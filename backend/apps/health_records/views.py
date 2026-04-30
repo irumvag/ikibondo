@@ -1,13 +1,15 @@
 import logging
 from django.utils import timezone
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters, mixins
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.viewsets import GenericViewSet
 from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.core.responses import success_response, created_response, error_response
-from .models import HealthRecord
-from .serializers import HealthRecordSerializer
+from apps.accounts.models import UserRole
+from .models import HealthRecord, ClinicalNote
+from .serializers import HealthRecordSerializer, ClinicalNoteSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +70,36 @@ class HealthRecordViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.warning('Prediction failed for record %s: %s', record.id, e)
 
+    @action(detail=True, methods=['get', 'post'], url_path='notes',
+            permission_classes=[IsAuthenticated])
+    def notes(self, request, pk=None):
+        """GET/POST /api/v1/health-records/<hr_id>/notes/"""
+        health_record = self.get_object()
+
+        if request.method == 'GET':
+            qs = (
+                ClinicalNote.objects
+                .filter(health_record=health_record, is_active=True)
+                .select_related('author')
+                .order_by('-is_pinned', '-created_at')
+            )
+            return success_response(data=ClinicalNoteSerializer(qs, many=True).data)
+
+        # POST — write restricted to NURSE / SUPERVISOR / ADMIN
+        if request.user.role not in (UserRole.NURSE, UserRole.SUPERVISOR, UserRole.ADMIN):
+            return error_response(
+                'Only nurses and above may add clinical notes.',
+                'FORBIDDEN',
+                status_code=403,
+            )
+        serializer = ClinicalNoteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        note = serializer.save(author=request.user, health_record=health_record)
+        return created_response(
+            data=ClinicalNoteSerializer(note).data,
+            message='Clinical note added.',
+        )
+
     @action(detail=False, methods=['get'], url_path='zone-summary')
     def zone_summary(self, request):
         """GET /api/v1/health-records/zone-summary/?zone=<id>"""
@@ -79,6 +111,60 @@ class HealthRecordViewSet(viewsets.ModelViewSet):
         for r in records:
             dist[r.risk_level or 'UNKNOWN'] = dist.get(r.risk_level or 'UNKNOWN', 0) + 1
         return success_response(data={'zone_id': zone_id, 'risk_distribution': dist, 'total': records.count()})
+
+
+# ---------------------------------------------------------------------------
+# Standalone ClinicalNote viewset  (PATCH / DELETE /api/v1/notes/<id>/)
+# ---------------------------------------------------------------------------
+
+class ClinicalNoteViewSet(
+    GenericViewSet,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+):
+    """
+    Retrieve, edit, or soft-delete an individual clinical note.
+
+    Listing is intentionally omitted here — notes are always accessed
+    through the parent resource (/health-records/<id>/notes/ or
+    /children/<id>/notes/) where access control is inherited from the
+    parent viewset's get_object().
+    """
+    serializer_class  = ClinicalNoteSerializer
+    http_method_names = ['get', 'patch', 'delete', 'head', 'options']
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return ClinicalNote.objects.filter(is_active=True).select_related('author')
+
+    def _check_ownership(self, note):
+        u = self.request.user
+        return u.role == UserRole.ADMIN or note.author_id == u.id
+
+    def partial_update(self, request, *args, **kwargs):
+        note = self.get_object()
+        if not self._check_ownership(note):
+            return error_response(
+                'You can only edit your own notes.',
+                'FORBIDDEN',
+                status_code=403,
+            )
+        serializer = self.get_serializer(note, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(data=serializer.data, message='Note updated.')
+
+    def destroy(self, request, *args, **kwargs):
+        note = self.get_object()
+        if not self._check_ownership(note):
+            return error_response(
+                'You can only delete your own notes.',
+                'FORBIDDEN',
+                status_code=403,
+            )
+        note.soft_delete()
+        return success_response(message='Note removed.')
 
 
 # ── Growth chart endpoint (standalone function-based view) ─────────────────────

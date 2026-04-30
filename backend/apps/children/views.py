@@ -86,6 +86,40 @@ class ChildViewSet(viewsets.ModelViewSet):
         from apps.ml_engine.serializers import MLPredictionLogSerializer
         return success_response(data=MLPredictionLogSerializer(predictions, many=True).data)
 
+    @action(detail=True, methods=['get', 'post'], url_path='notes',
+            permission_classes=[IsAuthenticated])
+    def notes(self, request, pk=None):
+        """GET/POST /api/v1/children/<child_id>/notes/  — child-level clinical notes."""
+        # Lazy imports to avoid circular dependency: children -> health_records
+        from apps.health_records.models import ClinicalNote
+        from apps.health_records.serializers import ClinicalNoteSerializer
+
+        child = self.get_object()
+
+        if request.method == 'GET':
+            qs = (
+                ClinicalNote.objects
+                .filter(child=child, is_active=True)
+                .select_related('author')
+                .order_by('-is_pinned', '-created_at')
+            )
+            return success_response(data=ClinicalNoteSerializer(qs, many=True).data)
+
+        # POST — write restricted to NURSE / SUPERVISOR / ADMIN
+        if request.user.role not in (UserRole.NURSE, UserRole.SUPERVISOR, UserRole.ADMIN):
+            return error_response(
+                'Only nurses and above may add clinical notes.',
+                'FORBIDDEN',
+                status_code=403,
+            )
+        serializer = ClinicalNoteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        note = serializer.save(author=request.user, child=child)
+        return created_response(
+            data=ClinicalNoteSerializer(note).data,
+            message='Clinical note added.',
+        )
+
     @action(detail=True, methods=['get'], url_path='qr')
     def qr_code(self, request, pk=None):
         """GET /api/v1/children/<id>/qr/ — returns qr_code string + base64-encoded PNG."""

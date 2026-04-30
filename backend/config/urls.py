@@ -25,6 +25,9 @@ urlpatterns = [
     # ML inference
     path('api/v1/ml/', include('apps.ml_engine.urls')),
 
+    # Clinical notes (standalone edit/delete; list+create is nested on parent)
+    path('api/v1/notes/', include('apps.health_records.notes_urls')),
+
     # Notifications
     path('api/v1/notifications/', include('apps.notifications.urls')),
 
