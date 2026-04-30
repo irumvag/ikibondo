@@ -62,9 +62,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = [
             'id', 'email', 'full_name', 'role', 'phone_number', 'camp', 'camp_name',
-            'is_approved', 'preferred_language', 'date_joined',
+            'is_approved', 'preferred_language', 'theme_preference', 'date_joined',
         ]
-        read_only_fields = ['id', 'date_joined']
+        read_only_fields = ['id', 'date_joined', 'is_approved', 'role', 'camp']
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):

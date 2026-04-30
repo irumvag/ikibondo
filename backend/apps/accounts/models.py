@@ -67,6 +67,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         choices=[('rw', 'Kinyarwanda'), ('fr', 'French'), ('en', 'English')],
         default='rw',
     )
+    theme_preference = models.CharField(
+        max_length=10,
+        choices=[('system', 'System'), ('light', 'Light'), ('dark', 'Dark')],
+        default='system',
+    )
     date_joined = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

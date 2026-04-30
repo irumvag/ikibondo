@@ -58,12 +58,20 @@ def logout_view(request):
         return error_response('Invalid or expired token.', 'INVALID_TOKEN')
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def me_view(request):
-    """GET /api/v1/auth/me/ — returns the current user's profile."""
-    serializer = UserProfileSerializer(request.user)
-    return success_response(data=serializer.data)
+    """
+    GET  /api/v1/auth/me/ — current user profile.
+    PATCH /api/v1/auth/me/ — update preferred_language or theme_preference.
+    """
+    if request.method == 'PATCH':
+        serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return success_response(data=serializer.data, message='Profile updated.')
+        return error_response(str(serializer.errors), 'VALIDATION_ERROR')
+    return success_response(data=UserProfileSerializer(request.user).data)
 
 
 @api_view(['POST'])
