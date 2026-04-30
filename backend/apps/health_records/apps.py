@@ -10,7 +10,8 @@ class HealthRecordsConfig(AppConfig):
         import apps.health_records.signals  # noqa: F401
         try:
             from auditlog.registry import auditlog
-            from .models import HealthRecord
+            from .models import HealthRecord, ClinicalNote
             auditlog.register(HealthRecord)
+            auditlog.register(ClinicalNote)
         except ImportError:
             pass
