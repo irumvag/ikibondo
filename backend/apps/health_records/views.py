@@ -179,15 +179,28 @@ def growth_data_view(request, child_id):
     """
     GET /api/v1/growth-data/<child_id>/
     Returns measurement time-series + WHO percentile bands (p3/p15/p50/p85/p97).
+    PARENT callers receive only parent_summary (no z-scores, no WHO bands).
     """
     try:
         child = Child.objects.get(id=child_id)
     except Child.DoesNotExist:
         return error_response('Child not found.', 'NOT_FOUND', status_code=404)
 
+    is_parent = request.user.role == UserRole.PARENT
+    lang = getattr(request.user, 'preferred_language', 'en') or 'en'
+
     records = HealthRecord.objects.filter(
         child=child, is_active=True
     ).order_by('measurement_date')
+
+    parent_summary = _build_parent_summary(child, records, lang)
+
+    if is_parent:
+        return success_response(data={
+            'child_id': str(child_id),
+            'child_name': child.full_name,
+            'parent_summary': parent_summary,
+        })
 
     measurements = []
     for r in records:
@@ -208,7 +221,84 @@ def growth_data_view(request, child_id):
         'child_name': child.full_name,
         'measurements': measurements,
         'who_percentiles': who_percentiles,
+        'parent_summary': parent_summary,
     })
+
+
+# ── Milestones table (age_months threshold → label) ──────────────────────────
+
+_MILESTONES = [
+    (3,  'Holding head up'),
+    (6,  'Rolling over'),
+    (9,  'Sitting without support'),
+    (12, 'Standing with help'),
+    (18, 'Walking first steps'),
+    (24, 'Running and climbing'),
+    (36, 'Saying simple sentences'),
+    (48, 'Playing with other children'),
+    (60, 'Drawing shapes'),
+    (72, 'School readiness'),
+]
+
+_MESSAGES = {
+    'on_track': {
+        'en': 'Your child is growing well! Keep up the great care.',
+        'rw': 'Umwana wawe akura neza! Komeza umwita neza.',
+        'fr': 'Votre enfant grandit bien ! Continuez les bons soins.',
+    },
+    'watch': {
+        'en': "Your child's growth needs attention. Please follow up with your health worker.",
+        'rw': "Imikurire y'umwana wawe isaba gukomezwa. Baza umujyanama w'ubuzima.",
+        'fr': "La croissance de votre enfant nécessite un suivi. Consultez votre agent de santé.",
+    },
+    'concern': {
+        'en': 'Your child needs medical attention. Please visit a health centre soon.',
+        'rw': 'Umwana wawe akeneye kujyanwa ku kigo nderabuzima vuba.',
+        'fr': "Votre enfant a besoin de soins médicaux. Visitez un centre de santé bientôt.",
+    },
+}
+
+
+def _build_parent_summary(child, records_qs, lang: str) -> dict:
+    """Derive a traffic-light growth summary without exposing z-scores."""
+    age = child.age_months
+
+    # Latest milestone the child should have reached
+    latest_milestone = None
+    next_milestone = None
+    for threshold, label in _MILESTONES:
+        if age >= threshold:
+            latest_milestone = label
+        elif next_milestone is None:
+            next_milestone = label
+
+    # Status from latest record z-scores (if any)
+    latest = records_qs.last()
+    status = 'on_track'
+    if latest:
+        z_scores = [
+            float(latest.height_for_age_z) if latest.height_for_age_z is not None else None,
+            float(latest.weight_for_age_z) if latest.weight_for_age_z is not None else None,
+            float(latest.weight_for_height_z) if latest.weight_for_height_z is not None else None,
+        ]
+        valid = [z for z in z_scores if z is not None]
+        if valid:
+            min_z = min(valid)
+            if min_z < -2:
+                status = 'concern'
+            elif min_z < -1:
+                status = 'watch'
+
+    message_key = f'growth.status.{status}'
+    message = _MESSAGES[status].get(lang, _MESSAGES[status]['en'])
+
+    return {
+        'status': status,
+        'latest_milestone': latest_milestone,
+        'next_milestone': next_milestone,
+        'message_key': message_key,
+        'message': message,
+    }
 
 
 def _build_who_percentile_bands(sex: str) -> dict:
