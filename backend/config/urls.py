@@ -4,7 +4,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from apps.health_records.views import growth_data_view
-from apps.core.views import health_check
+from apps.core.views import health_check, landing_stats_view
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
@@ -30,6 +30,9 @@ urlpatterns = [
 
     # Notifications
     path('api/v1/notifications/', include('apps.notifications.urls')),
+
+    # Public stats for landing page
+    path('api/v1/stats/landing/', landing_stats_view, name='landing-stats'),
 
     # System health
     path('api/v1/health/', health_check, name='health-check'),

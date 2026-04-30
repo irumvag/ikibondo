@@ -8,6 +8,7 @@ class CampFactory(DjangoModelFactory):
         model = Camp
 
     name = factory.Sequence(lambda n: f'Camp {n}')
+    code = factory.Sequence(lambda n: f'CMP{n:03d}')
     district = factory.Faker('city')
     province = 'Eastern'
     capacity = 5000
