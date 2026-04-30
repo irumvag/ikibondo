@@ -1,0 +1,18 @@
+{
+  "model_name": "growth_nn_v1",
+  "algorithm": "Feedforward Neural Network (pure numpy, 15\u219232\u219216\u21921)",
+  "sequence_length": 3,
+  "input_features": [
+    "age_months",
+    "sex_binary",
+    "weight_kg",
+    "height_cm",
+    "whz"
+  ],
+  "flattened_input_dim": 15,
+  "output": "risk_flag (binary: 1 = at risk of WHZ deterioration)",
+  "test_accuracy": 0.9004,
+  "test_auc": 0.9602,
+  "test_precision": 0.7571,
+  "test_recall": 0.9303
+}

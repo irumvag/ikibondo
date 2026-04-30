@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Raw / unprocessed data (processed synthetic CSVs are tracked)
+data/raw/
+
+# Local venv if someone creates one inside ml/
+venv/
+.venv/
