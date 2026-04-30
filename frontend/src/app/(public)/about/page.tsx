@@ -1,26 +1,31 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Shield, Activity, Users, BookOpen, ArrowRight } from 'lucide-react';
+import { FAQSection } from '@/components/public/FAQSection';
 
-export const metadata: Metadata = { title: 'About' };
+export const metadata: Metadata = {
+  title: 'About — Ikibondo',
+  description:
+    "Learn how Ikibondo helps community health workers, nurses, and supervisors monitor child nutrition and detect malnutrition early across Rwanda's refugee camps.",
+};
 
 const HOW_IT_WORKS = [
   {
     step: '01',
-    title: 'Community Health Worker visits',
-    body: 'CHWs visit children in their zones regularly, recording anthropometric measurements, vital signs, and clinical symptoms using the Ikibondo mobile app — even offline.',
+    title: 'Community health worker visits',
+    body: 'CHWs visit children in their zones and record anthropometric measurements, vital signs, and clinical symptoms using the Ikibondo field app — fully offline capable.',
     icon: Users,
   },
   {
     step: '02',
     title: 'ML-powered risk classification',
-    body: 'Each visit triggers an automatic risk assessment using a WHO-calibrated Random Forest model. Children are classified LOW, MEDIUM, or HIGH risk, with the top contributing factors explained in plain language.',
+    body: 'Each visit triggers a WHO-calibrated Random Forest model that classifies children as LOW, MEDIUM, or HIGH risk. The top five contributing factors are explained in plain language for clinical review.',
     icon: Activity,
   },
   {
     step: '03',
     title: 'Timely interventions',
-    body: "Supervisors and nurses receive instant alerts for high-risk children. Parents receive SMS notifications about their child's health status and upcoming vaccinations.",
+    body: "Supervisors and nurses receive instant alerts for high-risk children. Parents are notified about their child's health status and upcoming vaccinations via SMS.",
     icon: BookOpen,
   },
 ];
@@ -29,7 +34,7 @@ const WHO_USES = [
   {
     role: 'Community Health Workers',
     description:
-      'Register children, conduct visits, administer vaccines, and work from a mobile-first offline-ready interface with large touch targets.',
+      'Register children, conduct visits, administer vaccines, and work from a mobile-first offline-ready interface with large touch targets designed for field conditions.',
   },
   {
     role: 'Nurses & Clinicians',
@@ -39,12 +44,12 @@ const WHO_USES = [
   {
     role: 'Zone Supervisors',
     description:
-      'Monitor CHW activity, view zone-level KPIs, manage high-risk alerts, and export reports for camp leadership.',
+      'Monitor CHW activity, view zone-level KPIs, manage high-risk alerts, and export health reports for camp leadership — scoped to assigned zones.',
   },
   {
     role: 'Parents & Guardians',
     description:
-      "Track your child's growth journey, receive vaccination reminders, and view health milestones in a calm, parent-friendly interface.",
+      "Track your child's growth journey, receive vaccination reminders, and view health milestones in a calm, parent-friendly interface — no medical jargon.",
   },
 ];
 
@@ -76,9 +81,10 @@ export default function AboutPage() {
             className="text-lg leading-relaxed mx-auto"
             style={{ color: 'var(--text-muted)', maxWidth: '38rem' }}
           >
-            Ikibondo is a child nutrition and health monitoring platform built for
-            UNHCR-supported refugee camps in Rwanda — combining community health
-            worker workflows with machine learning to detect malnutrition early.
+            Ikibondo is a child nutrition and health monitoring platform built
+            for refugee camps in Rwanda — combining community health worker
+            workflows with machine learning to detect malnutrition early and
+            trigger timely interventions.
           </p>
         </div>
 
@@ -115,19 +121,12 @@ export default function AboutPage() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Icon
-                      size={18}
-                      aria-hidden="true"
-                      style={{ color: 'var(--ink)' }}
-                    />
+                    <Icon size={18} aria-hidden="true" style={{ color: 'var(--ink)' }} />
                     <h3 className="font-semibold" style={{ color: 'var(--text)' }}>
                       {title}
                     </h3>
                   </div>
-                  <p
-                    className="text-sm leading-relaxed"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
                     {body}
                   </p>
                 </div>
@@ -158,17 +157,11 @@ export default function AboutPage() {
               >
                 <h3
                   className="font-semibold mb-2"
-                  style={{
-                    color: 'var(--ink)',
-                    fontFamily: 'var(--font-fraunces)',
-                  }}
+                  style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}
                 >
                   {role}
                 </h3>
-                <p
-                  className="text-sm leading-relaxed"
-                  style={{ color: 'var(--text-muted)' }}
-                >
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
                   {description}
                 </p>
               </div>
@@ -178,11 +171,8 @@ export default function AboutPage() {
 
         {/* CTA */}
         <div
-          className="text-center p-10 rounded-2xl"
-          style={{
-            backgroundColor: 'var(--bg-sand)',
-            border: '1px solid var(--border)',
-          }}
+          className="text-center p-10 rounded-2xl mb-8"
+          style={{ backgroundColor: 'var(--bg-sand)', border: '1px solid var(--border)' }}
         >
           <h2
             className="text-2xl font-bold mb-3"
@@ -212,8 +202,10 @@ export default function AboutPage() {
             </Link>
           </div>
         </div>
-
       </div>
+
+      {/* FAQ — full-width so the section background extends edge-to-edge */}
+      <FAQSection />
     </main>
   );
 }
