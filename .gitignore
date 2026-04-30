@@ -1,0 +1,52 @@
+# ── Docs / private files ─────────────────────────────────────────
+Ikibondo_API_ML_Report.docx
+Asidedoc.md
+docs/IMPLEMENTATION_PLAN.md
+
+# ── Python ───────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# ── Node.js / React / Vite ───────────────────────────────────────
+node_modules/
+dist/
+.next/
+out/
+.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Flutter / Dart ───────────────────────────────────────────────
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.g.dart
+*.freezed.dart
+.packages
+.pub-cache/
+.pub/
+
+# ── OS files ─────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── IDE ──────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.suo
+*.sw?
+
+# ── Secrets / local config ────────────────────────────────────────
+*.pem
+*.key
+secrets/
+SKILL.md
