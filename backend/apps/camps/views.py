@@ -73,7 +73,7 @@ class CampZoneViewSet(viewsets.ModelViewSet):
         return CampZone.objects.filter(camp_id=self.kwargs['camp_pk'], is_active=True)
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'chw_activity']:
             return [IsSupervisorOrAdmin()]
         return [permissions.IsAuthenticated()]
 
@@ -111,6 +111,46 @@ class CampZoneViewSet(viewsets.ModelViewSet):
             except Exception as e:
                 return error_response(str(e), 'VALIDATION_ERROR')
         return error_response(str(serializer.errors), 'VALIDATION_ERROR')
+
+    @action(detail=True, methods=['get'], url_path='chw-activity')
+    def chw_activity(self, request, camp_pk=None, pk=None):
+        """GET /api/v1/camps/<camp_pk>/zones/<pk>/chw-activity/ — CHW visit activity for a zone."""
+        zone = self.get_object()
+        now = timezone.now().date()
+        seven_days_ago = now - timezone.timedelta(days=7)
+        thirty_days_ago = now - timezone.timedelta(days=30)
+
+        from apps.health_records.models import HealthRecord
+        from apps.accounts.models import CustomUser
+        from django.db.models import Count, Max, Q
+
+        assignments = CHWZoneAssignment.objects.filter(
+            zone=zone, status='active'
+        ).select_related('chw_user')
+
+        result = []
+        for assignment in assignments:
+            chw = assignment.chw_user
+            records_qs = HealthRecord.objects.filter(recorded_by=chw, zone=zone, is_active=True)
+
+            visits_7d = records_qs.filter(measurement_date__gte=seven_days_ago).count()
+            visits_30d = records_qs.filter(measurement_date__gte=thirty_days_ago).count()
+            last_record = records_qs.order_by('-measurement_date').first()
+            last_visit_at = last_record.measurement_date.isoformat() if last_record else None
+
+            result.append({
+                'user_id': str(chw.id),
+                'full_name': chw.full_name,
+                'phone_number': chw.phone_number or '',
+                'last_visit_at': last_visit_at,
+                'visits_7d': visits_7d,
+                'visits_30d': visits_30d,
+                'status': 'inactive' if visits_7d == 0 else 'active',
+            })
+
+        # inactive CHWs first, then most recently active
+        result.sort(key=lambda r: (r['status'] != 'inactive', r['last_visit_at'] or ''))
+        return success_response(data=result)
 
     @action(detail=True, methods=['get'], url_path='stats')
     def stats(self, request, camp_pk=None, pk=None):
