@@ -5,6 +5,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from apps.health_records.views import growth_data_view
 from apps.core.views import health_check, landing_stats_view
+from apps.core.sync_views import batch_sync_view
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
@@ -33,6 +34,9 @@ urlpatterns = [
 
     # Public stats for landing page
     path('api/v1/stats/landing/', landing_stats_view, name='landing-stats'),
+
+    # Offline CHW batch sync
+    path('api/v1/sync/batch/', batch_sync_view, name='sync-batch'),
 
     # System health
     path('api/v1/health/', health_check, name='health-check'),
