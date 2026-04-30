@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+/* ── Light theme (default) ─────────────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  --bg:        #FFFDF7;
+  --bg-elev:   #FFFFFF;
+  --bg-sand:   #F2EDE3;
+  --ink:       #085041;
+  --ink-soft:  #0a6352;
+  --accent:    #FBC800;
+  --accent-fg: #1A1200;
+  --text:      #1A1F2E;
+  --text-muted:#4B5563;
+  --border:    rgba(8,80,65,.10);
+
+  --success:   #16A34A;
+  --warn:      #D97706;
+  --danger:    #B91C1C;
+
+  --low-bg:    #F0FDF4;
+  --med-bg:    #FFFBEB;
+  --high-bg:   #FEF2F2;
+
+  --shadow-sm: 0 1px 3px rgba(8,80,65,.08);
+  --shadow-md: 0 4px 12px rgba(8,80,65,.12);
+  --shadow-lg: 0 8px 24px rgba(8,80,65,.16);
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+}
+
+/* ── Dark theme (night / low-light) ────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:        #0F1A17;
+  --bg-elev:   #16241F;
+  --bg-sand:   #1B2C26;
+  --ink:       #FFFDF7;
+  --ink-soft:  #E5E2DA;
+  --accent:    #FBC800;
+  --accent-fg: #1A1200;
+  --text:      #F1EFE8;
+  --text-muted:#A6B0AC;
+  --border:    rgba(255,253,247,.08);
+
+  --success:   #4ADE80;
+  --warn:      #FBBF24;
+  --danger:    #F87171;
+
+  --low-bg:    rgba(74,222,128,.10);
+  --med-bg:    rgba(251,191,36,.10);
+  --high-bg:   rgba(248,113,113,.10);
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.30);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.40);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,.50);
+}
+
+/* ── Base reset ─────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Scrollbar (subtle, matches theme) ─────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ── Focus ring ─────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
