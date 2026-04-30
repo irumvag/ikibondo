@@ -1,4 +1,6 @@
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 from apps.core.models import BaseModel
 from .who_zscore import compute_whz, compute_haz, compute_waz, classify_nutrition_status
 
@@ -119,7 +121,7 @@ class HealthRecord(BaseModel):
         return f'{self.child.full_name} — {self.measurement_date} — {self.nutrition_status}'
 
     def save(self, *args, **kwargs):
-        """Auto-compute z-scores, nutrition status, zone from child before saving."""
+        """Auto-compute z-scores, nutrition status, and zone from child before saving."""
         from .who_zscore import compute_bmi_z
         child = self.child
         age_months = child.age_months
@@ -144,3 +146,83 @@ class HealthRecord(BaseModel):
         if not self.zone_id and child.zone_id:
             self.zone_id = child.zone_id
         super().save(*args, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Clinical Notes
+# ---------------------------------------------------------------------------
+
+class NoteType(models.TextChoices):
+    FOLLOW_UP   = 'FOLLOW_UP',   'Follow-Up Required'
+    REFERRAL    = 'REFERRAL',    'Referral'
+    OBSERVATION = 'OBSERVATION', 'Observation'
+    GENERAL     = 'GENERAL',     'General'
+
+
+class ClinicalNote(BaseModel):
+    """
+    A structured clinical annotation written by a NURSE or SUPERVISOR.
+
+    Attaches to either a specific visit (health_record FK) or a child
+    longitudinally (child FK).  Exactly one target must be set — enforced
+    by clean() at the application layer and a DB CHECK constraint in the
+    migration as a belt-and-suspenders guard.
+
+    is_pinned surfaces critical follow-up notes at the top of a child's
+    record list without losing the chronological view of other notes.
+    """
+    author = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='clinical_notes',
+    )
+    health_record = models.ForeignKey(
+        HealthRecord,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='clinical_notes',
+    )
+    child = models.ForeignKey(
+        'children.Child',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='clinical_notes',
+    )
+    note_type = models.CharField(
+        max_length=20,
+        choices=NoteType.choices,
+        default=NoteType.GENERAL,
+    )
+    content   = models.TextField()
+    is_pinned = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-is_pinned', '-created_at']
+        verbose_name = 'Clinical Note'
+        verbose_name_plural = 'Clinical Notes'
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(health_record__isnull=False, child__isnull=True) |
+                    Q(health_record__isnull=True,  child__isnull=False)
+                ),
+                name='clinicalnote_exactly_one_target',
+            )
+        ]
+
+    def __str__(self):
+        target = f'HR:{self.health_record_id}' if self.health_record_id else f'Child:{self.child_id}'
+        author = self.author.full_name if self.author_id else 'unknown'
+        return f'[{self.note_type}] {author} → {target}'
+
+    def clean(self):
+        has_hr    = self.health_record_id is not None
+        has_child = self.child_id is not None
+        if has_hr == has_child:
+            raise ValidationError(
+                'A clinical note must target exactly one of health_record or child, not both or neither.'
+            )

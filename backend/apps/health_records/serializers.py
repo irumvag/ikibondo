@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import HealthRecord
+from .models import HealthRecord, ClinicalNote
 
 
 class HealthRecordSerializer(serializers.ModelSerializer):
@@ -38,4 +38,29 @@ class HealthRecordSerializer(serializers.ModelSerializer):
             'nutrition_status', 'risk_level', 'risk_factors', 'model_version',
             'ml_predicted_status', 'ml_confidence', 'ml_risk_flags',
             'created_at',
+        ]
+
+
+class ClinicalNoteSerializer(serializers.ModelSerializer):
+    author_name       = serializers.CharField(source='author.full_name', read_only=True, allow_null=True)
+    author_role       = serializers.CharField(source='author.role',      read_only=True, allow_null=True)
+    note_type_display = serializers.CharField(source='get_note_type_display', read_only=True)
+
+    class Meta:
+        model  = ClinicalNote
+        fields = [
+            'id',
+            'author', 'author_name', 'author_role',
+            'health_record', 'child',
+            'note_type', 'note_type_display',
+            'content', 'is_pinned',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id',
+            'author', 'author_name', 'author_role',
+            'note_type_display',
+            # Targets are injected by the view, never from request body
+            'health_record', 'child',
+            'created_at', 'updated_at',
         ]
