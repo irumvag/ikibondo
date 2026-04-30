@@ -25,6 +25,16 @@ interface AuthState {
   setLoading: (v: boolean) => void;
 }
 
+function setRoleCookie(role: string) {
+  if (typeof document === 'undefined') return;
+  document.cookie = `_ikibondo_role=${role}; path=/; SameSite=Strict`;
+}
+
+function clearRoleCookie() {
+  if (typeof document === 'undefined') return;
+  document.cookie = '_ikibondo_role=; path=/; max-age=0';
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   accessToken: null,
@@ -35,6 +45,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       sessionStorage.setItem('access_token', accessToken);
       localStorage.setItem('access_token', accessToken);
       localStorage.setItem('refresh_token', refreshToken);
+      setRoleCookie(user.role);
     }
     set({ user, accessToken, isLoading: false });
   },
@@ -44,10 +55,15 @@ export const useAuthStore = create<AuthState>((set) => ({
       sessionStorage.clear();
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      clearRoleCookie();
     }
     set({ user: null, accessToken: null, isLoading: false });
   },
 
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    setRoleCookie(user.role);
+    set({ user });
+  },
+
   setLoading: (v) => set({ isLoading: v }),
 }));
