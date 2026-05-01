@@ -27,7 +27,7 @@ export function CampsSection() {
             Serving Rwanda&apos;s refugee camps
           </h2>
           <p className="text-base" style={{ color: 'var(--text-muted)' }}>
-            Ikibondo is deployed across UNHCR-supported displacement sites
+            Ikibondo is deployed across displacement sites in Rwanda
           </p>
         </div>
 

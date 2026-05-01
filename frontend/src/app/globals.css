@@ -25,6 +25,7 @@
   --shadow-sm: 0 1px 3px rgba(8,80,65,.08);
   --shadow-md: 0 4px 12px rgba(8,80,65,.12);
   --shadow-lg: 0 8px 24px rgba(8,80,65,.16);
+  --shadow-xl: 0 16px 40px rgba(8,80,65,.18);
 
   --radius-sm: 6px;
   --radius-md: 12px;
@@ -55,6 +56,7 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,.30);
   --shadow-md: 0 4px 12px rgba(0,0,0,.40);
   --shadow-lg: 0 8px 24px rgba(0,0,0,.50);
+  --shadow-xl: 0 16px 40px rgba(0,0,0,.55);
 }
 
 /* ── Base reset ─────────────────────────────────────────────────────────── */
