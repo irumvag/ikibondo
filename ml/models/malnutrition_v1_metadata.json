@@ -1,0 +1,47 @@
+{
+  "model_name": "malnutrition_v1",
+  "algorithm": "Ensemble Decision Tree (pure numpy)",
+  "feature_names": [
+    "age_months",
+    "sex_binary",
+    "camp_id",
+    "weight_kg",
+    "height_cm",
+    "muac_cm",
+    "oedema",
+    "whz",
+    "haz",
+    "age_group",
+    "wasting",
+    "severe_wasting",
+    "muac_low",
+    "muac_critical"
+  ],
+  "classes": [
+    "MAM",
+    "NORMAL",
+    "SAM"
+  ],
+  "test_metrics": {
+    "MAM": {
+      "precision": 0.9261,
+      "recall": 0.952,
+      "f1": 0.9389,
+      "support": 250
+    },
+    "NORMAL": {
+      "precision": 0.994,
+      "recall": 0.9928,
+      "f1": 0.9934,
+      "support": 837
+    },
+    "SAM": {
+      "precision": 0.9828,
+      "recall": 0.9684,
+      "f1": 0.9756,
+      "support": 412
+    }
+  },
+  "overall_accuracy": 0.9793,
+  "sam_recall": 0.9684
+}
