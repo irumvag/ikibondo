@@ -88,10 +88,20 @@ def register_view(request):
     return error_response(str(serializer.errors), 'VALIDATION_ERROR')
 
 
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAdminUser])
 def create_user_view(request):
-    """POST /api/v1/auth/users/ — admin creates a new staff account (auto-approved)."""
+    """
+    GET  /api/v1/auth/users/ — list all active users (admin only); ?role= filter supported.
+    POST /api/v1/auth/users/ — admin creates a new staff account (auto-approved).
+    """
+    if request.method == 'GET':
+        qs = CustomUser.objects.filter(is_active=True).order_by('-date_joined')
+        role = request.query_params.get('role')
+        if role:
+            qs = qs.filter(role=role)
+        return success_response(data=UserProfileSerializer(qs, many=True).data)
+
     serializer = UserCreateSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()

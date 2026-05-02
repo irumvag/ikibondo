@@ -50,3 +50,5 @@ desktop.ini
 *.key
 secrets/
 SKILL.md
+.claude
+CLAUDE.md
