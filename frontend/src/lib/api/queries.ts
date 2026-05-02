@@ -10,6 +10,7 @@ import {
 import {
   getGrowthData, getChild, getChildHistory, getChildNotes, listHealthRecords,
 } from './nurse';
+import { listVaccinationQueue } from './chw';
 
 export const QK = {
   landingStats:       ['landing-stats']       as const,
@@ -29,6 +30,7 @@ export const QK = {
   childHistory:       (childId: string) => ['child-history', childId] as const,
   childNotes:         (childId: string) => ['child-notes', childId] as const,
   healthRecords:      (params: Record<string, unknown>) => ['health-records', params] as const,
+  vaccinationQueue:   (page?: number) => ['vaccination-queue', page] as const,
 };
 
 export function useLandingStats() {
@@ -194,6 +196,15 @@ export function useHealthRecords(params: {
   return useQuery({
     queryKey: QK.healthRecords(params as Record<string, unknown>),
     queryFn: () => listHealthRecords({ ...params, page_size: 20 }),
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useVaccinationQueue(page = 1) {
+  return useQuery({
+    queryKey: QK.vaccinationQueue(page),
+    queryFn: () => listVaccinationQueue({ page, page_size: 30 }),
     staleTime: 30_000,
     retry: 1,
   });

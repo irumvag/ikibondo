@@ -90,6 +90,7 @@ export async function listCampChildren(params?: {
   camp?: string;
   status?: string;
   sex?: string;
+  search?: string;
   page?: number;
   page_size?: number;
 }): Promise<Paginated<SupervisedChild>> {
