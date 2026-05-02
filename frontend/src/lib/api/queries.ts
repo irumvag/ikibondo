@@ -11,6 +11,7 @@ import {
   getGrowthData, getChild, getChildHistory, getChildNotes, listHealthRecords,
 } from './nurse';
 import { listVaccinationQueue } from './chw';
+import { listMyChildren, getChildVaccinations, listNotifications } from './parent';
 
 export const QK = {
   landingStats:       ['landing-stats']       as const,
@@ -31,6 +32,9 @@ export const QK = {
   childNotes:         (childId: string) => ['child-notes', childId] as const,
   healthRecords:      (params: Record<string, unknown>) => ['health-records', params] as const,
   vaccinationQueue:   (page?: number) => ['vaccination-queue', page] as const,
+  myChildren:         ['my-children']  as const,
+  childVaccinations:  (childId: string) => ['child-vaccinations', childId] as const,
+  notifications:      ['notifications'] as const,
 };
 
 export function useLandingStats() {
@@ -206,6 +210,34 @@ export function useVaccinationQueue(page = 1) {
     queryKey: QK.vaccinationQueue(page),
     queryFn: () => listVaccinationQueue({ page, page_size: 30 }),
     staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useMyChildren() {
+  return useQuery({
+    queryKey: QK.myChildren,
+    queryFn:  listMyChildren,
+    staleTime: 60_000,
+    retry: 1,
+  });
+}
+
+export function useChildVaccinations(childId: string | null) {
+  return useQuery({
+    queryKey: QK.childVaccinations(childId ?? ''),
+    queryFn:  () => getChildVaccinations(childId!),
+    enabled:  !!childId,
+    staleTime: 60_000,
+    retry: 1,
+  });
+}
+
+export function useNotifications() {
+  return useQuery({
+    queryKey: QK.notifications,
+    queryFn:  listNotifications,
+    staleTime: 15_000,
     retry: 1,
   });
 }
