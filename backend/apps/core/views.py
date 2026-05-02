@@ -1,8 +1,34 @@
 from django.core.cache import cache
 from django.utils import timezone
+from rest_framework import viewsets, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+
+from .models import FAQItem
+from .serializers import FAQItemSerializer
+
+
+class FAQItemViewSet(viewsets.ModelViewSet):
+    """
+    Public list/retrieve: returns only published items (no auth required).
+    Admin create/update/delete: requires ADMIN role.
+    """
+    serializer_class = FAQItemSerializer
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        qs = FAQItem.objects.filter(is_active=True)
+        user = self.request.user
+        if not (user and user.is_authenticated and getattr(user, 'role', None) == 'ADMIN'):
+            qs = qs.filter(is_published=True)
+        return qs
+
+    def get_permissions(self):
+        if self.action in ('list', 'retrieve'):
+            return [permissions.AllowAny()]
+        from apps.accounts.permissions import IsAdminUser
+        return [IsAdminUser()]
 
 _LANDING_CACHE_KEY = 'landing_stats_v1'
 _LANDING_CACHE_TTL = 60  # seconds

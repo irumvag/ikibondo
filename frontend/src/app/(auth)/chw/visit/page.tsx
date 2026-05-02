@@ -173,9 +173,9 @@ export default function NewVisitPage() {
               ? ['HFA z-score', parseFloat(result.height_for_age_z).toFixed(2)]
               : null,
           ]
-            .filter(Boolean)
+            .filter((x): x is string[] => x !== null)
             .map(([k, v]) => (
-              <div key={k as string} className="flex justify-between items-center text-sm">
+              <div key={String(k)} className="flex justify-between items-center text-sm">
                 <span style={{ color: 'var(--text-muted)' }}>{k}</span>
                 <span className="font-medium" style={{ color: 'var(--ink)' }}>{v}</span>
               </div>
@@ -260,7 +260,7 @@ export default function NewVisitPage() {
           {results.length > 0 && (
             <div
               className="rounded-xl border overflow-hidden divide-y"
-              style={{ borderColor: 'var(--border)', divideColor: 'var(--border)' }}
+              style={{ borderColor: 'var(--border)' }}
             >
               {results.map((c) => (
                 <button

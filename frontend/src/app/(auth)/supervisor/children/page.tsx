@@ -113,7 +113,7 @@ export default function ChildrenPage() {
 
       <DataTable
         columns={COLUMNS as Parameters<typeof DataTable>[0]['columns']}
-        data={displayed as Record<string, unknown>[]}
+        data={displayed }
         keyField="id"
         isLoading={isLoading}
         emptyTitle="No children found"
@@ -127,3 +127,4 @@ export default function ChildrenPage() {
     </div>
   );
 }
+

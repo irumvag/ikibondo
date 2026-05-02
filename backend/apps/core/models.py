@@ -36,6 +36,22 @@ class BaseModel(models.Model):
         self.save(update_fields=['is_active', 'updated_at'])
 
 
+class FAQItem(BaseModel):
+    """Frequently-asked question shown on the public landing page and About page."""
+
+    question     = models.CharField(max_length=500)
+    answer       = models.TextField()
+    order        = models.PositiveIntegerField(default=0)
+    is_published = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['order', 'created_at']
+        verbose_name = 'FAQ Item'
+
+    def __str__(self):
+        return self.question[:80]
+
+
 class SyncOperation(models.Model):
     """
     Idempotency log for offline batch sync operations submitted by CHWs.

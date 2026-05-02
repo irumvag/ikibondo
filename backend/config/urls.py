@@ -32,6 +32,9 @@ urlpatterns = [
     # Notifications
     path('api/v1/notifications/', include('apps.notifications.urls')),
 
+    # FAQ (public read, admin CRUD)
+    path('api/v1/faq/', include('apps.core.urls')),
+
     # Public stats for landing page
     path('api/v1/stats/landing/', landing_stats_view, name='landing-stats'),
 

@@ -105,7 +105,7 @@ export default function AuditPage() {
 
       <DataTable
         columns={COLUMNS as Parameters<typeof DataTable>[0]['columns']}
-        data={(predictions ?? []) as Record<string, unknown>[]}
+        data={(predictions ?? []) }
         keyField="id"
         isLoading={isLoading}
         emptyTitle="No predictions yet"
@@ -114,3 +114,4 @@ export default function AuditPage() {
     </div>
   );
 }
+

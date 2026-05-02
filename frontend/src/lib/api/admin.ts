@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import type { AuthUser } from '@/store/authStore';
+import type { FAQItem } from './public';
 
 // ── Users ─────────────────────────────────────────────────────────────────────
 
@@ -122,4 +123,31 @@ export async function listPredictions(params?: {
 }): Promise<PredictionLog[]> {
   const { data } = await apiClient.get('/ml/predictions/', { params });
   return data.data ?? [];
+}
+
+// ── FAQ (admin CRUD) ───────────────────────────────────────────────────────────
+
+export async function listAllFaqItems(): Promise<FAQItem[]> {
+  const { data } = await apiClient.get('/faq/');
+  const payload = data?.results ?? data?.data ?? data;
+  return Array.isArray(payload) ? payload : payload?.results ?? [];
+}
+
+export async function createFaqItem(
+  payload: Pick<FAQItem, 'question' | 'answer' | 'order' | 'is_published'>,
+): Promise<FAQItem> {
+  const { data } = await apiClient.post('/faq/', payload);
+  return data?.data ?? data;
+}
+
+export async function updateFaqItem(
+  id: string,
+  payload: Partial<Pick<FAQItem, 'question' | 'answer' | 'order' | 'is_published'>>,
+): Promise<FAQItem> {
+  const { data } = await apiClient.patch(`/faq/${id}/`, payload);
+  return data?.data ?? data;
+}
+
+export async function deleteFaqItem(id: string): Promise<void> {
+  await apiClient.delete(`/faq/${id}/`);
 }

@@ -106,7 +106,7 @@ export default function AlertsPage() {
 
       <DataTable
         columns={COLUMNS as Parameters<typeof DataTable>[0]['columns']}
-        data={(data?.items ?? []) as Record<string, unknown>[]}
+        data={(data?.items ?? []) }
         keyField="id"
         isLoading={isLoading}
         emptyTitle="No HIGH-risk records"
@@ -120,3 +120,4 @@ export default function AlertsPage() {
     </div>
   );
 }
+

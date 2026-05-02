@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { getLandingStats, getPublicCamps } from './public';
+import { getLandingStats, getPublicCamps, listFaq } from './public';
 import {
   listUsers, getPendingApprovals, listCamps, listZones,
-  getModelInfo, listPredictions,
+  getModelInfo, listPredictions, listAllFaqItems,
 } from './admin';
 import {
   getZoneStats, getCHWActivity, listHighRiskRecords, listCampChildren,
@@ -16,6 +16,8 @@ import { listMyChildren, getChildVaccinations, listNotifications } from './paren
 export const QK = {
   landingStats:       ['landing-stats']       as const,
   publicCamps:        ['public-camps']        as const,
+  faq:               ['faq']                 as const,
+  adminFaq:          ['admin-faq']           as const,
   adminUsers:         ['admin-users']         as const,
   pendingApprovals:   ['pending-approvals']   as const,
   adminCamps:         ['admin-camps']         as const,
@@ -54,6 +56,25 @@ export function usePublicCamps() {
     staleTime: 300_000,
     retry: 1,
     refetchOnWindowFocus: false,
+  });
+}
+
+export function useFaq() {
+  return useQuery({
+    queryKey: QK.faq,
+    queryFn: listFaq,
+    staleTime: 300_000,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useAdminFaq() {
+  return useQuery({
+    queryKey: QK.adminFaq,
+    queryFn: listAllFaqItems,
+    staleTime: 30_000,
+    retry: 1,
   });
 }
 

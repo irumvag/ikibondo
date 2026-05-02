@@ -166,7 +166,7 @@ export default function UsersPage() {
           </div>
           <DataTable
             columns={PENDING_COLUMNS(handleApprove, approving) as Parameters<typeof DataTable>[0]['columns']}
-            data={pending as Record<string, unknown>[]}
+            data={pending ?? []}
             keyField="id"
             isLoading={pendingLoading}
             emptyTitle="No pending approvals"
@@ -201,7 +201,7 @@ export default function UsersPage() {
         </div>
         <DataTable
           columns={USER_COLUMNS as Parameters<typeof DataTable>[0]['columns']}
-          data={(users ?? []) as Record<string, unknown>[]}
+          data={(users ?? []) }
           keyField="id"
           isLoading={usersLoading}
           emptyTitle="No users found"
@@ -282,3 +282,4 @@ export default function UsersPage() {
     </div>
   );
 }
+

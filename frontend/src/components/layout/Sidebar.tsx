@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, MapPin, ScrollText, Cpu,
   AlertTriangle, Activity, Baby, FileBarChart, ClipboardList,
   UserPlus, Stethoscope, Syringe, RefreshCw,
-  Heart, Bell, X, LogOut, Settings,
+  Heart, Bell, X, LogOut, Settings, MessageCircleQuestion,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuthStore, type UserRole } from '@/store/authStore';
@@ -24,6 +24,7 @@ const ROLE_NAV: Record<UserRole, NavItem[]> = {
     { href: '/admin/camps',  label: 'Camps & Zones', icon: MapPin },
     { href: '/admin/audit',  label: 'Audit Log',     icon: ScrollText },
     { href: '/admin/ml',     label: 'ML Model',      icon: Cpu },
+    { href: '/admin/faq',    label: 'FAQ',            icon: MessageCircleQuestion },
   ],
   SUPERVISOR: [
     { href: '/supervisor',          label: 'Zone Overview',     icon: LayoutDashboard },

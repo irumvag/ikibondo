@@ -18,7 +18,7 @@ interface Pagination {
   onPageChange: (page: number) => void;
 }
 
-interface DataTableProps<T extends Record<string, unknown>> {
+interface DataTableProps<T extends object> {
   columns: Column<T>[];
   data: T[];
   /** Unique field used as React key */
@@ -32,7 +32,7 @@ interface DataTableProps<T extends Record<string, unknown>> {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function DataTable<T extends Record<string, unknown>>({
+export function DataTable<T extends object>({
   columns,
   data,
   keyField,
@@ -112,7 +112,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 )
               : data.map((row) => (
                   <tr
-                    key={String(row[keyField])}
+                    key={String((row as Record<string, unknown>)[keyField as string])}
                     className="transition-colors hover:bg-[var(--bg-sand)]"
                     style={{ borderBottom: '1px solid var(--border)' }}
                   >
@@ -123,8 +123,8 @@ export function DataTable<T extends Record<string, unknown>>({
                         style={{ color: 'var(--text)' }}
                       >
                         {col.render
-                          ? col.render(row[col.key], row)
-                          : String(row[col.key] ?? '—')}
+                          ? col.render((row as Record<string, unknown>)[col.key], row)
+                          : String((row as Record<string, unknown>)[col.key] ?? '—')}
                       </td>
                     ))}
                   </tr>

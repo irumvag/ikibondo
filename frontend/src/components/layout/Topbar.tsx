@@ -13,6 +13,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/camps':          'Camps & Zones',
   '/admin/audit':          'Audit Log',
   '/admin/ml':             'ML Model',
+  '/admin/faq':            'FAQ Management',
   '/admin':                'Overview',
   '/supervisor/alerts':    'High-Risk Alerts',
   '/supervisor/chws':      'CHW Activity',

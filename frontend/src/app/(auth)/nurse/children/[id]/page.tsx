@@ -85,11 +85,11 @@ function GrowthChart({ growth }: { growth: GrowthData }) {
             width={48}
           />
           <Tooltip
-            formatter={(value: number, name: string) => [
-              value != null ? value.toFixed(1) : '—',
-              name === 'actual' ? 'Measurement'
-                : name === 'p3' ? 'p3 (low)'
-                : name === 'p50' ? 'p50 (median)'
+            formatter={(value, name) => [
+              value != null ? Number(value).toFixed(1) : '—',
+              String(name) === 'actual' ? 'Measurement'
+                : String(name) === 'p3' ? 'p3 (low)'
+                : String(name) === 'p50' ? 'p50 (median)'
                 : 'p97 (high)',
             ]}
             labelFormatter={(v) => `Age: ${v} months`}

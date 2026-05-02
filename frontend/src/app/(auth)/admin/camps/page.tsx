@@ -49,7 +49,7 @@ function ZonesPanel({ campId }: { campId: string }) {
   return (
     <DataTable
       columns={ZONE_COLUMNS as Parameters<typeof DataTable>[0]['columns']}
-      data={(zones ?? []) as Record<string, unknown>[]}
+      data={(zones ?? []) }
       keyField="id"
       emptyTitle="No zones yet"
       emptyDescription="Zones will appear here once added to this camp."
@@ -186,3 +186,4 @@ export default function CampsPage() {
     </div>
   );
 }
+

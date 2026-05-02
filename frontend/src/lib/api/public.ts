@@ -21,6 +21,16 @@ export interface Camp {
   estimated_population: number | null;
 }
 
+export interface FAQItem {
+  id: string;
+  question: string;
+  answer: string;
+  order: number;
+  is_published: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 type Envelope<T>    = { status: string; data: T };
@@ -45,4 +55,12 @@ export async function getPublicCamps(): Promise<Camp[]> {
   const { data } = await apiClient.get('/camps/');
   const payload = unwrap<Camp[] | Camp>(data);
   return Array.isArray(payload) ? payload : [payload];
+}
+
+export async function listFaq(): Promise<FAQItem[]> {
+  const { data } = await apiClient.get('/faq/');
+  const payload = unwrap<FAQItem[] | { results: FAQItem[] }>(data);
+  if (Array.isArray(payload)) return payload;
+  if (payload && 'results' in payload) return payload.results;
+  return [];
 }

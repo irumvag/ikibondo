@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { FAQ_DATA, type FAQItem } from '@/data/faq';
+import { FAQ_DATA } from '@/data/faq';
+import type { FAQItem } from '@/lib/api/public';
+import { useFaq } from '@/lib/api/queries';
 import { useIntersection } from '@/hooks/useIntersection';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
@@ -65,17 +67,29 @@ function FAQRow({ item, isOpen, onToggle }: { item: FAQItem; isOpen: boolean; on
   );
 }
 
+function FAQSkeleton() {
+  return (
+    <div className="rounded-2xl overflow-hidden px-6" style={{ backgroundColor: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="py-5 border-b last:border-0" style={{ borderColor: 'var(--border)' }}>
+          <div className="h-4 rounded-lg animate-pulse" style={{ backgroundColor: 'var(--bg-sand)', width: `${55 + i * 7}%` }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Section ────────────────────────────────────────────────────────────────────
 interface FAQSectionProps {
-  /** Override data — used by About page to pass the same FAQ_DATA for now;
-   *  replaced by an API call in Phase 3 without changing this component. */
-  items?: FAQItem[];
-  /** Visual variant: 'standalone' (own padding + heading) or 'embedded' (no padding, no heading). */
   variant?: 'standalone' | 'embedded';
 }
 
-export function FAQSection({ items, variant = 'standalone' }: FAQSectionProps) {
-  const published = (items ?? FAQ_DATA)
+export function FAQSection({ variant = 'standalone' }: FAQSectionProps) {
+  const { data: apiItems, isLoading } = useFaq();
+
+  // Fall back to static data if the API returns nothing
+  const source = apiItems && apiItems.length > 0 ? apiItems : FAQ_DATA;
+  const published = source
     .filter(i => i.is_published)
     .sort((a, b) => a.order - b.order);
 
@@ -85,7 +99,7 @@ export function FAQSection({ items, variant = 'standalone' }: FAQSectionProps) {
 
   const toggle = (id: string) => setOpenId(prev => (prev === id ? null : id));
 
-  const inner = (
+  const inner = isLoading ? <FAQSkeleton /> : (
     <div
       className="rounded-2xl overflow-hidden"
       style={{

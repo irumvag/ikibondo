@@ -121,7 +121,7 @@ export default function CHWsPage() {
 
       <DataTable
         columns={COLUMNS as Parameters<typeof DataTable>[0]['columns']}
-        data={(chws ?? []) as Record<string, unknown>[]}
+        data={(chws ?? []) }
         keyField="user_id"
         isLoading={chwsLoading || zonesLoading}
         emptyTitle="No CHWs assigned"
@@ -130,3 +130,4 @@ export default function CHWsPage() {
     </div>
   );
 }
+
