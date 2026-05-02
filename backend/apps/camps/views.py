@@ -20,6 +20,9 @@ class CampViewSet(viewsets.ModelViewSet):
     ordering_fields = ['name', 'created_at']
 
     def get_permissions(self):
+        # Public read access so the homepage can list camps without authentication
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsSupervisorOrAdmin()]
         return [permissions.IsAuthenticated()]
