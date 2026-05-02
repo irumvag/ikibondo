@@ -3,6 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 // Routes anyone can visit without a session
 const PUBLIC_PATHS = ['/', '/about', '/login', '/register'];
 
+// Routes available to any authenticated user regardless of role
+const SHARED_AUTH_PATHS = ['/profile'];
+
+function isSharedAuth(pathname: string) {
+  return SHARED_AUTH_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + '/'),
+  );
+}
+
 // Where each role lands after login
 const ROLE_HOME: Record<string, string> = {
   ADMIN:      '/admin',
@@ -58,7 +67,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Authenticated user trying to access another role's routes → their home
-  if (role && !isPublic(pathname)) {
+  if (role && !isPublic(pathname) && !isSharedAuth(pathname)) {
     const allowed = ROLE_PREFIX[role];
     if (allowed && !pathname.startsWith(allowed)) {
       const url = request.nextUrl.clone();

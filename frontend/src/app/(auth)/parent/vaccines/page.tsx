@@ -1,6 +1,5 @@
 'use client';
 
-import { use } from 'react';
 import Link from 'next/link';
 import { Syringe, CheckCircle, Clock, XCircle, SkipForward, ChevronRight } from 'lucide-react';
 import { useMyChildren, useChildVaccinations } from '@/lib/api/queries';

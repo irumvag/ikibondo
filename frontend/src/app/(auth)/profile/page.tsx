@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, User } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { patchMe } from '@/lib/api/user';
+import { useTheme } from '@/components/layout/ThemeProvider';
 import { Button } from '@/components/ui/Button';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -29,23 +30,21 @@ const THEMES: { value: 'system' | 'light' | 'dark'; label: string }[] = [
 export default function ProfilePage() {
   const user    = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const { theme, setTheme } = useTheme();
 
-  const [lang,    setLang]    = useState<'rw' | 'fr' | 'en'>(user?.preferred_language ?? 'en');
-  const [theme,   setTheme]   = useState<'system' | 'light' | 'dark'>(user?.theme_preference ?? 'system');
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
-  const [error,   setError]   = useState('');
+  const [lang,   setLang]   = useState<'rw' | 'fr' | 'en'>(user?.preferred_language ?? 'en');
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+  const [error,  setError]  = useState('');
 
-  const isDirty =
-    lang  !== (user?.preferred_language ?? 'en') ||
-    theme !== (user?.theme_preference   ?? 'system');
+  const isDirty = lang !== (user?.preferred_language ?? 'en');
 
   const handleSave = async () => {
     setSaving(true);
     setError('');
     setSaved(false);
     try {
-      const updated = await patchMe({ preferred_language: lang, theme_preference: theme });
+      const updated = await patchMe({ preferred_language: lang });
       setUser(updated);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
