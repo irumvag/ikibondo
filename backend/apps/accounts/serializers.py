@@ -117,6 +117,13 @@ class ApproveUserSerializer(serializers.ModelSerializer):
         fields = ['is_approved']
 
 
+class UserAdminUpdateSerializer(serializers.ModelSerializer):
+    """Admin PATCH on any user — can edit role, camp, approval status."""
+    class Meta:
+        model = CustomUser
+        fields = ['full_name', 'email', 'phone_number', 'role', 'camp', 'is_approved']
+
+
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True, min_length=8)

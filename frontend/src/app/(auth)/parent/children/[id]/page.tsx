@@ -210,7 +210,7 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
                      NUTRITION_LABEL[latestRecord.nutrition_status] ?? latestRecord.nutrition_status_display]
                   : null,
               ]
-                .filter(Boolean)
+                .filter((x): x is string[] => x !== null)
                 .map(([k, v]) => (
                   <div key={k as string} className="flex justify-between items-center text-sm border-b last:border-b-0 pb-2 last:pb-0" style={{ borderColor: 'var(--border)' }}>
                     <span style={{ color: 'var(--text-muted)' }}>{k}</span>

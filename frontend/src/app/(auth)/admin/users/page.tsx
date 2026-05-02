@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { UserCheck, UserPlus, Users } from 'lucide-react';
-import { useAdminUsers, usePendingApprovals, QK } from '@/lib/api/queries';
-import { approveUser, createStaffUser } from '@/lib/api/admin';
+import { Pencil, UserCheck, UserPlus, UserX, Users } from 'lucide-react';
+import { useAdminUsers, useAdminCamps, usePendingApprovals, QK } from '@/lib/api/queries';
+import { approveUser, createStaffUser, updateUser, deactivateUser } from '@/lib/api/admin';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -23,29 +23,7 @@ function roleBadgeVariant(role: string) {
   return 'default';
 }
 
-const USER_COLUMNS = [
-  { key: 'full_name',  header: 'Name',       width: '180px' },
-  { key: 'email',      header: 'Email',       width: '220px' },
-  {
-    key: 'role', header: 'Role', width: '120px',
-    render: (v: unknown) => (
-      <Badge variant={roleBadgeVariant(v as string)}>
-        {ROLE_LABELS[v as string] ?? v as string}
-      </Badge>
-    ),
-  },
-  { key: 'camp_name', header: 'Camp',   width: '140px', render: (v: unknown) => (v as string) || '—' },
-  {
-    key: 'is_approved', header: 'Status', width: '100px',
-    render: (v: unknown) => (
-      <Badge variant={v ? 'success' : 'warn'}>{v ? 'Active' : 'Pending'}</Badge>
-    ),
-  },
-  {
-    key: 'date_joined', header: 'Joined', width: '120px',
-    render: (v: unknown) => new Date(v as string).toLocaleDateString(),
-  },
-];
+// ── Pending columns ───────────────────────────────────────────────────────────
 
 const PENDING_COLUMNS = (onApprove: (id: string) => void, approving: string | null) => [
   { key: 'full_name', header: 'Name',  width: '180px' },
@@ -64,12 +42,7 @@ const PENDING_COLUMNS = (onApprove: (id: string) => void, approving: string | nu
     render: (_: unknown, row: unknown) => {
       const user = row as AuthUser;
       return (
-        <Button
-          size="sm"
-          variant="secondary"
-          loading={approving === user.id}
-          onClick={() => onApprove(user.id)}
-        >
+        <Button size="sm" variant="secondary" loading={approving === user.id} onClick={() => onApprove(user.id)}>
           Approve
         </Button>
       );
@@ -77,25 +50,108 @@ const PENDING_COLUMNS = (onApprove: (id: string) => void, approving: string | nu
   },
 ];
 
-// ── Create user form ──────────────────────────────────────────────────────────
+// ── All-users columns ─────────────────────────────────────────────────────────
+
+const USER_COLUMNS = (
+  onEdit: (u: AuthUser) => void,
+  confirmingDeactivate: string | null,
+  onRequestDeactivate: (id: string) => void,
+  onCancelDeactivate: () => void,
+  onConfirmDeactivate: (id: string) => void,
+  deactivating: string | null,
+) => [
+  { key: 'full_name',  header: 'Name',   width: '180px' },
+  { key: 'email',      header: 'Email',  width: '220px' },
+  {
+    key: 'role', header: 'Role', width: '120px',
+    render: (v: unknown) => (
+      <Badge variant={roleBadgeVariant(v as string)}>
+        {ROLE_LABELS[v as string] ?? v as string}
+      </Badge>
+    ),
+  },
+  { key: 'camp_name', header: 'Camp', width: '140px', render: (v: unknown) => (v as string) || '—' },
+  {
+    key: 'is_approved', header: 'Status', width: '100px',
+    render: (v: unknown) => (
+      <Badge variant={v ? 'success' : 'warn'}>{v ? 'Active' : 'Pending'}</Badge>
+    ),
+  },
+  {
+    key: 'date_joined', header: 'Joined', width: '120px',
+    render: (v: unknown) => new Date(v as string).toLocaleDateString(),
+  },
+  {
+    key: 'id', header: '', width: '190px',
+    render: (_: unknown, row: unknown) => {
+      const user = row as AuthUser;
+      if (confirmingDeactivate === user.id) {
+        return (
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Deactivate?</span>
+            <Button size="sm" variant="danger" loading={deactivating === user.id} onClick={() => onConfirmDeactivate(user.id)}>
+              Yes
+            </Button>
+            <Button size="sm" variant="secondary" onClick={onCancelDeactivate}>No</Button>
+          </div>
+        );
+      }
+      return (
+        <div className="flex items-center gap-1.5">
+          <Button size="sm" variant="secondary" onClick={() => onEdit(user)}>
+            <Pencil size={12} aria-hidden="true" />Edit
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => onRequestDeactivate(user.id)}>
+            <UserX size={12} aria-hidden="true" />
+          </Button>
+        </div>
+      );
+    },
+  },
+];
+
+// ── Form types ────────────────────────────────────────────────────────────────
 
 interface CreateUserForm {
   full_name: string; email: string; role: string; phone_number: string; password: string;
 }
+const EMPTY_CREATE: CreateUserForm = { full_name: '', email: '', role: 'CHW', phone_number: '', password: '' };
 
-const EMPTY_FORM: CreateUserForm = { full_name: '', email: '', role: 'CHW', phone_number: '', password: '' };
+interface EditUserForm {
+  full_name: string; email: string; phone_number: string;
+  role: string; camp: string; is_approved: boolean;
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function UsersPage() {
   const qc = useQueryClient();
   const [roleFilter, setRoleFilter] = useState('');
+
+  // Approve
   const [approving, setApproving] = useState<string | null>(null);
+
+  // Create
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState<CreateUserForm>(EMPTY_FORM);
+  const [createForm, setCreateForm] = useState<CreateUserForm>(EMPTY_CREATE);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
 
+  // Edit
+  const [editingUser, setEditingUser] = useState<AuthUser | null>(null);
+  const [editForm, setEditForm] = useState<EditUserForm>({
+    full_name: '', email: '', phone_number: '', role: '', camp: '', is_approved: false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  // Deactivate
+  const [confirmingDeactivate, setConfirmingDeactivate] = useState<string | null>(null);
+  const [deactivating, setDeactivating] = useState<string | null>(null);
+
   const { data: users, isLoading: usersLoading } = useAdminUsers(roleFilter || undefined);
   const { data: pending, isLoading: pendingLoading } = usePendingApprovals();
+  const { data: camps } = useAdminCamps();
 
   const handleApprove = async (userId: string) => {
     setApproving(userId);
@@ -113,18 +169,60 @@ export default function UsersPage() {
     setCreating(true);
     setCreateError('');
     try {
-      await createStaffUser({
-        ...form,
-        phone_number: form.phone_number || undefined,
-      });
+      await createStaffUser({ ...createForm, phone_number: createForm.phone_number || undefined });
       qc.invalidateQueries({ queryKey: QK.adminUsers });
       setShowCreate(false);
-      setForm(EMPTY_FORM);
+      setCreateForm(EMPTY_CREATE);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setCreateError(msg ?? 'Failed to create user. Check the form and try again.');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const openEdit = (user: AuthUser) => {
+    setEditingUser(user);
+    setEditForm({
+      full_name: user.full_name,
+      email: user.email,
+      phone_number: user.phone_number ?? '',
+      role: user.role,
+      camp: user.camp ?? '',
+      is_approved: user.is_approved,
+    });
+    setEditError('');
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setSaving(true);
+    setEditError('');
+    try {
+      await updateUser(editingUser.id, {
+        ...editForm,
+        phone_number: editForm.phone_number || undefined,
+        camp: editForm.camp || null,
+      });
+      qc.invalidateQueries({ queryKey: QK.adminUsers });
+      setEditingUser(null);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setEditError(msg ?? 'Failed to save changes.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeactivate = async (userId: string) => {
+    setDeactivating(userId);
+    try {
+      await deactivateUser(userId);
+      qc.invalidateQueries({ queryKey: QK.adminUsers });
+      setConfirmingDeactivate(null);
+    } finally {
+      setDeactivating(null);
     }
   };
 
@@ -187,11 +285,7 @@ export default function UsersPage() {
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
             className="text-sm px-3 py-1.5 rounded-lg border outline-none"
-            style={{
-              borderColor: 'var(--border)',
-              backgroundColor: 'var(--bg-elev)',
-              color: 'var(--ink)',
-            }}
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
             aria-label="Filter by role"
           >
             {ROLE_OPTIONS.map((r) => (
@@ -200,8 +294,15 @@ export default function UsersPage() {
           </select>
         </div>
         <DataTable
-          columns={USER_COLUMNS as Parameters<typeof DataTable>[0]['columns']}
-          data={(users ?? []) }
+          columns={USER_COLUMNS(
+            openEdit,
+            confirmingDeactivate,
+            setConfirmingDeactivate,
+            () => setConfirmingDeactivate(null),
+            handleDeactivate,
+            deactivating,
+          ) as Parameters<typeof DataTable>[0]['columns']}
+          data={users ?? []}
           keyField="id"
           isLoading={usersLoading}
           emptyTitle="No users found"
@@ -209,7 +310,7 @@ export default function UsersPage() {
         />
       </section>
 
-      {/* Create user modal */}
+      {/* Create modal */}
       {showCreate && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -226,28 +327,28 @@ export default function UsersPage() {
             <form onSubmit={handleCreate} className="flex flex-col gap-3">
               <Input
                 label="Full name"
-                value={form.full_name}
-                onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                value={createForm.full_name}
+                onChange={(e) => setCreateForm({ ...createForm, full_name: e.target.value })}
                 required
               />
               <Input
                 label="Email"
                 type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                value={createForm.email}
+                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
                 required
               />
               <Input
                 label="Phone number (optional)"
                 type="tel"
-                value={form.phone_number}
-                onChange={(e) => setForm({ ...form, phone_number: e.target.value })}
+                value={createForm.phone_number}
+                onChange={(e) => setCreateForm({ ...createForm, phone_number: e.target.value })}
               />
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Role</label>
                 <select
-                  value={form.role}
-                  onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  value={createForm.role}
+                  onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
                   className="text-sm px-3 py-2 rounded-lg border outline-none"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
                   required
@@ -260,8 +361,8 @@ export default function UsersPage() {
               <Input
                 label="Temporary password"
                 type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                value={createForm.password}
+                onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                 required
               />
               {createError && (
@@ -271,7 +372,97 @@ export default function UsersPage() {
                 <Button type="submit" variant="primary" loading={creating} className="flex-1">
                   Create account
                 </Button>
-                <Button type="button" variant="secondary" onClick={() => { setShowCreate(false); setCreateError(''); }}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => { setShowCreate(false); setCreateError(''); }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit modal */}
+      {editingUser && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setEditingUser(null); }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-6 flex flex-col gap-4 shadow-xl"
+            style={{ backgroundColor: 'var(--bg-elev)', border: '1px solid var(--border)' }}
+          >
+            <h3 className="font-bold text-lg" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
+              Edit — {editingUser.full_name}
+            </h3>
+            <form onSubmit={handleSave} className="flex flex-col gap-3">
+              <Input
+                label="Full name"
+                value={editForm.full_name}
+                onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+                required
+              />
+              <Input
+                label="Email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                required
+              />
+              <Input
+                label="Phone number"
+                type="tel"
+                value={editForm.phone_number}
+                onChange={(e) => setEditForm({ ...editForm, phone_number: e.target.value })}
+              />
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Role</label>
+                <select
+                  value={editForm.role}
+                  onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                  className="text-sm px-3 py-2 rounded-lg border outline-none"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
+                >
+                  {ROLE_OPTIONS.filter(Boolean).map((r) => (
+                    <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Camp</label>
+                <select
+                  value={editForm.camp}
+                  onChange={(e) => setEditForm({ ...editForm, camp: e.target.value })}
+                  className="text-sm px-3 py-2 rounded-lg border outline-none"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
+                >
+                  <option value="">— No camp —</option>
+                  {(camps ?? []).map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={editForm.is_approved}
+                  onChange={(e) => setEditForm({ ...editForm, is_approved: e.target.checked })}
+                  className="w-4 h-4 rounded"
+                />
+                <span className="text-sm" style={{ color: 'var(--ink)' }}>Account approved</span>
+              </label>
+              {editError && (
+                <p className="text-xs" style={{ color: 'var(--danger)' }}>{editError}</p>
+              )}
+              <div className="flex gap-2 pt-1">
+                <Button type="submit" variant="primary" loading={saving} className="flex-1">
+                  Save changes
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setEditingUser(null)}>
                   Cancel
                 </Button>
               </div>
@@ -282,4 +473,3 @@ export default function UsersPage() {
     </div>
   );
 }
-

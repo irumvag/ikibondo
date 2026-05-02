@@ -12,6 +12,7 @@ from .serializers import (
     UserCreateSerializer,
     UserRegistrationSerializer,
     ApproveUserSerializer,
+    UserAdminUpdateSerializer,
 )
 from .permissions import IsAdminUser, IsSupervisorOrAdmin
 from .models import CustomUser
@@ -108,6 +109,39 @@ def create_user_view(request):
         return created_response(
             data=UserProfileSerializer(user).data,
             message='User created successfully.',
+        )
+    return error_response(str(serializer.errors), 'VALIDATION_ERROR')
+
+
+@api_view(['PATCH', 'DELETE'])
+@permission_classes([IsAdminUser])
+def manage_user_view(request, user_id):
+    """
+    PATCH  /api/v1/auth/users/<user_id>/ — admin edits any user's profile fields.
+    DELETE /api/v1/auth/users/<user_id>/ — soft-deactivate a user (sets is_active=False).
+    """
+    try:
+        user = CustomUser.objects.get(id=user_id, is_active=True)
+    except CustomUser.DoesNotExist:
+        return error_response('User not found.', 'NOT_FOUND', status_code=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'DELETE':
+        if user == request.user:
+            return error_response(
+                'Cannot deactivate your own account.',
+                'FORBIDDEN',
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+        user.is_active = False
+        user.save(update_fields=['is_active', 'updated_at'])
+        return success_response(message=f'{user.full_name} has been deactivated.')
+
+    serializer = UserAdminUpdateSerializer(user, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return success_response(
+            data=UserProfileSerializer(user).data,
+            message='User updated successfully.',
         )
     return error_response(str(serializer.errors), 'VALIDATION_ERROR')
 

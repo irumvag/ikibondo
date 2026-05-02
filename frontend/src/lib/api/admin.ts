@@ -31,6 +31,25 @@ export async function approveUser(userId: string): Promise<AuthUser> {
   return data.data;
 }
 
+export async function updateUser(
+  userId: string,
+  payload: Partial<{
+    full_name: string;
+    email: string;
+    phone_number: string;
+    role: string;
+    camp: string | null;
+    is_approved: boolean;
+  }>,
+): Promise<AuthUser> {
+  const { data } = await apiClient.patch(`/auth/users/${userId}/`, payload);
+  return data.data;
+}
+
+export async function deactivateUser(userId: string): Promise<void> {
+  await apiClient.delete(`/auth/users/${userId}/`);
+}
+
 // ── Camps & Zones ─────────────────────────────────────────────────────────────
 
 export interface Camp {
@@ -88,6 +107,76 @@ export async function listZones(campId: string): Promise<Zone[]> {
   const { data } = await apiClient.get(`/camps/${campId}/zones/`);
   const payload = data.data ?? data;
   return payload?.results ?? payload ?? [];
+}
+
+export async function createCamp(payload: {
+  name: string;
+  code: string;
+  district?: string;
+  province?: string;
+  estimated_population?: number;
+  managing_body?: string;
+  status: string;
+  capacity?: number;
+}): Promise<Camp> {
+  const { data } = await apiClient.post('/camps/', payload);
+  return data.data ?? data;
+}
+
+export async function updateCamp(
+  campId: string,
+  payload: Partial<{
+    name: string;
+    code: string;
+    district: string;
+    province: string;
+    estimated_population: number;
+    managing_body: string;
+    status: string;
+    capacity: number;
+  }>,
+): Promise<Camp> {
+  const { data } = await apiClient.patch(`/camps/${campId}/`, payload);
+  return data.data ?? data;
+}
+
+export async function deleteCamp(campId: string): Promise<void> {
+  await apiClient.delete(`/camps/${campId}/`);
+}
+
+export async function createZone(
+  campId: string,
+  payload: {
+    name: string;
+    code: string;
+    description?: string;
+    estimated_households?: number;
+    estimated_population?: number;
+    status: string;
+  },
+): Promise<Zone> {
+  const { data } = await apiClient.post(`/camps/${campId}/zones/`, payload);
+  return data.data ?? data;
+}
+
+export async function updateZone(
+  campId: string,
+  zoneId: string,
+  payload: Partial<{
+    name: string;
+    code: string;
+    description: string;
+    estimated_households: number;
+    estimated_population: number;
+    status: string;
+  }>,
+): Promise<Zone> {
+  const { data } = await apiClient.patch(`/camps/${campId}/zones/${zoneId}/`, payload);
+  return data.data ?? data;
+}
+
+export async function deleteZone(campId: string, zoneId: string): Promise<void> {
+  await apiClient.delete(`/camps/${campId}/zones/${zoneId}/`);
 }
 
 // ── ML ────────────────────────────────────────────────────────────────────────
