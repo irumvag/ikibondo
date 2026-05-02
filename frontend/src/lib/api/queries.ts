@@ -7,6 +7,9 @@ import {
 import {
   getZoneStats, getCHWActivity, listHighRiskRecords, listCampChildren,
 } from './supervisor';
+import {
+  getGrowthData, getChild, getChildHistory, getChildNotes, listHealthRecords,
+} from './nurse';
 
 export const QK = {
   landingStats:       ['landing-stats']       as const,
@@ -21,6 +24,11 @@ export const QK = {
   chwActivity:        (campId: string, zoneId: string) => ['chw-activity', campId, zoneId] as const,
   highRiskRecords:    (zone?: string, page?: number)   => ['high-risk-records', zone, page] as const,
   campChildren:       (camp?: string, status?: string, page?: number) => ['camp-children', camp, status, page] as const,
+  growthData:         (childId: string) => ['growth-data', childId] as const,
+  child:              (childId: string) => ['child', childId] as const,
+  childHistory:       (childId: string) => ['child-history', childId] as const,
+  childNotes:         (childId: string) => ['child-notes', childId] as const,
+  healthRecords:      (params: Record<string, unknown>) => ['health-records', params] as const,
 };
 
 export function useLandingStats() {
@@ -132,6 +140,60 @@ export function useCampChildren(camp?: string, status?: string, page = 1) {
     queryKey: QK.campChildren(camp, status, page),
     queryFn: () => listCampChildren({ camp, status, page, page_size: 20 }),
     enabled: !!camp,
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useGrowthData(childId: string | null) {
+  return useQuery({
+    queryKey: QK.growthData(childId ?? ''),
+    queryFn: () => getGrowthData(childId!),
+    enabled: !!childId,
+    staleTime: 60_000,
+    retry: 1,
+  });
+}
+
+export function useChild(childId: string | null) {
+  return useQuery({
+    queryKey: QK.child(childId ?? ''),
+    queryFn: () => getChild(childId!),
+    enabled: !!childId,
+    staleTime: 60_000,
+    retry: 1,
+  });
+}
+
+export function useChildHistory(childId: string | null) {
+  return useQuery({
+    queryKey: QK.childHistory(childId ?? ''),
+    queryFn: () => getChildHistory(childId!),
+    enabled: !!childId,
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useChildNotes(childId: string | null) {
+  return useQuery({
+    queryKey: QK.childNotes(childId ?? ''),
+    queryFn: () => getChildNotes(childId!),
+    enabled: !!childId,
+    staleTime: 15_000,
+    retry: 1,
+  });
+}
+
+export function useHealthRecords(params: {
+  risk_level?: string;
+  nutrition_status?: string;
+  zone?: string;
+  page?: number;
+}) {
+  return useQuery({
+    queryKey: QK.healthRecords(params as Record<string, unknown>),
+    queryFn: () => listHealthRecords({ ...params, page_size: 20 }),
     staleTime: 30_000,
     retry: 1,
   });
