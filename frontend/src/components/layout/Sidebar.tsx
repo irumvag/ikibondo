@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, MapPin, ScrollText, Cpu,
   AlertTriangle, Activity, Baby, FileBarChart, ClipboardList,
   UserPlus, Stethoscope, Syringe, RefreshCw,
-  Heart, Bell, X, LogOut,
+  Heart, Bell, X, LogOut, Settings,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuthStore, type UserRole } from '@/store/authStore';
@@ -180,6 +180,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
         </div>
 
+        <Link
+          href="/profile"
+          onClick={onClose}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-[var(--bg-sand)]"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          <Settings size={16} aria-hidden="true" />
+          Profile &amp; settings
+        </Link>
         <button
           type="button"
           onClick={handleLogout}

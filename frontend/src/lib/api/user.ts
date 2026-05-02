@@ -1,67 +1,77 @@
 import { apiClient } from './client';
 import type { AuthUser } from '@/store/authStore';
 
-type Envelope<T> = { status: string; data: T };
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-function unwrap<T>(raw: unknown): T {
-  if (raw && typeof raw === 'object' && 'data' in raw) {
-    return (raw as Envelope<T>).data;
-  }
-  return raw as T;
+export interface AppNotification {
+  id:           string;
+  trigger_type: string;
+  title:        string;
+  body:         string;
+  is_read:      boolean;
+  created_at:   string;
+  child_name:   string | null;
 }
 
-// ── Current user ─────────────────────────────────────────────────────────────
+interface BackendNotification {
+  id:                        string;
+  notification_type:         string;
+  notification_type_display: string;
+  message:                   string;
+  is_read:                   boolean;
+  created_at:                string;
+  sent_at:                   string | null;
+  child_name:                string | null;
+}
+
+function adapt(n: BackendNotification): AppNotification {
+  return {
+    id:           n.id,
+    trigger_type: n.notification_type,
+    title:        n.notification_type_display,
+    body:         n.message,
+    is_read:      n.is_read,
+    created_at:   n.created_at ?? n.sent_at ?? new Date().toISOString(),
+    child_name:   n.child_name,
+  };
+}
+
+// ── Current user ──────────────────────────────────────────────────────────────
 
 export async function getMe(): Promise<AuthUser> {
   const { data } = await apiClient.get('/auth/me/');
-  return unwrap<AuthUser>(data);
+  return data.data;
 }
 
 export async function patchMe(
-  payload: Partial<Pick<AuthUser, 'preferred_language' | 'theme_preference' | 'full_name'>>,
+  payload: Partial<Pick<AuthUser, 'preferred_language' | 'theme_preference'> & { phone_number?: string }>,
 ): Promise<AuthUser> {
   const { data } = await apiClient.patch('/auth/me/', payload);
-  return unwrap<AuthUser>(data);
+  return data.data;
 }
 
 // ── Notifications ─────────────────────────────────────────────────────────────
 
-export interface AppNotification {
-  id: string;
-  title: string;
-  body: string;
-  is_read: boolean;
-  created_at: string;
-  trigger_type:
-    | 'HIGH_RISK_ALERT'
-    | 'VACCINATION_REMINDER'
-    | 'VACCINATION_OVERDUE'
-    | 'ZONE_SUMMARY'
-    | 'CHW_INACTIVE'
-    | 'ACCOUNT_APPROVED';
-}
-
-interface Paginated<T> { count: number; results: T[] }
-
 export async function getUnreadNotifications(): Promise<{
-  count: number;
+  count:   number;
   results: AppNotification[];
 }> {
-  const { data } = await apiClient.get<Paginated<AppNotification>>(
-    '/notifications/',
-    { params: { is_read: false, page_size: 10 } },
-  );
-  // Handle both { count, results } and { data: { count, results } } envelopes
-  if (data && typeof data === 'object' && 'data' in data) {
-    return (data as unknown as Envelope<Paginated<AppNotification>>).data;
-  }
-  return data;
+  const { data } = await apiClient.get('/notifications/');
+  const all: BackendNotification[] = data.data ?? [];
+  const unread = all.filter((n) => !n.is_read).map(adapt);
+  return { count: unread.length, results: unread };
+}
+
+export async function getAllNotifications(): Promise<AppNotification[]> {
+  const { data } = await apiClient.get('/notifications/');
+  const all: BackendNotification[] = data.data ?? [];
+  return all.map(adapt);
 }
 
 export async function markNotificationRead(id: string): Promise<void> {
-  await apiClient.patch(`/notifications/${id}/`, { is_read: true });
+  await apiClient.patch(`/notifications/${id}/read/`);
 }
 
 export async function markAllNotificationsRead(): Promise<void> {
-  await apiClient.post('/notifications/mark-all-read/');
+  await apiClient.patch('/notifications/read-all/');
 }

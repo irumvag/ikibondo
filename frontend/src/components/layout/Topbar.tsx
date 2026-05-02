@@ -30,6 +30,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/parent/vaccines':      'Vaccination Card',
   '/parent/notifications': 'Notifications',
   '/parent':               'My Children',
+  '/profile':              'Profile',
 };
 
 function getPageTitle(pathname: string) {
