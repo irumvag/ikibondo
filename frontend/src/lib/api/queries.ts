@@ -4,6 +4,9 @@ import {
   listUsers, getPendingApprovals, listCamps, listZones,
   getModelInfo, listPredictions,
 } from './admin';
+import {
+  getZoneStats, getCHWActivity, listHighRiskRecords, listCampChildren,
+} from './supervisor';
 
 export const QK = {
   landingStats:       ['landing-stats']       as const,
@@ -14,6 +17,10 @@ export const QK = {
   adminZones:         (campId: string) => ['admin-zones', campId] as const,
   modelInfo:          ['model-info']          as const,
   predictions:        ['predictions']         as const,
+  zoneStats:          (campId: string, zoneId: string) => ['zone-stats', campId, zoneId] as const,
+  chwActivity:        (campId: string, zoneId: string) => ['chw-activity', campId, zoneId] as const,
+  highRiskRecords:    (zone?: string, page?: number)   => ['high-risk-records', zone, page] as const,
+  campChildren:       (camp?: string, status?: string, page?: number) => ['camp-children', camp, status, page] as const,
 };
 
 export function useLandingStats() {
@@ -86,6 +93,45 @@ export function usePredictions(model?: string) {
   return useQuery({
     queryKey: [...QK.predictions, model ?? 'all'],
     queryFn: () => listPredictions({ model, limit: 50 }),
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useZoneStats(campId: string | null, zoneId: string | null) {
+  return useQuery({
+    queryKey: QK.zoneStats(campId ?? '', zoneId ?? ''),
+    queryFn: () => getZoneStats(campId!, zoneId!),
+    enabled: !!campId && !!zoneId,
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useCHWActivity(campId: string | null, zoneId: string | null) {
+  return useQuery({
+    queryKey: QK.chwActivity(campId ?? '', zoneId ?? ''),
+    queryFn: () => getCHWActivity(campId!, zoneId!),
+    enabled: !!campId && !!zoneId,
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useHighRiskRecords(zone?: string, page = 1) {
+  return useQuery({
+    queryKey: QK.highRiskRecords(zone, page),
+    queryFn: () => listHighRiskRecords({ zone, page, page_size: 20 }),
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useCampChildren(camp?: string, status?: string, page = 1) {
+  return useQuery({
+    queryKey: QK.campChildren(camp, status, page),
+    queryFn: () => listCampChildren({ camp, status, page, page_size: 20 }),
+    enabled: !!camp,
     staleTime: 30_000,
     retry: 1,
   });

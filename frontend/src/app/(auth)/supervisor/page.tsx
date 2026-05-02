@@ -1,64 +1,206 @@
 'use client';
 
-import { Baby, AlertTriangle, Activity, FileBarChart } from 'lucide-react';
+import { useState } from 'react';
+import { Baby, AlertTriangle, Activity, Syringe, Users, Eye } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { KPICard } from '@/components/ui/KPICard';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { Badge } from '@/components/ui/Badge';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { useAdminZones, useZoneStats } from '@/lib/api/queries';
+
+function ZoneSelector({
+  zones,
+  selected,
+  onChange,
+}: {
+  zones: { id: string; name: string; code: string }[];
+  selected: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <select
+      value={selected}
+      onChange={(e) => onChange(e.target.value)}
+      className="text-sm px-3 py-1.5 rounded-lg border outline-none"
+      style={{
+        borderColor: 'var(--border)',
+        backgroundColor: 'var(--bg-elev)',
+        color: 'var(--ink)',
+      }}
+      aria-label="Select zone"
+    >
+      {zones.map((z) => (
+        <option key={z.id} value={z.id}>
+          {z.name} ({z.code})
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export default function SupervisorDashboard() {
   const user = useAuthStore((s) => s.user);
+  const campId = user?.camp ?? null;
+
+  const { data: zones, isLoading: zonesLoading } = useAdminZones(campId);
+  const [selectedZone, setSelectedZone] = useState<string>('');
+
+  // Default to first zone once loaded
+  const activeZoneId = selectedZone || zones?.[0]?.id || null;
+
+  const { data: stats, isLoading: statsLoading } = useZoneStats(campId, activeZoneId);
+
+  const riskTotal =
+    (stats?.risk_distribution.LOW ?? 0) +
+    (stats?.risk_distribution.MEDIUM ?? 0) +
+    (stats?.risk_distribution.HIGH ?? 0) +
+    (stats?.risk_distribution.UNKNOWN ?? 0);
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h2
-          className="text-2xl font-bold"
-          style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          Zone Overview
-        </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Welcome back, {user?.full_name ?? 'Supervisor'}.
-        </p>
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h2
+            className="text-2xl font-bold"
+            style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
+          >
+            Zone Overview
+          </h2>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+            Welcome back, {user?.full_name ?? 'Supervisor'} &middot; {user?.camp_name ?? '—'}
+          </p>
+        </div>
+        {zonesLoading ? (
+          <Skeleton className="h-8 w-40 rounded-lg" />
+        ) : zones && zones.length > 0 ? (
+          <ZoneSelector
+            zones={zones}
+            selected={activeZoneId ?? ''}
+            onChange={setSelectedZone}
+          />
+        ) : null}
       </div>
 
+      {/* KPIs */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           label="Children in zone"
-          value="—"
+          value={stats ? stats.total_children.toLocaleString() : '—'}
           icon={<Baby size={18} />}
-          isLoading
+          isLoading={statsLoading}
         />
         <KPICard
           label="HIGH-risk alerts"
-          value="—"
+          value={stats ? stats.risk_distribution.HIGH.toString() : '—'}
           icon={<AlertTriangle size={18} />}
-          variant="danger"
+          variant={stats && stats.risk_distribution.HIGH > 0 ? 'danger' : 'default'}
           subtext="Needs follow-up"
-          isLoading
+          isLoading={statsLoading}
         />
         <KPICard
           label="Active CHWs"
-          value="—"
+          value={stats ? stats.active_chws.toString() : '—'}
           icon={<Activity size={18} />}
           variant="success"
-          subtext="Visits this week"
-          isLoading
+          subtext={stats ? `${stats.visits_this_week} visits this week` : undefined}
+          isLoading={statsLoading}
         />
         <KPICard
           label="Vaccination coverage"
-          value="—"
-          icon={<FileBarChart size={18} />}
+          value={stats ? `${Math.round(stats.vaccination_coverage_pct)}%` : '—'}
+          icon={<Syringe size={18} />}
           subtext="Zone average"
-          isLoading
+          isLoading={statsLoading}
         />
       </div>
 
-      <EmptyState
-        icon={<Activity size={24} />}
-        title="Zone detail coming in Phase 4"
-        description="CHW activity, high-risk alerts, zone-scoped children list, and exportable reports."
-      />
+      {/* Two-column detail */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Risk distribution */}
+        <div
+          className="rounded-2xl border p-5 flex flex-col gap-4"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+        >
+          <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>
+            Risk distribution
+          </h3>
+          {statsLoading ? (
+            <div className="flex flex-col gap-2">
+              {[0, 1, 2].map((i) => <Skeleton key={i} className="h-8 rounded-lg" />)}
+            </div>
+          ) : stats ? (
+            <div className="flex flex-col gap-3">
+              {(['HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'] as const).map((level) => {
+                const count = stats.risk_distribution[level] ?? 0;
+                const pct = riskTotal > 0 ? (count / riskTotal) * 100 : 0;
+                return (
+                  <div key={level} className="flex items-center gap-3">
+                    <Badge
+                      variant={level === 'HIGH' ? 'danger' : level === 'MEDIUM' ? 'warn' : level === 'LOW' ? 'success' : 'default'}
+                      className="w-20 justify-center"
+                    >
+                      {level}
+                    </Badge>
+                    <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-sand)' }}>
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${pct}%`,
+                          backgroundColor:
+                            level === 'HIGH' ? 'var(--danger, #ef4444)'
+                            : level === 'MEDIUM' ? 'var(--warn, #f59e0b)'
+                            : level === 'LOW' ? 'var(--success, #22c55e)'
+                            : 'var(--text-muted)',
+                        }}
+                      />
+                    </div>
+                    <span className="text-sm font-semibold w-10 text-right" style={{ color: 'var(--ink)' }}>
+                      {count}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No data — select a zone above.</p>
+          )}
+        </div>
+
+        {/* CHW summary */}
+        <div
+          className="rounded-2xl border p-5 flex flex-col gap-4"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+        >
+          <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>
+            Workforce snapshot
+          </h3>
+          {statsLoading ? (
+            <div className="flex flex-col gap-2">
+              {[0, 1, 2].map((i) => <Skeleton key={i} className="h-8 rounded-lg" />)}
+            </div>
+          ) : stats ? (
+            <div className="flex flex-col gap-3">
+              {[
+                { icon: Users,   label: 'Active CHWs',          value: stats.active_chws,             variant: 'success' as const },
+                { icon: Users,   label: 'Inactive CHWs',        value: stats.inactive_chws,           variant: stats.inactive_chws > 0 ? 'warn' as const : 'default' as const },
+                { icon: Eye,     label: 'Visits this week',     value: stats.visits_this_week,        variant: 'default' as const },
+                { icon: Baby,    label: 'Never visited',        value: stats.children_never_visited,  variant: stats.children_never_visited > 0 ? 'danger' as const : 'default' as const },
+              ].map(({ icon: Icon, label, value, variant }) => (
+                <div key={label} className="flex items-center justify-between py-2 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
+                  <div className="flex items-center gap-2">
+                    <Icon size={15} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{label}</span>
+                  </div>
+                  <Badge variant={variant}>{value}</Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No data — select a zone above.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
