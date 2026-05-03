@@ -7,6 +7,22 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
+def send_email_task(
+    to: str,
+    template: str,
+    subject: str,
+    context: dict,
+    language: str = 'en',
+):
+    """
+    Async wrapper around send_branded_email.
+    Call with .delay(...) so the request doesn't block on SMTP.
+    """
+    from apps.accounts.emails import send_branded_email
+    send_branded_email(to=to, template=template, subject=subject, context=context, language=language)
+
+
+@shared_task
 def send_sam_alert(child_id: str, health_record_id: str):
     """Legacy SAM alert — kept for backward-compat with existing callers."""
     notify_high_risk.delay(health_record_id)

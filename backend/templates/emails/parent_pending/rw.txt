@@ -1,0 +1,17 @@
+Kwiyandikisha kwakiriwe - Ikibondo
+===================================
+
+Muraho {{ full_name }},
+
+Murakoze kwiyandikisha kuri Ikibondo.
+
+Konti yawe iri GUTEGEREZWA KWEMEZWA n'umuyobozi.
+Muzabona imeyili indi iyo iemezwa.
+
+Imeyili: {{ email }}
+
+---
+Ufite ibibazo? Andikira support@ikibondo.rw.
+
+Ikibondo - Sisitemu yo gukurikirana ubuzima bw'abana
+{{ frontend_url }}

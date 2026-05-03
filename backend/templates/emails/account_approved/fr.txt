@@ -1,0 +1,14 @@
+Compte approuve - Ikibondo
+==========================
+
+Bonjour {{ full_name }},
+
+Votre compte Ikibondo a ete APPROUVE.
+
+Connectez-vous ici : {{ login_url }}
+
+---
+Questions ? Ecrivez a support@ikibondo.rw.
+
+Ikibondo
+{{ frontend_url }}

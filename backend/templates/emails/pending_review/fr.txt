@@ -1,0 +1,16 @@
+Nouveau compte en attente d'approbation - Ikibondo
+===================================================
+
+Bonjour,
+
+Un nouveau parent s'est inscrit sur Ikibondo et attend votre approbation.
+
+Nom :   {{ applicant_name }}
+Email : {{ applicant_email }}
+{% if camp_name %}Camp :  {{ camp_name }}{% endif %}
+
+Approuver ici : {{ approvals_url }}
+
+---
+Ikibondo
+{{ frontend_url }}

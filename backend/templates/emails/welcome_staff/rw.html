@@ -1,0 +1,27 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>Murakaza neza kuri Ikibondo</h1>
+<p>Muraho <strong>{{ full_name }}</strong>,</p>
+<p>Konti yawe yafunguwe kuri sisitemu ya <strong>Ikibondo</strong> yo gukurikirana ubuzima bw'abana. Ushoboye kwinjira ukoresheje amakuru akurikira.</p>
+
+<div class="credential-box">
+  <strong>Imeyili</strong>
+  <code>{{ email }}</code>
+</div>
+<div class="credential-box">
+  <strong>Ijambo ry'ibanga ry'agateganyo</strong>
+  <code>{{ temp_password }}</code>
+</div>
+
+<p>
+  <a href="{{ login_url }}" class="cta">Injira none</a>
+</p>
+
+<p><strong>Ingenzi:</strong> Uzasabwa guhindura ijambo ry'ibanga ubwa mbere ubinjiramo. Hitamo ijambo ry'ibanga rikomeye.</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  Niba utari wowe wahawe konti iyi, vugana na nyiri ubuyobozi bwawe cyangwa andikira
+  <a href="mailto:support@ikibondo.rw">support@ikibondo.rw</a>.
+</p>
+{% endblock %}

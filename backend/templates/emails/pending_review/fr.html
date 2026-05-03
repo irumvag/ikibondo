@@ -1,0 +1,30 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>Nouveau compte en attente d'approbation</h1>
+<p>Bonjour,</p>
+<p>Un nouveau parent / tuteur s'est inscrit sur <strong>Ikibondo</strong> et attend votre approbation.</p>
+
+<div class="credential-box">
+  <strong>Nom</strong>
+  <code>{{ applicant_name }}</code>
+</div>
+<div class="credential-box">
+  <strong>Email</strong>
+  <code>{{ applicant_email }}</code>
+</div>
+{% if camp_name %}
+<div class="credential-box">
+  <strong>Camp</strong>
+  <code>{{ camp_name }}</code>
+</div>
+{% endif %}
+
+<p>
+  <a href="{{ approvals_url }}" class="cta">Voir les approbations</a>
+</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  Cette notification vous a ete envoyee parce que vous etes superviseur ou administrateur de ce camp.
+</p>
+{% endblock %}

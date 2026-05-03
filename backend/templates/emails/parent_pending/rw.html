@@ -1,0 +1,18 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>Kwiyandikisha kwakiriwe</h1>
+<p>Muraho <strong>{{ full_name }}</strong>,</p>
+<p>Murakoze kwiyandikisha kuri <strong>Ikibondo</strong>. Konti yawe yafunguwe kandi iri gutegerezwa <strong>kwemezwa</strong> n'umuyobozi w'ivuriro.</p>
+<p>Muzabona imeyili indi konti yawe iemezwa.</p>
+
+<div class="credential-box">
+  <strong>Imeyili yanditseho</strong>
+  <code>{{ email }}</code>
+</div>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  Ufite ibibazo? Vugana n'ivuriro ryawe rya hafi cyangwa andikira
+  <a href="mailto:support@ikibondo.rw">support@ikibondo.rw</a>.
+</p>
+{% endblock %}

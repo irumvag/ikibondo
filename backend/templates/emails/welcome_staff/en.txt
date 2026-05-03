@@ -1,0 +1,21 @@
+Welcome to Ikibondo
+===================
+
+Hello {{ full_name }},
+
+Your account has been created on the Ikibondo child health monitoring platform.
+
+Login credentials:
+  Email:             {{ email }}
+  Temporary Password: {{ temp_password }}
+
+Log in at: {{ login_url }}
+
+IMPORTANT: You will be asked to change your password on your first login.
+Please choose a strong, unique password.
+
+---
+If you did not expect this account, please contact your supervisor or email support@ikibondo.rw.
+
+Ikibondo - Child Health Monitoring System
+{{ frontend_url }}

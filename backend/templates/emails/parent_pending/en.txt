@@ -1,0 +1,17 @@
+Registration Received - Ikibondo
+================================
+
+Hello {{ full_name }},
+
+Thank you for registering on Ikibondo.
+
+Your account is currently PENDING APPROVAL by a health facility supervisor.
+You will receive another email once approved.
+
+Registered email: {{ email }}
+
+---
+Questions? Contact your nearest health facility or email support@ikibondo.rw.
+
+Ikibondo - Child Health Monitoring System
+{{ frontend_url }}

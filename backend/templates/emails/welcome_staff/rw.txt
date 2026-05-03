@@ -1,0 +1,20 @@
+Murakaza neza kuri Ikibondo
+===========================
+
+Muraho {{ full_name }},
+
+Konti yawe yafunguwe kuri sisitemu ya Ikibondo.
+
+Amakuru yo kwinjira:
+  Imeyili:                   {{ email }}
+  Ijambo ry'ibanga agateganyo: {{ temp_password }}
+
+Injira hano: {{ login_url }}
+
+INGENZI: Uzasabwa guhindura ijambo ry'ibanga ubwa mbere ubinjiramo.
+
+---
+Niba utari wowe, vugana na nyiri ubuyobozi bwawe cyangwa andikira support@ikibondo.rw.
+
+Ikibondo - Sisitemu yo gukurikirana ubuzima bw'abana
+{{ frontend_url }}
