@@ -36,8 +36,9 @@ class TestCampList:
         assert isinstance(results, list)
 
     def test_list_camps_unauthenticated(self, client, camp):
+        # Camp list is intentionally public (used by landing page stats)
         resp = client.get(reverse('camp-list'))
-        assert resp.status_code == 401
+        assert resp.status_code == 200
 
 
 @pytest.mark.django_db

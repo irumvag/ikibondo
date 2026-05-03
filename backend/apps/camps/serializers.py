@@ -35,7 +35,7 @@ class CampZoneSerializer(serializers.ModelSerializer):
             'estimated_households', 'estimated_population', 'status',
             'is_active', 'created_at',
         ]
-        read_only_fields = ['id', 'created_at', 'camp_name']
+        read_only_fields = ['id', 'created_at', 'camp', 'camp_name']
 
 
 class ZoneCoordinatorAssignmentSerializer(serializers.ModelSerializer):

@@ -16,12 +16,14 @@ import { Skeleton } from '@/components/ui/Skeleton';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const STATUS_OPTIONS = ['ACTIVE', 'INACTIVE', 'CLOSED'];
+const CAMP_STATUS_OPTIONS  = ['active', 'closed', 'transitioning'];
+const ZONE_STATUS_OPTIONS  = ['active', 'inactive'];
 
 function statusVariant(s: string) {
-  if (s === 'ACTIVE') return 'success';
-  if (s === 'INACTIVE') return 'default';
-  return 'warn';
+  const l = s.toLowerCase();
+  if (l === 'active') return 'success';
+  if (l === 'inactive' || l === 'closed') return 'default';
+  return 'warn';  // transitioning, etc.
 }
 
 // ── Camp form ─────────────────────────────────────────────────────────────────
@@ -33,7 +35,7 @@ interface CampForm {
 
 const EMPTY_CAMP: CampForm = {
   name: '', code: '', district: '', province: '',
-  status: 'ACTIVE', estimated_population: '', managing_body: '', capacity: '',
+  status: 'active', estimated_population: '', managing_body: '', capacity: '',
 };
 
 function campFormToPayload(f: CampForm) {
@@ -70,7 +72,7 @@ interface ZoneForm {
 }
 
 const EMPTY_ZONE: ZoneForm = {
-  name: '', code: '', description: '', status: 'ACTIVE',
+  name: '', code: '', description: '', status: 'active',
   estimated_households: '', estimated_population: '',
 };
 
@@ -121,7 +123,7 @@ function CampFormFields({ form, onChange }: {
           className="text-sm px-3 py-2 rounded-lg border outline-none"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
         >
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+          {CAMP_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -154,7 +156,7 @@ function ZoneFormFields({ form, onChange }: {
           className="text-sm px-3 py-2 rounded-lg border outline-none"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
         >
-          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+          {ZONE_STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
       <div className="grid grid-cols-2 gap-3">
