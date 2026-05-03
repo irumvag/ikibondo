@@ -15,7 +15,7 @@ export async function createStaffUser(payload: {
   role: string;
   phone_number?: string;
   camp?: string;
-  password: string;
+  password?: string;
 }): Promise<AuthUser> {
   const { data } = await apiClient.post('/auth/users/', payload);
   return data.data;

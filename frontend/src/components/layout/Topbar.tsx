@@ -19,6 +19,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/supervisor/chws':      'CHW Activity',
   '/supervisor/children':  'Children',
   '/supervisor/reports':   'Reports',
+  '/supervisor/users':     'Camp staff',
   '/supervisor':           'Zone Overview',
   '/nurse/children':       'Children',
   '/nurse/records':        'Health Records',

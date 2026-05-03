@@ -32,6 +32,7 @@ const ROLE_NAV: Record<UserRole, NavItem[]> = {
     { href: '/supervisor/chws',     label: 'CHW Activity',      icon: Activity },
     { href: '/supervisor/children', label: 'Children',          icon: Baby },
     { href: '/supervisor/reports',  label: 'Reports',           icon: FileBarChart },
+    { href: '/supervisor/users',    label: 'Camp staff',        icon: Users },
   ],
   NURSE: [
     { href: '/nurse',          label: 'Overview',       icon: LayoutDashboard },

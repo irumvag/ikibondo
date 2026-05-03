@@ -25,6 +25,7 @@ export const LANGUAGE_LABELS: Record<(typeof LANGUAGES)[number], string> = {
   en: 'English',
 };
 
+// Self-signup is PARENT only — role field is omitted from the form
 export const registerSchema = z
   .object({
     full_name: z
@@ -40,7 +41,6 @@ export const registerSchema = z
       .regex(/^\+?[\d\s\-()]{10,}$/, 'Invalid phone number format'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     password_confirm: z.string().min(1, 'Please confirm your password'),
-    role: z.enum(USER_ROLES, { error: 'Please select a role' }),
     preferred_language: z.enum(LANGUAGES),
     camp: z
       .string()
@@ -53,3 +53,4 @@ export const registerSchema = z
   });
 
 export type RegisterFormValues = z.infer<typeof registerSchema>;
+// Role is always PARENT for self-signup — added server-side

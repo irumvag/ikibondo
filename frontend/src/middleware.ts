@@ -36,6 +36,15 @@ function isPublic(pathname: string) {
   );
 }
 
+// Paths exempt from the force-password-change redirect
+const FORCE_PW_EXEMPT = ['/profile', '/login', '/logout'];
+
+function isForcePwExempt(pathname: string) {
+  return FORCE_PW_EXEMPT.some(
+    (p) => pathname === p || pathname.startsWith(p + '/'),
+  );
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -57,6 +66,17 @@ export function middleware(request: NextRequest) {
     url.pathname = '/login';
     url.searchParams.set('next', pathname);
     return NextResponse.redirect(url);
+  }
+
+  // Force-password-change hard block: redirect every protected page to /profile?force=1
+  if (role) {
+    const mustChangePw = request.cookies.get('_ikibondo_must_change_pw')?.value;
+    if (mustChangePw === '1' && !isPublic(pathname) && !isForcePwExempt(pathname)) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/profile';
+      url.searchParams.set('force', '1');
+      return NextResponse.redirect(url);
+    }
   }
 
   // Authenticated user hitting login/register → their home dashboard

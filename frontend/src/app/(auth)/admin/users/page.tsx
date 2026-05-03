@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Pencil, UserCheck, UserPlus, UserX, Users } from 'lucide-react';
+import { Check, Pencil, UserCheck, UserPlus, UserX, Users } from 'lucide-react';
 import { useAdminUsers, useAdminCamps, usePendingApprovals, QK } from '@/lib/api/queries';
 import { approveUser, createStaffUser, updateUser, deactivateUser } from '@/lib/api/admin';
 import { DataTable } from '@/components/ui/DataTable';
@@ -117,6 +117,9 @@ interface CreateUserForm {
 }
 const EMPTY_CREATE: CreateUserForm = { full_name: '', email: '', role: 'CHW', phone_number: '', password: '' };
 
+// Toast auto-dismiss duration
+const TOAST_MS = 5000;
+
 interface EditUserForm {
   full_name: string; email: string; phone_number: string;
   role: string; camp: string; is_approved: boolean;
@@ -136,6 +139,13 @@ export default function UsersPage() {
   const [createForm, setCreateForm] = useState<CreateUserForm>(EMPTY_CREATE);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [createToast, setCreateToast] = useState('');  // email of successfully created user
+
+  useEffect(() => {
+    if (!createToast) return;
+    const t = setTimeout(() => setCreateToast(''), TOAST_MS);
+    return () => clearTimeout(t);
+  }, [createToast]);
 
   // Edit
   const [editingUser, setEditingUser] = useState<AuthUser | null>(null);
@@ -169,10 +179,15 @@ export default function UsersPage() {
     setCreating(true);
     setCreateError('');
     try {
-      await createStaffUser({ ...createForm, phone_number: createForm.phone_number || undefined });
+      const created = await createStaffUser({
+        ...createForm,
+        phone_number: createForm.phone_number || undefined,
+        password: createForm.password || undefined,
+      });
       qc.invalidateQueries({ queryKey: QK.adminUsers });
       setShowCreate(false);
       setCreateForm(EMPTY_CREATE);
+      setCreateToast(created.email);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setCreateError(msg ?? 'Failed to create user. Check the form and try again.');
@@ -228,6 +243,23 @@ export default function UsersPage() {
 
   return (
     <div className="flex flex-col gap-8">
+      {/* Success toast */}
+      {createToast && (
+        <div
+          role="status"
+          className="flex items-center gap-3 rounded-2xl border px-5 py-3"
+          style={{
+            borderColor: 'color-mix(in srgb, var(--success) 40%, transparent)',
+            backgroundColor: 'color-mix(in srgb, var(--success) 10%, var(--bg-elev))',
+          }}
+        >
+          <Check size={16} style={{ color: 'var(--success)' }} aria-hidden="true" />
+          <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
+            Account created. Welcome email sent to <strong>{createToast}</strong>.
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
@@ -359,11 +391,11 @@ export default function UsersPage() {
                 </select>
               </div>
               <Input
-                label="Temporary password"
+                label="Temporary password (optional — leave blank to auto-generate and email to user)"
                 type="password"
                 value={createForm.password}
                 onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                required
+                autoComplete="new-password"
               />
               {createError && (
                 <p className="text-xs" style={{ color: 'var(--danger)' }}>{createError}</p>

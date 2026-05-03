@@ -11,6 +11,7 @@ export interface AuthUser {
   camp: string | null;
   camp_name: string | null;
   is_approved: boolean;
+  must_change_password: boolean;
   preferred_language: 'rw' | 'fr' | 'en';
   theme_preference: 'system' | 'light' | 'dark';
 }
@@ -35,6 +36,16 @@ function clearRoleCookie() {
   document.cookie = '_ikibondo_role=; path=/; max-age=0';
 }
 
+function setMustChangePwCookie(value: boolean) {
+  if (typeof document === 'undefined') return;
+  document.cookie = `_ikibondo_must_change_pw=${value ? '1' : '0'}; path=/; SameSite=Strict`;
+}
+
+function clearMustChangePwCookie() {
+  if (typeof document === 'undefined') return;
+  document.cookie = '_ikibondo_must_change_pw=; path=/; max-age=0';
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   accessToken: null,
@@ -46,6 +57,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       localStorage.setItem('access_token', accessToken);
       localStorage.setItem('refresh_token', refreshToken);
       setRoleCookie(user.role);
+      setMustChangePwCookie(user.must_change_password ?? false);
     }
     set({ user, accessToken, isLoading: false });
   },
@@ -56,12 +68,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       clearRoleCookie();
+      clearMustChangePwCookie();
     }
     set({ user: null, accessToken: null, isLoading: false });
   },
 
   setUser: (user) => {
     setRoleCookie(user.role);
+    setMustChangePwCookie(user.must_change_password ?? false);
     set({ user });
   },
 

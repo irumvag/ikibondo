@@ -8,7 +8,6 @@ import { CheckCircle } from 'lucide-react';
 import {
   registerSchema,
   type RegisterFormValues,
-  ROLE_LABELS,
   LANGUAGE_LABELS,
 } from '@/lib/schemas/auth';
 import { registerUser } from '@/lib/api/auth';
@@ -43,7 +42,7 @@ export function RegisterForm() {
         full_name:          values.full_name,
         phone_number:       values.phone_number,
         password:           values.password,
-        role:               values.role,
+        role:               'PARENT', // self-signup is always PARENT
         preferred_language: values.preferred_language ?? 'rw',
         ...(values.email ? { email: values.email } : {}),
         ...(values.camp  ? { camp:  values.camp  } : {}),
@@ -99,7 +98,7 @@ export function RegisterForm() {
         </h2>
         <p className="text-sm mb-6 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
           Your account is pending approval by your camp supervisor or
-          administrator. You will receive an SMS once your account is activated.
+          administrator. You&apos;ll receive an email once your account is activated.
         </p>
         <Link
           href="/login"
@@ -123,15 +122,18 @@ export function RegisterForm() {
         boxShadow: 'var(--shadow-md)',
       }}
     >
-      <div className="mb-8 text-center">
+      <div className="mb-6 text-center">
         <h1
           className="text-2xl font-bold mb-1"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
         >
-          Request access
+          Parent / guardian sign-up
         </h1>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Create your account — pending supervisor approval
+        <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+          Create your account — pending supervisor approval.
+        </p>
+        <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+          Health workers (CHW, Nurse, Supervisor)? Ask your supervisor or admin to create your account.
         </p>
       </div>
 
@@ -181,62 +183,34 @@ export function RegisterForm() {
           {...register('email')}
         />
 
-        {/* Role + Language row */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-              Role <span aria-hidden="true" style={{ color: 'var(--danger)' }}>*</span>
-            </label>
-            <select
-              className={SELECT_CLASS}
-              style={{ borderColor: errors.role ? 'var(--danger)' : 'var(--border)' }}
-              {...register('role')}
-            >
-              <option value="">Select…</option>
-              {(
-                Object.entries(ROLE_LABELS) as [
-                  keyof typeof ROLE_LABELS,
-                  string,
-                ][]
-              ).map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </select>
-            {errors.role && (
-              <p className="text-xs" style={{ color: 'var(--danger)' }}>
-                {errors.role.message}
-              </p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-              Language
-            </label>
-            <select
-              className={SELECT_CLASS}
-              style={{ borderColor: 'var(--border)' }}
-              {...register('preferred_language')}
-            >
-              {(
-                Object.entries(LANGUAGE_LABELS) as [
-                  keyof typeof LANGUAGE_LABELS,
-                  string,
-                ][]
-              ).map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </select>
-          </div>
+        {/* Language preference */}
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+            Language preference
+          </label>
+          <select
+            className={SELECT_CLASS}
+            style={{ borderColor: 'var(--border)' }}
+            {...register('preferred_language')}
+          >
+            {(
+              Object.entries(LANGUAGE_LABELS) as [
+                keyof typeof LANGUAGE_LABELS,
+                string,
+              ][]
+            ).map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
         </div>
 
-        {/* Camp (only if camps are available) */}
+        {/* Camp */}
         {camps.length > 0 && (
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium" style={{ color: 'var(--text)' }}>
               Camp{' '}
               <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>
-                (optional)
+                (where your child is registered)
               </span>
             </label>
             <select

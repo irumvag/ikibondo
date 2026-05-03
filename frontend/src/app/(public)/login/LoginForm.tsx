@@ -39,7 +39,12 @@ export function LoginForm() {
     try {
       const { access, refresh, user } = await loginUser(values);
       setAuth(user, access, refresh);
-      router.push(ROLE_ROUTES[user.role] ?? '/');
+      // If a temporary password is in use, force the user to change it first
+      if (user.must_change_password) {
+        router.push('/profile?force=1');
+      } else {
+        router.push(ROLE_ROUTES[user.role] ?? '/');
+      }
     } catch (err: unknown) {
       const e = err as {
         response?: {
