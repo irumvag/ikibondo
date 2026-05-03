@@ -58,3 +58,40 @@ class TestLogout:
         logout_resp = client.post(reverse('auth-logout'), {'refresh': refresh_token})
         assert logout_resp.status_code == 200
         assert logout_resp.data['success'] is True
+
+
+@pytest.mark.django_db
+class TestChangePassword:
+    def test_correct_old_password_succeeds(self, client, user):
+        client.force_authenticate(user=user)
+        resp = client.post(reverse('auth-change-password'), {
+            'old_password': 'testpass123',
+            'new_password': 'newpass456!',
+        })
+        assert resp.status_code == 200
+        assert resp.data['success'] is True
+        user.refresh_from_db()
+        assert user.check_password('newpass456!')
+
+    def test_wrong_old_password_rejected(self, client, user):
+        client.force_authenticate(user=user)
+        resp = client.post(reverse('auth-change-password'), {
+            'old_password': 'wrongpassword',
+            'new_password': 'newpass456!',
+        })
+        assert resp.status_code == 400
+
+    def test_short_new_password_rejected(self, client, user):
+        client.force_authenticate(user=user)
+        resp = client.post(reverse('auth-change-password'), {
+            'old_password': 'testpass123',
+            'new_password': 'short',
+        })
+        assert resp.status_code == 400
+
+    def test_unauthenticated_rejected(self, client):
+        resp = client.post(reverse('auth-change-password'), {
+            'old_password': 'anything',
+            'new_password': 'newpass456!',
+        })
+        assert resp.status_code == 401

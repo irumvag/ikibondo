@@ -13,6 +13,7 @@ from .serializers import (
     UserRegistrationSerializer,
     ApproveUserSerializer,
     UserAdminUpdateSerializer,
+    ChangePasswordSerializer,
 )
 from .permissions import IsAdminUser, IsSupervisorOrAdmin
 from .models import CustomUser
@@ -111,6 +112,27 @@ def create_user_view(request):
             message='User created successfully.',
         )
     return error_response(str(serializer.errors), 'VALIDATION_ERROR')
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password_view(request):
+    """POST /api/v1/auth/change-password/ — authenticated user changes their own password."""
+    serializer = ChangePasswordSerializer(data=request.data)
+    if not serializer.is_valid():
+        return error_response(str(serializer.errors), 'VALIDATION_ERROR')
+
+    user = request.user
+    if not user.check_password(serializer.validated_data['old_password']):
+        return error_response(
+            'Current password is incorrect.',
+            'INVALID_PASSWORD',
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user.set_password(serializer.validated_data['new_password'])
+    user.save(update_fields=['password', 'updated_at'])
+    return success_response(message='Password changed successfully.')
 
 
 @api_view(['PATCH', 'DELETE'])

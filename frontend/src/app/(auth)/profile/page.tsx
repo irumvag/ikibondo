@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Lock } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { patchMe } from '@/lib/api/user';
+import { patchMe, changePassword } from '@/lib/api/user';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 
 const ROLE_LABEL: Record<string, string> = {
   ADMIN:      'Administrator',
@@ -36,6 +37,38 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saved,  setSaved]  = useState(false);
   const [error,  setError]  = useState('');
+
+  // Change password
+  const [pwForm, setPwForm]   = useState({ old: '', next: '', confirm: '' });
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwSaved,  setPwSaved]  = useState(false);
+  const [pwError,  setPwError]  = useState('');
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pwForm.next !== pwForm.confirm) {
+      setPwError('New passwords do not match.');
+      return;
+    }
+    if (pwForm.next.length < 8) {
+      setPwError('New password must be at least 8 characters.');
+      return;
+    }
+    setPwSaving(true);
+    setPwError('');
+    setPwSaved(false);
+    try {
+      await changePassword(pwForm.old, pwForm.next);
+      setPwForm({ old: '', next: '', confirm: '' });
+      setPwSaved(true);
+      setTimeout(() => setPwSaved(false), 3000);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setPwError(msg ?? 'Failed to change password. Check your current password.');
+    } finally {
+      setPwSaving(false);
+    }
+  };
 
   const isDirty = lang !== (user?.preferred_language ?? 'en');
 
@@ -216,6 +249,58 @@ export default function ProfilePage() {
             ? <><Check size={15} className="mr-1.5" aria-hidden="true" />Saved</>
             : 'Save preferences'}
         </Button>
+      </div>
+
+      {/* Security */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <Lock size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
+          <p className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Security</p>
+        </div>
+        <div
+          className="rounded-2xl border p-5"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+        >
+          <form onSubmit={handleChangePassword} className="flex flex-col gap-3">
+            <Input
+              label="Current password"
+              type="password"
+              value={pwForm.old}
+              onChange={(e) => setPwForm({ ...pwForm, old: e.target.value })}
+              required
+              autoComplete="current-password"
+            />
+            <Input
+              label="New password"
+              type="password"
+              value={pwForm.next}
+              onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })}
+              required
+              autoComplete="new-password"
+            />
+            <Input
+              label="Confirm new password"
+              type="password"
+              value={pwForm.confirm}
+              onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
+              required
+              autoComplete="new-password"
+            />
+            {pwError && (
+              <p className="text-sm" style={{ color: 'var(--danger)' }}>{pwError}</p>
+            )}
+            <Button
+              type="submit"
+              variant="primary"
+              loading={pwSaving}
+              className="self-start"
+            >
+              {pwSaved
+                ? <><Check size={15} className="mr-1.5" aria-hidden="true" />Password changed</>
+                : 'Change password'}
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );

@@ -50,6 +50,13 @@ export async function patchMe(
   return data.data;
 }
 
+export async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
+  await apiClient.post('/auth/change-password/', {
+    old_password: oldPassword,
+    new_password: newPassword,
+  });
+}
+
 // ── Notifications ─────────────────────────────────────────────────────────────
 
 export async function getUnreadNotifications(): Promise<{
