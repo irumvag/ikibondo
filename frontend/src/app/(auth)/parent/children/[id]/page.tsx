@@ -322,9 +322,10 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
             />
           ) : (
             <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+              <div className="overflow-x-auto">
               {/* Header */}
               <div
-                className="grid grid-cols-[auto_auto_auto_1fr] gap-4 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider"
+                className="grid grid-cols-[120px_80px_80px_1fr] gap-3 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider min-w-[360px]"
                 style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-elev)', borderBottom: '1px solid var(--border)' }}
               >
                 <span>Date</span>
@@ -338,7 +339,7 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
                 return (
                   <div
                     key={rec.id}
-                    className="grid grid-cols-[auto_auto_auto_1fr] gap-4 items-center px-4 py-3.5 border-b last:border-b-0 text-sm"
+                    className="grid grid-cols-[120px_80px_80px_1fr] gap-3 items-center px-4 py-3.5 border-b last:border-b-0 text-sm min-w-[360px]"
                     style={{ borderColor: 'var(--border)' }}
                   >
                     <span className="font-medium whitespace-nowrap" style={{ color: 'var(--ink)' }}>
@@ -359,6 +360,7 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
                   </div>
                 );
               })}
+              </div>{/* /overflow-x-auto */}
             </div>
           )}
         </div>

@@ -19,12 +19,13 @@ interface NavItem {
 
 const ROLE_NAV: Record<UserRole, NavItem[]> = {
   ADMIN: [
-    { href: '/admin',        label: 'Overview',     icon: LayoutDashboard },
-    { href: '/admin/users',  label: 'Users',         icon: Users },
-    { href: '/admin/camps',  label: 'Camps & Zones', icon: MapPin },
-    { href: '/admin/audit',  label: 'Audit Log',     icon: ScrollText },
-    { href: '/admin/ml',     label: 'ML Model',      icon: Cpu },
-    { href: '/admin/faq',    label: 'FAQ',            icon: MessageCircleQuestion },
+    { href: '/admin',          label: 'Overview',     icon: LayoutDashboard },
+    { href: '/admin/users',    label: 'Users',         icon: Users },
+    { href: '/admin/camps',    label: 'Camps & Zones', icon: MapPin },
+    { href: '/admin/audit',    label: 'Audit Log',     icon: ScrollText },
+    { href: '/admin/ml',       label: 'ML Model',      icon: Cpu },
+    { href: '/admin/faq',      label: 'FAQ',            icon: MessageCircleQuestion },
+    { href: '/notifications',  label: 'Notifications', icon: Bell },
   ],
   SUPERVISOR: [
     { href: '/supervisor',          label: 'Zone Overview',     icon: LayoutDashboard },
@@ -33,18 +34,21 @@ const ROLE_NAV: Record<UserRole, NavItem[]> = {
     { href: '/supervisor/children', label: 'Children',          icon: Baby },
     { href: '/supervisor/reports',  label: 'Reports',           icon: FileBarChart },
     { href: '/supervisor/users',    label: 'Camp staff',        icon: Users },
+    { href: '/notifications',       label: 'Notifications',     icon: Bell },
   ],
   NURSE: [
     { href: '/nurse',          label: 'Overview',       icon: LayoutDashboard },
     { href: '/nurse/children', label: 'Children',       icon: Baby },
     { href: '/nurse/records',  label: 'Health Records', icon: ClipboardList },
+    { href: '/notifications',  label: 'Notifications',  icon: Bell },
   ],
   CHW: [
-    { href: '/chw',          label: 'My Caseload',       icon: LayoutDashboard },
-    { href: '/chw/register', label: 'Register Child',    icon: UserPlus },
-    { href: '/chw/visit',    label: 'New Visit',         icon: Stethoscope },
-    { href: '/chw/vaccines', label: 'Vaccination Queue', icon: Syringe },
-    { href: '/chw/sync',     label: 'Sync Queue',        icon: RefreshCw },
+    { href: '/chw',           label: 'My Caseload',       icon: LayoutDashboard },
+    { href: '/chw/register',  label: 'Register Child',    icon: UserPlus },
+    { href: '/chw/visit',     label: 'New Visit',         icon: Stethoscope },
+    { href: '/chw/vaccines',  label: 'Vaccination Queue', icon: Syringe },
+    { href: '/chw/sync',      label: 'Sync Queue',        icon: RefreshCw },
+    { href: '/notifications', label: 'Notifications',     icon: Bell },
   ],
   PARENT: [
     { href: '/parent',               label: 'My Children',     icon: Heart },

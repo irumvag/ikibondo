@@ -133,6 +133,22 @@ export default function NewVisitPage() {
   if (result) {
     const color = RISK_COLOR[result.risk_level] ?? RISK_COLOR.UNKNOWN;
     const bg    = RISK_BG[result.risk_level]    ?? RISK_BG.UNKNOWN;
+
+    // SHAP risk factors
+    const factorsRaw = result.risk_factors;
+    const factorEntries: [string, number][] = Array.isArray(factorsRaw)
+      ? factorsRaw.map((f) => [f as string, 1])
+      : factorsRaw
+        ? Object.entries(factorsRaw as Record<string, number>)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 6)
+        : [];
+    const maxFactor = factorEntries[0]?.[1] ?? 1;
+
+    const barColor =
+      result.risk_level === 'HIGH'   ? 'var(--danger, #ef4444)' :
+      result.risk_level === 'MEDIUM' ? 'var(--warn, #f59e0b)'   : 'var(--ink)';
+
     return (
       <div className="flex flex-col gap-6 max-w-md mx-auto pt-4">
         <div className="flex flex-col items-center gap-4 text-center">
@@ -192,6 +208,41 @@ export default function NewVisitPage() {
             </span>
           </div>
         </div>
+
+        {/* SHAP risk factor bars */}
+        {factorEntries.length > 0 && (
+          <div
+            className="rounded-2xl border p-5 flex flex-col gap-3"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+          >
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              Top contributing factors (SHAP)
+            </p>
+            <div className="flex flex-col gap-3">
+              {factorEntries.map(([name, val]) => (
+                <div key={name}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium" style={{ color: 'var(--ink)' }}>
+                      {name.replace(/_/g, ' ')}
+                    </span>
+                    <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+                      {typeof val === 'number' ? val.toFixed(3) : val}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border)' }}>
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min((val / maxFactor) * 100, 100)}%`,
+                        backgroundColor: barColor,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {result.risk_level === 'HIGH' && (
           <div

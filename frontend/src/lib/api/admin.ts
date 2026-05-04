@@ -179,39 +179,32 @@ export async function deleteZone(campId: string, zoneId: string): Promise<void> 
   await apiClient.delete(`/camps/${campId}/zones/${zoneId}/`);
 }
 
-// ── ML ────────────────────────────────────────────────────────────────────────
+// ── Audit log ─────────────────────────────────────────────────────────────────
 
-export interface ModelInfo {
-  model_loaded: boolean;
-  version: string;
-  trained_at?: string;
-  macro_f1?: number;
-  high_recall?: number;
-  n_features: number;
-}
-
-export interface PredictionLog {
+export interface AuditLogEntry {
   id: string;
-  child_id: string;
-  child_name: string;
-  model_name: string;
-  model_version: string;
-  predicted_label: string;
-  confidence: number;
-  created_at: string;
+  user: string;
+  user_name: string;
+  action: string;
+  model: string;
+  object_id: string;
+  object_repr: string;
+  timestamp: string;
+  changes?: Record<string, unknown>;
 }
 
-export async function getModelInfo(): Promise<ModelInfo> {
-  const { data } = await apiClient.get('/ml/model-info/');
-  return data.data;
-}
-
-export async function listPredictions(params?: {
-  model?: string;
-  limit?: number;
-}): Promise<PredictionLog[]> {
-  const { data } = await apiClient.get('/ml/predictions/', { params });
-  return data.data ?? [];
+export async function listAuditLog(params?: {
+  page?: number;
+  page_size?: number;
+  user?: string;
+  action?: string;
+}): Promise<{ count: number; results: AuditLogEntry[] }> {
+  const { data } = await apiClient.get('/audit/log/', { params });
+  const payload = data.data ?? data;
+  return {
+    count: payload.count ?? 0,
+    results: payload.results ?? [],
+  };
 }
 
 // ── FAQ (admin CRUD) ───────────────────────────────────────────────────────────

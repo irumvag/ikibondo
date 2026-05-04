@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getLandingStats, getPublicCamps, listFaq } from './public';
 import {
   listUsers, getPendingApprovals, listCamps, listZones,
-  getModelInfo, listPredictions, listAllFaqItems,
+  listAllFaqItems, listAuditLog,
 } from './admin';
 import {
   getZoneStats, getCHWActivity, listHighRiskRecords, listCampChildren,
@@ -12,6 +12,8 @@ import {
 } from './nurse';
 import { listVaccinationQueue } from './chw';
 import { listMyChildren, getChildVaccinations, listNotifications } from './parent';
+import { getModelInfo, listPredictions } from './ml';
+import { getAllNotifications, markNotificationRead, markAllNotificationsRead } from './user';
 
 export const QK = {
   landingStats:       ['landing-stats']       as const,
@@ -37,7 +39,12 @@ export const QK = {
   myChildren:         ['my-children']  as const,
   childVaccinations:  (childId: string) => ['child-vaccinations', childId] as const,
   notifications:      ['notifications'] as const,
+  allNotifications:   ['all-notifications'] as const,
+  auditLog:           (page?: number) => ['audit-log', page] as const,
 };
+
+// re-export mutation helpers so pages can import from one place
+export { markNotificationRead, markAllNotificationsRead };
 
 export function useLandingStats() {
   return useQuery({
@@ -259,6 +266,24 @@ export function useNotifications() {
     queryKey: QK.notifications,
     queryFn:  listNotifications,
     staleTime: 15_000,
+    retry: 1,
+  });
+}
+
+export function useAllNotifications() {
+  return useQuery({
+    queryKey: QK.allNotifications,
+    queryFn:  getAllNotifications,
+    staleTime: 15_000,
+    retry: 1,
+  });
+}
+
+export function useAuditLog(page = 1) {
+  return useQuery({
+    queryKey: QK.auditLog(page),
+    queryFn:  () => listAuditLog({ page, page_size: 30 }),
+    staleTime: 60_000,
     retry: 1,
   });
 }

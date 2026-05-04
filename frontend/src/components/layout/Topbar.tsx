@@ -33,6 +33,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/parent/notifications': 'Notifications',
   '/parent':               'My Children',
   '/profile':              'Profile',
+  '/notifications':        'Notifications',
 };
 
 function getPageTitle(pathname: string) {

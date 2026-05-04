@@ -4,13 +4,15 @@ import { useState } from 'react';
 import { use } from 'react';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Pin, PinOff, ClipboardList, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Pin, ClipboardList, TrendingUp, Cpu } from 'lucide-react';
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, ResponsiveContainer, ReferenceLine,
+  Legend, ResponsiveContainer,
 } from 'recharts';
 import { useGrowthData, useChild, useChildHistory, useChildNotes, QK } from '@/lib/api/queries';
 import { createChildNote } from '@/lib/api/nurse';
+import { predictRisk, buildFeaturesFromRecord } from '@/lib/api/ml';
+import type { PredictRiskResult } from '@/lib/api/ml';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -310,11 +312,163 @@ function NotesPanel({ childId }: { childId: string }) {
   );
 }
 
+// ── ML Predict panel ──────────────────────────────────────────────────────────
+
+function MLPredictPanel({ history }: { history: HealthRecordDetail[] | undefined }) {
+  const [result, setResult] = useState<PredictRiskResult | null>(null);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState('');
+
+  const latestRecord = history?.[0];
+
+  const handlePredict = async () => {
+    if (!latestRecord) return;
+    setRunning(true);
+    setError('');
+    try {
+      const features = buildFeaturesFromRecord({
+        weight_kg: latestRecord.weight_kg,
+        height_cm: latestRecord.height_cm,
+        muac_cm: latestRecord.muac_cm,
+        oedema: latestRecord.oedema ?? false,
+        temperature_c: latestRecord.temperature_c,
+      });
+      // z-scores if available
+      if (latestRecord.weight_for_height_z)
+        features.weight_for_height_z = parseFloat(latestRecord.weight_for_height_z);
+      if (latestRecord.height_for_age_z)
+        features.height_for_age_z = parseFloat(latestRecord.height_for_age_z);
+      if (latestRecord.weight_for_age_z)
+        features.weight_for_age_z = parseFloat(latestRecord.weight_for_age_z);
+      // symptom flags
+      const flags = latestRecord.symptom_flags ?? [];
+      if (flags.includes('fever'))    features.has_fever    = 1;
+      if (flags.includes('cough'))    features.has_cough    = 1;
+      if (flags.includes('diarrhea')) features.has_diarrhea = 1;
+      if (flags.includes('vomiting')) features.has_vomiting = 1;
+      if (latestRecord.oedema)        features.has_oedema   = 1;
+
+      const res = await predictRisk(features);
+      setResult(res);
+    } catch {
+      setError('Prediction failed. Ensure the ML model is loaded.');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const barColor = (level: string) =>
+    level === 'HIGH' ? 'var(--danger)' : level === 'MEDIUM' ? 'var(--warn)' : 'var(--success)';
+
+  const factorEntries = result
+    ? Object.entries(result.top_factors).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 8)
+    : [];
+  const maxFactor = factorEntries.length > 0 ? Math.max(...factorEntries.map(([, v]) => Math.abs(v))) : 1;
+
+  return (
+    <div className="flex flex-col gap-5">
+      {latestRecord ? (
+        <div
+          className="rounded-xl border p-4 text-sm"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-sand)' }}
+        >
+          <p className="font-semibold mb-2" style={{ color: 'var(--ink)' }}>Latest record features</p>
+          <div className="flex flex-wrap gap-4 text-xs" style={{ color: 'var(--text-muted)' }}>
+            {latestRecord.weight_kg && <span>Weight: <strong style={{ color: 'var(--ink)' }}>{latestRecord.weight_kg} kg</strong></span>}
+            {latestRecord.height_cm && <span>Height: <strong style={{ color: 'var(--ink)' }}>{latestRecord.height_cm} cm</strong></span>}
+            {latestRecord.muac_cm && <span>MUAC: <strong style={{ color: 'var(--ink)' }}>{latestRecord.muac_cm} cm</strong></span>}
+            <span>Date: <strong style={{ color: 'var(--ink)' }}>{new Date(latestRecord.measurement_date).toLocaleDateString()}</strong></span>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+          No health records available to run prediction. Record a visit first.
+        </p>
+      )}
+
+      {error && <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>}
+
+      <Button
+        variant="primary"
+        onClick={handlePredict}
+        loading={running}
+        disabled={!latestRecord}
+        className="self-start"
+      >
+        <Cpu size={15} className="mr-1.5" aria-hidden="true" />
+        Run ML prediction
+      </Button>
+
+      {result && (
+        <div
+          className="rounded-xl border p-5 flex flex-col gap-4"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+        >
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+                Risk prediction
+              </p>
+              <Badge variant={result.risk_level === 'HIGH' ? 'danger' : result.risk_level === 'MEDIUM' ? 'warn' : 'success'} className="text-sm px-3 py-1">
+                {result.risk_level} risk
+              </Badge>
+            </div>
+            <div className="text-right">
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Confidence</p>
+              <p className="text-3xl font-bold" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>
+                {Math.round(result.confidence * 100)}%
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="w-24 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-sand)' }}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${Math.round(result.confidence * 100)}%`, backgroundColor: barColor(result.risk_level) }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Model: {result.model_version}</p>
+
+          {factorEntries.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+                SHAP feature contributions
+              </p>
+              <div className="flex flex-col gap-2">
+                {factorEntries.map(([feature, value]) => (
+                  <div key={feature} className="flex items-center gap-3">
+                    <span className="text-xs w-40 truncate" style={{ color: 'var(--text-muted)' }}>
+                      {feature.replace(/_/g, ' ')}
+                    </span>
+                    <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-sand)' }}>
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${(Math.abs(value) / maxFactor) * 100}%`,
+                          backgroundColor: value > 0 ? barColor(result.risk_level) : 'var(--text-muted)',
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs font-mono w-14 text-right" style={{ color: 'var(--ink)' }}>
+                      {value > 0 ? '+' : ''}{value.toFixed(3)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ChildDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [activeTab, setActiveTab] = useState<'chart' | 'history' | 'notes'>('chart');
+  const [activeTab, setActiveTab] = useState<'chart' | 'history' | 'notes' | 'ml'>('chart');
 
   const { data: child, isLoading: childLoading }     = useChild(id);
   const { data: growth, isLoading: growthLoading }   = useGrowthData(id);
@@ -377,11 +531,12 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 border-b" style={{ borderColor: 'var(--border)' }}>
+      <div className="flex gap-1 border-b overflow-x-auto" style={{ borderColor: 'var(--border)' }}>
         {[
-          { key: 'chart',   label: 'Growth chart', icon: TrendingUp },
-          { key: 'history', label: 'Visit history', icon: ClipboardList },
-          { key: 'notes',   label: 'Clinical notes', icon: Pin },
+          { key: 'chart',   label: 'Growth chart',    icon: TrendingUp },
+          { key: 'history', label: 'Visit history',   icon: ClipboardList },
+          { key: 'notes',   label: 'Clinical notes',  icon: Pin },
+          { key: 'ml',      label: 'ML Prediction',   icon: Cpu },
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -439,6 +594,15 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
           >
             <NotesPanel childId={id} />
+          </div>
+        )}
+
+        {activeTab === 'ml' && (
+          <div
+            className="rounded-2xl border p-5"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+          >
+            <MLPredictPanel history={history} />
           </div>
         )}
       </div>

@@ -130,9 +130,10 @@ export default function VaccinesPage() {
       ) : (
         <>
           <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+            <div className="overflow-x-auto">
             {/* Head */}
             <div
-              className="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-4 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider"
+              className="grid grid-cols-[140px_140px_100px_80px_100px] gap-4 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider min-w-[560px]"
               style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-elev)', borderBottom: '1px solid var(--border)' }}
             >
               <span>Child</span>
@@ -148,7 +149,7 @@ export default function VaccinesPage() {
                 key={rec.id}
                 type="button"
                 onClick={() => openModal(rec)}
-                className="w-full grid grid-cols-[1fr_1fr_auto_auto_auto] gap-4 items-center px-4 py-3.5 border-b text-left hover:bg-[var(--bg-sand)] transition-colors"
+                className="w-full grid grid-cols-[140px_140px_100px_80px_100px] gap-4 items-center px-4 py-3.5 border-b text-left hover:bg-[var(--bg-sand)] transition-colors min-w-[560px]"
                 style={{ borderColor: 'var(--border)' }}
               >
                 <span className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>
@@ -186,6 +187,7 @@ export default function VaccinesPage() {
                 </span>
               </button>
             ))}
+            </div>{/* /overflow-x-auto */}
           </div>
 
           {/* Pagination */}

@@ -41,3 +41,5 @@ coverage.xml
 
 # MyPy
 .mypy_cache/
+config/__pycache__
+config/__pycache__

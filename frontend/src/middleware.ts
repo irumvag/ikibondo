@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const PUBLIC_PATHS = ['/', '/about', '/login', '/register'];
 
 // Routes available to any authenticated user regardless of role
-const SHARED_AUTH_PATHS = ['/profile'];
+const SHARED_AUTH_PATHS = ['/profile', '/notifications'];
 
 function isSharedAuth(pathname: string) {
   return SHARED_AUTH_PATHS.some(
@@ -37,7 +37,7 @@ function isPublic(pathname: string) {
 }
 
 // Paths exempt from the force-password-change redirect
-const FORCE_PW_EXEMPT = ['/profile', '/login', '/logout'];
+const FORCE_PW_EXEMPT = ['/profile', '/notifications', '/login', '/logout'];
 
 function isForcePwExempt(pathname: string) {
   return FORCE_PW_EXEMPT.some(
