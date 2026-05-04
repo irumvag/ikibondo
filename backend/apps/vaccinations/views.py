@@ -1,32 +1,30 @@
 from django.utils import timezone
-from rest_framework import viewsets, filters, serializers as drf_serializers
+from drf_spectacular.utils import extend_schema
+from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.core.responses import success_response, error_response
-from apps.accounts.permissions import IsCampStaff
 from apps.accounts.models import UserRole
 from .models import VaccinationRecord, Vaccine, DoseStatus
-from .serializers import VaccinationRecordSerializer, VaccineSerializer
-
-
-class _AdministerSerializer(drf_serializers.Serializer):
-    administered_date = drf_serializers.DateField(default=timezone.now().date)
-    batch_number = drf_serializers.CharField(required=False, allow_blank=True, default='')
-    notes = drf_serializers.CharField(required=False, allow_blank=True, default='')
+from .serializers import VaccinationRecordSerializer, VaccineSerializer, AdministerSerializer
+from .filters import VaccineFilter, VaccinationRecordFilter
 
 
 class VaccineViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only master list of all vaccines in the Rwanda EPI schedule."""
-    queryset = Vaccine.objects.filter(is_active=True)
+    queryset = Vaccine.objects.all()
     serializer_class = VaccineSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_class = VaccineFilter
+    search_fields = ['name', 'short_code']
 
 
 class VaccinationRecordViewSet(viewsets.ModelViewSet):
     queryset = VaccinationRecord.objects.select_related('child', 'vaccine', 'administered_by').all()
     serializer_class = VaccinationRecordSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['child', 'status', 'vaccine', 'dropout_risk_tier']
+    filterset_class = VaccinationRecordFilter
     ordering_fields = ['scheduled_date', 'created_at']
     http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
@@ -39,6 +37,7 @@ class VaccinationRecordViewSet(viewsets.ModelViewSet):
                 instance.administered_date = timezone.now().date()
             instance.save(update_fields=['administered_by', 'administered_date', 'updated_at'])
 
+    @extend_schema(request=AdministerSerializer, responses=VaccinationRecordSerializer)
     @action(detail=True, methods=['post'], url_path='administer')
     def administer(self, request, pk=None):
         """POST /api/v1/vaccinations/<id>/administer/ — mark a dose as administered."""
@@ -66,7 +65,7 @@ class VaccinationRecordViewSet(viewsets.ModelViewSet):
                         'FORBIDDEN', status_code=403,
                     )
 
-        s = _AdministerSerializer(data=request.data)
+        s = AdministerSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         data = s.validated_data
 

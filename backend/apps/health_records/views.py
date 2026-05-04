@@ -209,6 +209,7 @@ def growth_data_view(request, child_id):
             'age_months': child.age_months,
             'weight_kg': float(r.weight_kg) if r.weight_kg else None,
             'height_cm': float(r.height_cm) if r.height_cm else None,
+            'muac_cm': float(r.muac_cm) if r.muac_cm is not None else None,
             'waz': float(r.weight_for_age_z) if r.weight_for_age_z is not None else None,
             'haz': float(r.height_for_age_z) if r.height_for_age_z is not None else None,
             'whz': float(r.weight_for_height_z) if r.weight_for_height_z is not None else None,

@@ -34,6 +34,7 @@ class CampViewSet(viewsets.ModelViewSet):
 
         from apps.health_records.models import HealthRecord, NutritionStatus
         from apps.vaccinations.models import VaccinationRecord
+        from apps.accounts.models import UserRole
 
         children = camp.children.filter(is_active=True)
         total = children.count()
@@ -57,6 +58,16 @@ class CampViewSet(viewsets.ModelViewSet):
         ).count()
         coverage = round((total_done / total_scheduled * 100), 1) if total_scheduled > 0 else 0.0
 
+        high_risk_count = HealthRecord.objects.filter(
+            child__camp=camp, is_active=True, risk_level='HIGH'
+        ).values('child').distinct().count()
+
+        seven_days_ago = timezone.now() - timezone.timedelta(days=7)
+        active_chw_count = camp.staff.filter(
+            role=UserRole.CHW, is_active=True,
+            last_login__gte=seven_days_ago,
+        ).count()
+
         stats_data = {
             'camp_id': camp.id,
             'camp_name': camp.name,
@@ -65,6 +76,8 @@ class CampViewSet(viewsets.ModelViewSet):
             'mam_count': mam,
             'normal_count': normal,
             'vaccination_coverage_percent': coverage,
+            'high_risk_count': high_risk_count,
+            'active_chw_count': active_chw_count,
         }
         return success_response(data=stats_data)
 

@@ -23,6 +23,8 @@ class CampStatsSerializer(serializers.Serializer):
     mam_count = serializers.IntegerField()
     normal_count = serializers.IntegerField()
     vaccination_coverage_percent = serializers.FloatField()
+    high_risk_count = serializers.IntegerField()
+    active_chw_count = serializers.IntegerField()
 
 
 class CampZoneSerializer(serializers.ModelSerializer):
