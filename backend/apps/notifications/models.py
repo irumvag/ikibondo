@@ -11,6 +11,11 @@ class NotificationType(models.TextChoices):
     MISSED_VISIT = 'MISSED_VISIT', 'Child has not been seen recently'
     ZONE_SUMMARY = 'ZONE_SUMMARY', 'Daily zone KPI summary'
     CHW_INACTIVE = 'CHW_INACTIVE', 'CHW has been inactive'
+    # Visit request lifecycle
+    VISIT_REQUEST_CREATED = 'VISIT_REQUEST_CREATED', 'New visit request from parent'
+    VISIT_REQUEST_ACCEPTED = 'VISIT_REQUEST_ACCEPTED', 'Visit request accepted by CHW'
+    VISIT_REQUEST_DECLINED = 'VISIT_REQUEST_DECLINED', 'Visit request declined'
+    VISIT_REQUEST_COMPLETED = 'VISIT_REQUEST_COMPLETED', 'Visit completed'
 
 
 class NotificationChannel(models.TextChoices):

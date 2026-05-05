@@ -4,9 +4,11 @@ import { use, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft, Heart, Syringe, Calendar, CheckCircle,
-  XCircle, Clock, SkipForward, AlertTriangle,
+  XCircle, Clock, SkipForward, AlertTriangle, Home,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useChild, useChildHistory, useChildVaccinations } from '@/lib/api/queries';
+import { listVisitRequests, type VisitRequest } from '@/lib/api/parent';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -50,7 +52,17 @@ const VAX_STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; 
   SKIPPED:   { label: 'Skipped',   icon: <SkipForward  size={14} />, color: 'var(--text-muted)', bg: 'var(--bg-elev)' },
 };
 
-type Tab = 'status' | 'vaccines' | 'visits';
+type Tab = 'status' | 'vaccines' | 'visits' | 'requests';
+
+const VR_STATUS_COLOR: Record<string, string> = {
+  PENDING:   '#d97706',
+  ACCEPTED:  '#2563eb',
+  DECLINED:  '#dc2626',
+  COMPLETED: '#16a34a',
+};
+const VR_STATUS_LABEL: Record<string, string> = {
+  PENDING: 'Pending', ACCEPTED: 'Accepted', DECLINED: 'Declined', COMPLETED: 'Completed',
+};
 
 interface ChildData {
   id: string;
@@ -67,14 +79,21 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
   const { data: rawChild,  isLoading: childLoading }    = useChild(id);
   const { data: history,   isLoading: historyLoading }  = useChildHistory(id);
   const { data: vaccines,  isLoading: vaccinesLoading } = useChildVaccinations(id);
+  const { data: visitReqs, isLoading: vrLoading }       = useQuery({
+    queryKey: ['parent', 'visit-requests'],
+    queryFn: () => listVisitRequests(),
+  });
 
   const child       = rawChild as ChildData | undefined;
   const latestRecord = history?.[0] ?? null;
+
+  const childVisitReqs = (visitReqs ?? []).filter((vr: VisitRequest) => vr.child === id);
 
   const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: 'status',   label: 'Health status', icon: <Heart    size={15} /> },
     { key: 'vaccines', label: 'Vaccinations',  icon: <Syringe  size={15} /> },
     { key: 'visits',   label: 'Visit history', icon: <Calendar size={15} /> },
+    { key: 'requests', label: 'Visit requests', icon: <Home    size={15} /> },
   ];
 
   if (childLoading) {
@@ -122,6 +141,14 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
           {child.age_display} &middot; {child.sex === 'M' ? 'Boy' : 'Girl'} &middot; {child.registration_number}
         </p>
+        <Link
+          href={`/parent/request-visit?child=${id}`}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-white"
+          style={{ backgroundColor: 'var(--brand)' }}
+        >
+          <Home size={14} aria-hidden="true" />
+          Request a home visit
+        </Link>
       </div>
 
       {/* Tab bar */}
@@ -303,6 +330,75 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
                 })}
               </div>
             </>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab: Visit requests ──────────────────────────────────────────── */}
+      {tab === 'requests' && (
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              {childVisitReqs.length} request{childVisitReqs.length !== 1 ? 's' : ''} submitted
+            </p>
+            <Link
+              href={`/parent/request-visit?child=${id}`}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white"
+              style={{ backgroundColor: 'var(--brand)' }}
+            >
+              <Home size={12} />
+              New request
+            </Link>
+          </div>
+
+          {vrLoading ? (
+            <div className="flex flex-col gap-3">
+              {[1, 2].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
+            </div>
+          ) : childVisitReqs.length === 0 ? (
+            <EmptyState
+              icon={<Home size={28} />}
+              title="No visit requests"
+              description="Request a home visit from your assigned CHW by tapping the button above."
+            />
+          ) : (
+            <div className="flex flex-col gap-3">
+              {childVisitReqs.map((vr: VisitRequest) => {
+                const color = VR_STATUS_COLOR[vr.status] ?? '#6b7280';
+                return (
+                  <div
+                    key={vr.id}
+                    className="rounded-xl border p-4 flex flex-col gap-2"
+                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
+                        {vr.urgency === 'URGENT' ? '🚨 Urgent' : vr.urgency === 'SOON' ? '⏰ Soon' : '📋 Routine'} visit
+                      </span>
+                      <span
+                        className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: `${color}20`, color }}
+                      >
+                        {VR_STATUS_LABEL[vr.status]}
+                      </span>
+                    </div>
+                    {vr.concern_text && (
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{vr.concern_text}</p>
+                    )}
+                    <div className="flex gap-4 text-xs" style={{ color: 'var(--text-muted)' }}>
+                      <span>Submitted: {new Date(vr.created_at).toLocaleDateString()}</span>
+                      {vr.assigned_chw_name && <span>CHW: {vr.assigned_chw_name}</span>}
+                      {vr.eta && <span>ETA: {new Date(vr.eta).toLocaleString()}</span>}
+                    </div>
+                    {vr.decline_reason && (
+                      <p className="text-xs rounded px-2 py-1" style={{ backgroundColor: '#fef2f2', color: '#dc2626' }}>
+                        Declined: {vr.decline_reason}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}

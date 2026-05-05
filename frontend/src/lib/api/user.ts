@@ -44,7 +44,7 @@ export async function getMe(): Promise<AuthUser> {
 }
 
 export async function patchMe(
-  payload: Partial<Pick<AuthUser, 'preferred_language' | 'theme_preference'> & { phone_number?: string }>,
+  payload: Partial<Pick<AuthUser, 'preferred_language' | 'theme_preference'> & { phone_number?: string; notification_prefs?: Record<string, unknown> }>,
 ): Promise<AuthUser> {
   const { data } = await apiClient.patch('/auth/me/', payload);
   return data.data;

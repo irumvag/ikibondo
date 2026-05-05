@@ -42,3 +42,45 @@ export async function markNotificationRead(id: string): Promise<void> {
 export async function markAllRead(): Promise<void> {
   await apiClient.patch('/notifications/read-all/');
 }
+
+// ── Visit Requests ──────────────────────────────────────────────────────────
+
+export type VisitUrgency = 'ROUTINE' | 'SOON' | 'URGENT';
+export type VisitRequestStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'COMPLETED';
+
+export interface VisitRequest {
+  id: string;
+  child: string;
+  child_name: string;
+  requested_by: string;
+  requested_by_name: string | null;
+  urgency: VisitUrgency;
+  concern_text: string;
+  symptom_flags: string[];
+  status: VisitRequestStatus;
+  assigned_chw: string | null;
+  assigned_chw_name: string | null;
+  eta: string | null;
+  decline_reason: string;
+  accepted_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface CreateVisitRequestPayload {
+  child: string;
+  urgency: VisitUrgency;
+  concern_text: string;
+  symptom_flags: string[];
+}
+
+export async function createVisitRequest(payload: CreateVisitRequestPayload): Promise<VisitRequest> {
+  const { data } = await apiClient.post('/children/visit-requests/', payload);
+  return data.data;
+}
+
+export async function listVisitRequests(status?: VisitRequestStatus): Promise<VisitRequest[]> {
+  const params = status ? { status } : {};
+  const { data } = await apiClient.get('/children/visit-requests/', { params });
+  return data.data ?? [];
+}

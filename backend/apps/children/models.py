@@ -4,6 +4,19 @@ from django.utils import timezone
 from apps.core.models import BaseModel
 
 
+class VisitUrgency(models.TextChoices):
+    ROUTINE = 'ROUTINE', 'Routine'
+    SOON = 'SOON', 'Soon (within a week)'
+    URGENT = 'URGENT', 'Urgent (within 24 h)'
+
+
+class VisitRequestStatus(models.TextChoices):
+    PENDING = 'PENDING', 'Pending'
+    ACCEPTED = 'ACCEPTED', 'Accepted'
+    DECLINED = 'DECLINED', 'Declined'
+    COMPLETED = 'COMPLETED', 'Completed'
+
+
 class Guardian(BaseModel):
     """
     The adult responsible for a child. One guardian can have multiple children.
@@ -112,7 +125,7 @@ class Child(BaseModel):
         rem = months % 12
         return f'{years}y {rem}m' if rem else f'{years} years'
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs):  # noqa: D401
         if not self.qr_code:
             self.qr_code = uuid.uuid4().hex
         if not self.registration_number:
@@ -132,3 +145,51 @@ class Child(BaseModel):
                     max_seq = max(max_seq, int(m.group(1)))
             self.registration_number = f'IKB-{prefix}-{year}-{max_seq + 1:04d}'
         super().save(*args, **kwargs)
+
+
+class VisitRequest(BaseModel):
+    """
+    A parent-initiated request for a home visit by the assigned CHW.
+    Lifecycle: PENDING → ACCEPTED / DECLINED → COMPLETED.
+    Urgency informs CHW prioritisation; URGENT declined requests notify the supervisor.
+    """
+    child = models.ForeignKey(
+        Child,
+        on_delete=models.CASCADE,
+        related_name='visit_requests',
+    )
+    requested_by = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='sent_visit_requests',
+    )
+    urgency = models.CharField(
+        max_length=10, choices=VisitUrgency.choices, default=VisitUrgency.ROUTINE
+    )
+    concern_text = models.TextField(blank=True)
+    symptom_flags = models.JSONField(default=list, blank=True,
+        help_text='List of symptom strings e.g. ["fever","diarrhea"]')
+    status = models.CharField(
+        max_length=10, choices=VisitRequestStatus.choices, default=VisitRequestStatus.PENDING
+    )
+    # Set when a CHW accepts
+    assigned_chw = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='accepted_visit_requests',
+        limit_choices_to={'role': 'CHW'},
+    )
+    eta = models.DateTimeField(null=True, blank=True,
+        help_text='Estimated time of arrival provided by the CHW')
+    decline_reason = models.TextField(blank=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Visit Request'
+
+    def __str__(self):
+        return f'VisitRequest({self.child.full_name}, {self.status}, {self.urgency})'

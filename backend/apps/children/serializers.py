@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Child, Guardian
+from .models import Child, Guardian, VisitRequest
 
 
 class GuardianSerializer(serializers.ModelSerializer):
@@ -44,6 +44,28 @@ class ChildSerializer(serializers.ModelSerializer):
 
     def get_guardian_has_account(self, obj):
         return obj.guardian.user_id is not None
+
+
+class VisitRequestSerializer(serializers.ModelSerializer):
+    requested_by_name = serializers.CharField(source='requested_by.full_name', read_only=True, allow_null=True)
+    assigned_chw_name = serializers.CharField(source='assigned_chw.full_name', read_only=True, allow_null=True)
+    child_name = serializers.CharField(source='child.full_name', read_only=True)
+
+    class Meta:
+        model = VisitRequest
+        fields = [
+            'id', 'child', 'child_name',
+            'requested_by', 'requested_by_name',
+            'urgency', 'concern_text', 'symptom_flags',
+            'status', 'assigned_chw', 'assigned_chw_name',
+            'eta', 'decline_reason',
+            'accepted_at', 'completed_at', 'created_at',
+        ]
+        read_only_fields = [
+            'id', 'child_name', 'requested_by', 'requested_by_name',
+            'assigned_chw_name', 'status', 'assigned_chw',
+            'accepted_at', 'completed_at', 'created_at',
+        ]
 
 
 class ChildCreateSerializer(serializers.ModelSerializer):

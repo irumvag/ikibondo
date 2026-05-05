@@ -9,8 +9,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from apps.core.responses import success_response, created_response, error_response
 from apps.accounts.models import UserRole
 from apps.accounts.permissions import IsSupervisorOrAdmin
-from .models import Child, Guardian
-from .serializers import ChildSerializer, ChildCreateSerializer, GuardianSerializer
+from django.utils import timezone as tz
+from .models import Child, Guardian, VisitRequest, VisitRequestStatus, VisitUrgency
+from .serializers import ChildSerializer, ChildCreateSerializer, GuardianSerializer, VisitRequestSerializer
 from .filters import ChildFilter
 
 
@@ -253,3 +254,113 @@ def scan_qr_view(request, qr_code):
     except Child.DoesNotExist:
         return error_response('Child not found.', 'NOT_FOUND', status_code=404)
     return success_response(data=ChildSerializer(child).data)
+
+
+class VisitRequestViewSet(viewsets.ModelViewSet):
+    """
+    CRUD + lifecycle actions on VisitRequest.
+
+    Scoping:
+      PARENT  — can create for own children; can list own requests.
+      CHW     — can list requests for their assigned children; can accept/decline/complete.
+      SUPERVISOR/ADMIN/NURSE — read-only on all requests in their camp.
+    """
+    serializer_class = VisitRequestSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'head', 'options']
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = VisitRequest.objects.select_related(
+            'child', 'requested_by', 'assigned_chw'
+        )
+        if user.role == UserRole.PARENT:
+            qs = qs.filter(requested_by=user)
+        elif user.role == UserRole.CHW:
+            qs = qs.filter(child__guardian__assigned_chw=user)
+        elif user.role in (UserRole.NURSE, UserRole.SUPERVISOR):
+            if user.camp_id:
+                qs = qs.filter(child__camp_id=user.camp_id)
+        # ADMIN sees all
+        return qs.order_by('-created_at')
+
+    def create(self, request, *args, **kwargs):
+        if request.user.role != UserRole.PARENT:
+            return error_response('Only parents can submit visit requests.', 'FORBIDDEN', status_code=403)
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        child = serializer.validated_data['child']
+
+        # Verify child belongs to this parent
+        if not Child.objects.filter(id=child.id, guardian__user=request.user).exists():
+            return error_response('You can only request visits for your own children.', 'FORBIDDEN', status_code=403)
+
+        vr = serializer.save(requested_by=request.user, status=VisitRequestStatus.PENDING)
+
+        from apps.notifications.tasks import notify_visit_request_created
+        notify_visit_request_created.delay(str(vr.id))
+
+        return created_response(
+            data=VisitRequestSerializer(vr).data,
+            message='Visit request submitted successfully.',
+        )
+
+    @action(detail=True, methods=['post'], url_path='accept')
+    def accept(self, request, pk=None):
+        """POST /api/v1/visit-requests/<id>/accept/ — CHW accepts the request."""
+        if request.user.role != UserRole.CHW:
+            return error_response('Only CHWs can accept visit requests.', 'FORBIDDEN', status_code=403)
+
+        vr = self.get_object()
+        if vr.status != VisitRequestStatus.PENDING:
+            return error_response(f'Cannot accept a request with status {vr.status}.', 'INVALID_STATE')
+
+        vr.status = VisitRequestStatus.ACCEPTED
+        vr.assigned_chw = request.user
+        vr.accepted_at = tz.now()
+        vr.eta = request.data.get('eta')  # Optional ISO datetime string
+        vr.save(update_fields=['status', 'assigned_chw', 'accepted_at', 'eta', 'updated_at'])
+
+        from apps.notifications.tasks import notify_visit_request_accepted
+        notify_visit_request_accepted.delay(str(vr.id))
+
+        return success_response(data=VisitRequestSerializer(vr).data, message='Visit request accepted.')
+
+    @action(detail=True, methods=['post'], url_path='decline')
+    def decline(self, request, pk=None):
+        """POST /api/v1/visit-requests/<id>/decline/ — CHW declines with optional reason."""
+        if request.user.role != UserRole.CHW:
+            return error_response('Only CHWs can decline visit requests.', 'FORBIDDEN', status_code=403)
+
+        vr = self.get_object()
+        if vr.status != VisitRequestStatus.PENDING:
+            return error_response(f'Cannot decline a request with status {vr.status}.', 'INVALID_STATE')
+
+        vr.status = VisitRequestStatus.DECLINED
+        vr.decline_reason = request.data.get('reason', '')
+        vr.save(update_fields=['status', 'decline_reason', 'updated_at'])
+
+        from apps.notifications.tasks import notify_visit_request_declined
+        notify_visit_request_declined.delay(str(vr.id))
+
+        return success_response(data=VisitRequestSerializer(vr).data, message='Visit request declined.')
+
+    @action(detail=True, methods=['post'], url_path='complete')
+    def complete(self, request, pk=None):
+        """POST /api/v1/visit-requests/<id>/complete/ — CHW marks the visit as done."""
+        if request.user.role != UserRole.CHW:
+            return error_response('Only CHWs can complete visit requests.', 'FORBIDDEN', status_code=403)
+
+        vr = self.get_object()
+        if vr.status != VisitRequestStatus.ACCEPTED:
+            return error_response(f'Cannot complete a request with status {vr.status}.', 'INVALID_STATE')
+
+        vr.status = VisitRequestStatus.COMPLETED
+        vr.completed_at = tz.now()
+        vr.save(update_fields=['status', 'completed_at', 'updated_at'])
+
+        from apps.notifications.tasks import notify_visit_request_completed
+        notify_visit_request_completed.delay(str(vr.id))
+
+        return success_response(data=VisitRequestSerializer(vr).data, message='Visit marked as complete.')

@@ -277,6 +277,143 @@ def daily_zone_summary():
     logger.info('Zone summaries dispatched.')
 
 
+@shared_task
+def notify_visit_request_created(visit_request_id: str):
+    """Notify assigned CHW when a parent submits a new visit request."""
+    from apps.children.models import VisitRequest
+    from .models import Notification, NotificationType, NotificationChannel, NotificationStatus
+
+    try:
+        vr = VisitRequest.objects.select_related('child', 'child__guardian__assigned_chw').get(id=visit_request_id)
+        chw = vr.child.guardian.assigned_chw if vr.child.guardian else None
+        if not chw:
+            return
+
+        message = (
+            f'New visit request for {vr.child.full_name} ({vr.get_urgency_display()}). '
+            f'Concern: {vr.concern_text[:100] or "No details provided."}'
+        )
+        notif = Notification.objects.create(
+            recipient=chw,
+            child=vr.child,
+            notification_type=NotificationType.VISIT_REQUEST_CREATED,
+            channel=NotificationChannel.PUSH,
+            message=message,
+            status=NotificationStatus.PENDING,
+        )
+        send_push.delay(str(notif.id))
+    except Exception as e:
+        logger.exception('notify_visit_request_created failed for %s: %s', visit_request_id, e)
+
+
+@shared_task
+def notify_visit_request_accepted(visit_request_id: str):
+    """Notify the parent when their CHW accepts a visit request."""
+    from apps.children.models import VisitRequest
+    from .models import Notification, NotificationType, NotificationChannel, NotificationStatus
+
+    try:
+        vr = VisitRequest.objects.select_related('child', 'requested_by', 'assigned_chw').get(id=visit_request_id)
+        if not vr.requested_by:
+            return
+
+        chw_name = vr.assigned_chw.full_name if vr.assigned_chw else 'Your CHW'
+        eta_str = vr.eta.strftime('%Y-%m-%d %H:%M') if vr.eta else 'shortly'
+        message = (
+            f'Your visit request for {vr.child.full_name} has been accepted by {chw_name}. '
+            f'Expected visit: {eta_str}.'
+        )
+        notif = Notification.objects.create(
+            recipient=vr.requested_by,
+            child=vr.child,
+            notification_type=NotificationType.VISIT_REQUEST_ACCEPTED,
+            channel=NotificationChannel.SMS,
+            message=message,
+            status=NotificationStatus.PENDING,
+        )
+        send_sms.delay(str(notif.id))
+    except Exception as e:
+        logger.exception('notify_visit_request_accepted failed for %s: %s', visit_request_id, e)
+
+
+@shared_task
+def notify_visit_request_declined(visit_request_id: str):
+    """Notify parent of decline; alert supervisor if urgent."""
+    from apps.children.models import VisitRequest, VisitUrgency
+    from apps.camps.models import ZoneCoordinatorAssignment
+    from apps.accounts.models import CustomUser
+    from .models import Notification, NotificationType, NotificationChannel, NotificationStatus
+
+    try:
+        vr = VisitRequest.objects.select_related('child', 'requested_by', 'child__zone').get(id=visit_request_id)
+
+        if vr.requested_by:
+            reason = vr.decline_reason or 'No reason provided.'
+            message = (
+                f'Your visit request for {vr.child.full_name} was declined. '
+                f'Reason: {reason} Please contact your health facility.'
+            )
+            notif = Notification.objects.create(
+                recipient=vr.requested_by,
+                child=vr.child,
+                notification_type=NotificationType.VISIT_REQUEST_DECLINED,
+                channel=NotificationChannel.SMS,
+                message=message,
+                status=NotificationStatus.PENDING,
+            )
+            send_sms.delay(str(notif.id))
+
+        # Alert supervisor if urgent request declined
+        if vr.urgency == VisitUrgency.URGENT and vr.child.zone:
+            coord_ids = ZoneCoordinatorAssignment.objects.filter(
+                zone=vr.child.zone, status='active'
+            ).values_list('user_id', flat=True)
+            sup_msg = (
+                f'URGENT visit request for {vr.child.full_name} was declined by a CHW. '
+                f'Reason: {vr.decline_reason or "none"}. Supervisor action may be needed.'
+            )
+            for user in CustomUser.objects.filter(id__in=coord_ids, is_active=True):
+                n = Notification.objects.create(
+                    recipient=user,
+                    child=vr.child,
+                    notification_type=NotificationType.VISIT_REQUEST_DECLINED,
+                    channel=NotificationChannel.PUSH,
+                    message=sup_msg,
+                    status=NotificationStatus.PENDING,
+                )
+                send_push.delay(str(n.id))
+    except Exception as e:
+        logger.exception('notify_visit_request_declined failed for %s: %s', visit_request_id, e)
+
+
+@shared_task
+def notify_visit_request_completed(visit_request_id: str):
+    """Notify parent that the visit has been completed."""
+    from apps.children.models import VisitRequest
+    from .models import Notification, NotificationType, NotificationChannel, NotificationStatus
+
+    try:
+        vr = VisitRequest.objects.select_related('child', 'requested_by').get(id=visit_request_id)
+        if not vr.requested_by:
+            return
+
+        message = (
+            f'The home visit for {vr.child.full_name} has been completed. '
+            f'Please check the app for updated health information.'
+        )
+        notif = Notification.objects.create(
+            recipient=vr.requested_by,
+            child=vr.child,
+            notification_type=NotificationType.VISIT_REQUEST_COMPLETED,
+            channel=NotificationChannel.SMS,
+            message=message,
+            status=NotificationStatus.PENDING,
+        )
+        send_sms.delay(str(notif.id))
+    except Exception as e:
+        logger.exception('notify_visit_request_completed failed for %s: %s', visit_request_id, e)
+
+
 def _format_risk_factors(risk_factors: list) -> str:
     if not risk_factors:
         return 'see clinical record'
