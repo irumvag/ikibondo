@@ -42,3 +42,19 @@ Co-Authored-By: Gentille Tumukunde <tumukundegentille001@gmail.com>
 - ML engine: `backend/apps/ml_engine/`
 - Standalone ML scripts: `ml/`
 - Tests: `backend/apps/*/tests/`
+
+## Role Workflow
+
+| Role | Can do |
+|------|--------|
+| **NURSE** | Registers newborns, creates/finds parent accounts (auto-approved), approves pending parents in their camp |
+| **CHW** | Visits assigned families, records health data — cannot register children |
+| **SUPERVISOR** | Assigns parent/guardian families to CHWs, manages camp/zone staff |
+| **ADMIN** | Full control |
+| **PARENT** | Views own children's records via app |
+
+Key rules:
+- Child registration: NURSE or SUPERVISOR/ADMIN only — CHW cannot register children
+- Parent accounts: Created by NURSE (auto-approved) or self-registration (pending approval)
+- CHW caseload: filtered to children of `guardian.assigned_chw = chw_user` (set by supervisor via `POST /children/guardians/<id>/assign-chw/`)
+- Guardian + child are created atomically in `ChildCreateSerializer`; parent account is linked separately via `link-account` action

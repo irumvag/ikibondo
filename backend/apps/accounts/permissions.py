@@ -58,3 +58,21 @@ class IsStaffCreator(BasePermission):
             request.user and request.user.is_authenticated
             and request.user.role in (UserRole.ADMIN, UserRole.SUPERVISOR)
         )
+
+
+class IsNurseOrSupervisorOrAdmin(BasePermission):
+    """NURSE, SUPERVISOR, or ADMIN — for approval and management flows."""
+    def has_permission(self, request, view):
+        return bool(
+            request.user and request.user.is_authenticated
+            and request.user.role in (UserRole.NURSE, UserRole.SUPERVISOR, UserRole.ADMIN)
+        )
+
+
+class IsStaffCreatorOrNurse(BasePermission):
+    """ADMIN, SUPERVISOR, and NURSE. Nurses are restricted to creating PARENT accounts only (enforced in the view)."""
+    def has_permission(self, request, view):
+        return bool(
+            request.user and request.user.is_authenticated
+            and request.user.role in (UserRole.ADMIN, UserRole.SUPERVISOR, UserRole.NURSE)
+        )

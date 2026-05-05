@@ -16,7 +16,7 @@ from .serializers import (
     UserAdminUpdateSerializer,
     ChangePasswordSerializer,
 )
-from .permissions import IsAdminUser, IsSupervisorOrAdmin, IsStaffCreator
+from .permissions import IsAdminUser, IsSupervisorOrAdmin, IsStaffCreator, IsStaffCreatorOrNurse, IsNurseOrSupervisorOrAdmin
 from .models import CustomUser, UserRole
 
 
@@ -166,28 +166,51 @@ def _send_pending_review_emails(user):
 
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsStaffCreator])
+@permission_classes([IsStaffCreatorOrNurse])
 def create_user_view(request):
     """
     GET  /api/v1/auth/users/ — list all active users; ?role= filter supported.
-                                Supervisors only see their own camp.
-    POST /api/v1/auth/users/ — create a new staff account.
+                                Supervisors only see their own camp. Nurses see PARENT accounts in their camp.
+    POST /api/v1/auth/users/ — create a new user account.
                                 Admin: any role.
                                 Supervisor: CHW or NURSE in their own camp only.
+                                Nurse: PARENT only, auto-approved, scoped to nurse's camp.
     """
     if request.method == 'GET':
         qs = CustomUser.objects.filter(is_active=True).order_by('-date_joined')
-        # Supervisors are scoped to their own camp
-        if request.user.role == UserRole.SUPERVISOR and request.user.camp_id:
+        if request.user.role == UserRole.NURSE:
+            # Nurses see PARENT accounts in their camp
+            qs = qs.filter(role=UserRole.PARENT, camp=request.user.camp)
+        elif request.user.role == UserRole.SUPERVISOR and request.user.camp_id:
             qs = qs.filter(camp=request.user.camp)
         role = request.query_params.get('role')
         if role:
             qs = qs.filter(role=role)
         return success_response(data=UserProfileSerializer(qs, many=True).data)
 
-    # --- POST: create staff ---
+    # --- POST: create user ---
     requested_role = request.data.get('role', '')
     creator_role = request.user.role
+
+    if creator_role == UserRole.NURSE:
+        # Nurses can only create PARENT accounts, auto-approved, scoped to their camp
+        if requested_role != UserRole.PARENT:
+            return error_response(
+                'Nurses can only create parent accounts.',
+                'ROLE_FORBIDDEN',
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+        data = request.data.copy()
+        if request.user.camp_id:
+            data['camp'] = str(request.user.camp_id)
+        serializer = UserCreateSerializer(data=data)
+        if serializer.is_valid():
+            user = serializer.save(is_approved=True)
+            return created_response(
+                data=UserProfileSerializer(user).data,
+                message='Parent account created and approved.',
+            )
+        return error_response(str(serializer.errors), 'VALIDATION_ERROR')
 
     if creator_role == UserRole.SUPERVISOR:
         # Supervisors can only create CHW / NURSE in their own camp
@@ -300,7 +323,7 @@ def manage_user_view(request, user_id):
 
 
 @api_view(['GET'])
-@permission_classes([IsSupervisorOrAdmin])
+@permission_classes([IsNurseOrSupervisorOrAdmin])
 def pending_approvals_view(request):
     """GET /api/v1/auth/pending-approvals/ — list unapproved users in the requester's camp."""
     qs = CustomUser.objects.filter(is_approved=False, is_active=True)
@@ -312,7 +335,7 @@ def pending_approvals_view(request):
 
 
 @api_view(['PATCH'])
-@permission_classes([IsSupervisorOrAdmin])
+@permission_classes([IsNurseOrSupervisorOrAdmin])
 def approve_user_view(request, user_id):
     """PATCH /api/v1/auth/approve/<user_id>/ — approve a pending user."""
     try:

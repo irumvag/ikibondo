@@ -11,7 +11,9 @@ class Guardian(BaseModel):
 
     A guardian can optionally have a linked app account (CustomUser with role=PARENT).
     This allows them to log in and view their own children's health records.
-    Workflow: CHW registers child (Guardian created) → Admin creates PARENT user with guardian_id.
+    Workflow: Nurse registers child (Guardian created) → Nurse links PARENT user account to guardian.
+
+    assigned_chw: set by a Supervisor to assign this family to a CHW for home visits.
     """
     full_name = models.CharField(max_length=200)
     phone_number = models.CharField(max_length=20)
@@ -26,6 +28,14 @@ class Guardian(BaseModel):
         null=True,
         blank=True,
         related_name='guardian_profile',
+    )
+    assigned_chw = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_guardians',
+        limit_choices_to={'role': 'CHW'},
     )
 
     class Meta:

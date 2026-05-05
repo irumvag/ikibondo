@@ -16,18 +16,33 @@ from .filters import ChildFilter
 
 class GuardianViewSet(viewsets.ModelViewSet):
     """
-    CRUD on Guardian records. ADMIN/SUPERVISOR only.
-    Also exposes a `link-account` action to associate a parent user account
-    with a guardian record, enabling app access for the parent.
+    CRUD on Guardian records. ADMIN/SUPERVISOR only for writes; NURSE gets read access.
+    Also exposes `link-account` and `assign-chw` actions.
     """
-    queryset = Guardian.objects.select_related('user').all()
+    queryset = Guardian.objects.select_related('user', 'assigned_chw').all()
     serializer_class = GuardianSerializer
-    permission_classes = [IsSupervisorOrAdmin]
+    permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     search_fields = ['full_name', 'phone_number', 'national_id']
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
-    @action(detail=True, methods=['post'], url_path='link-account')
+    def get_permissions(self):
+        if self.request.method in ('POST', 'PATCH', 'DELETE'):
+            return [IsSupervisorOrAdmin()]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.role == UserRole.NURSE and user.camp_id:
+            # Nurse sees guardians of children in their camp
+            qs = qs.filter(children__camp_id=user.camp_id).distinct()
+        elif user.role == UserRole.CHW:
+            # CHW sees only their assigned guardians
+            qs = qs.filter(assigned_chw=user)
+        return qs
+
+    @action(detail=True, methods=['post'], url_path='link-account', permission_classes=[IsAuthenticated])
     def link_account(self, request, pk=None):
         """
         POST /api/v1/children/guardians/<id>/link-account/
@@ -72,6 +87,37 @@ class GuardianViewSet(viewsets.ModelViewSet):
             message='Guardian linked to parent account successfully.',
         )
 
+    @action(detail=True, methods=['post'], url_path='assign-chw', permission_classes=[IsSupervisorOrAdmin])
+    def assign_chw(self, request, pk=None):
+        """
+        POST /api/v1/children/guardians/<id>/assign-chw/
+        Body: {"chw_id": "<uuid>"}  — assigns a CHW to this guardian's family.
+        Body: {"chw_id": null}      — clears the assignment.
+        """
+        guardian = self.get_object()
+        chw_id = request.data.get('chw_id')
+
+        if chw_id is None:
+            guardian.assigned_chw = None
+            guardian.save(update_fields=['assigned_chw'])
+            return success_response(
+                data=GuardianSerializer(guardian).data,
+                message='CHW assignment cleared.',
+            )
+
+        from apps.accounts.models import CustomUser
+        try:
+            chw = CustomUser.objects.get(id=chw_id, role=UserRole.CHW, is_active=True)
+        except CustomUser.DoesNotExist:
+            return error_response('No active CHW found with that ID.', 'NOT_FOUND', status_code=404)
+
+        guardian.assigned_chw = chw
+        guardian.save(update_fields=['assigned_chw'])
+        return success_response(
+            data=GuardianSerializer(guardian).data,
+            message=f'Guardian assigned to {chw.full_name}.',
+        )
+
 
 class ChildViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -83,7 +129,10 @@ class ChildViewSet(viewsets.ModelViewSet):
         qs = Child.objects.filter(is_active=True).select_related(
             'camp', 'zone', 'guardian', 'guardian__user', 'registered_by'
         )
-        if self.request.user.role == UserRole.PARENT:
+        role = self.request.user.role
+        if role == UserRole.CHW:
+            qs = qs.filter(guardian__assigned_chw=self.request.user)
+        elif role == UserRole.PARENT:
             qs = qs.filter(guardian__user=self.request.user)
         return qs
 
@@ -93,8 +142,8 @@ class ChildViewSet(viewsets.ModelViewSet):
         return ChildSerializer
 
     def create(self, request, *args, **kwargs):
-        if request.user.role == UserRole.PARENT:
-            return error_response('Parents cannot register children.', 'FORBIDDEN', status_code=403)
+        if request.user.role in (UserRole.PARENT, UserRole.CHW):
+            return error_response('Only nurses and supervisors can register children.', 'FORBIDDEN', status_code=403)
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
