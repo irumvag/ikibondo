@@ -381,6 +381,12 @@ function PredictionHistory() {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+const MODEL_LABELS: Record<string, string> = {
+  malnutrition: 'Malnutrition classifier',
+  growth: 'Growth trajectory predictor',
+  vaccination: 'Vaccination dropout predictor',
+};
+
 export default function MLModelPage() {
   const { data: info, isLoading, isError } = useModelInfo();
 
@@ -392,21 +398,21 @@ export default function MLModelPage() {
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
         >
-          ML Model
+          ML Models
         </h2>
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Malnutrition risk classifier · predictions · SHAP explanations
+          Risk classifier · malnutrition · growth · dropout · SHAP explanations
         </p>
       </div>
 
-      {/* Model status card */}
+      {/* Primary risk model status card */}
       <div
         className="rounded-2xl border p-6 flex flex-col gap-5"
         style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
       >
         <div className="flex items-center gap-2">
           <Cpu size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-          <p className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Model status</p>
+          <p className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Risk model (primary)</p>
         </div>
 
         {isLoading ? (
@@ -431,7 +437,7 @@ export default function MLModelPage() {
                 ? <CheckCircle size={20} aria-hidden="true" />
                 : <XCircle size={20} aria-hidden="true" />}
               <span className="font-semibold text-sm">
-                {info!.model_loaded ? 'Model loaded and ready' : 'Model not loaded — run training script'}
+                {info!.model_loaded ? 'Risk model loaded and ready' : 'Risk model not loaded — run training script'}
               </span>
             </div>
 
@@ -469,6 +475,42 @@ export default function MLModelPage() {
                     </p>
                     <PctBar value={info!.high_recall} color="var(--danger, #ef4444)" />
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* Secondary model statuses */}
+            {info!.models && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+                  Secondary models (ModelLoader)
+                </p>
+                <div className="flex flex-col gap-2">
+                  {(Object.entries(info!.models) as [string, boolean][]).map(([key, loaded]) => (
+                    <div key={key} className="flex items-center justify-between py-2 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
+                      <span className="text-sm" style={{ color: 'var(--ink)' }}>{MODEL_LABELS[key] ?? key}</span>
+                      <span
+                        className="flex items-center gap-1.5 text-sm font-semibold"
+                        style={{ color: loaded ? 'var(--success)' : 'var(--danger)' }}
+                      >
+                        {loaded
+                          ? <><CheckCircle size={14} aria-hidden="true" /> Loaded</>
+                          : <><XCircle size={14} aria-hidden="true" /> Not loaded</>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {!Object.values(info!.models).every(Boolean) && (
+                  <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+                    Run{' '}
+                    <code className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-elev)' }}>
+                      python ml/scripts/train_all.py
+                    </code>{' '}
+                    to train and save missing models to{' '}
+                    <code className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-elev)' }}>
+                      ml/models/
+                    </code>
+                  </p>
                 )}
               </div>
             )}

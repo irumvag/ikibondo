@@ -41,6 +41,7 @@ def predict_risk(request):
 def model_info(request):
     """GET /api/v1/ml/model-info/"""
     from apps.ml_engine.prediction_service import PredictionService
+    from apps.ml_engine.loader import ModelLoader
     meta_path = _SAVED_MODELS_DIR / 'model_metadata.json'
     metadata = {}
     if meta_path.exists():
@@ -50,12 +51,19 @@ def model_info(request):
         except Exception:
             pass
     return success_response(data={
+        # Primary risk model (PredictionService)
         'model_loaded': PredictionService.is_loaded,
         'version': metadata.get('version', 'unknown'),
         'trained_at': metadata.get('trained_at'),
         'macro_f1': metadata.get('macro_f1'),
         'high_recall': metadata.get('high_recall'),
         'n_features': 25,
+        # All three secondary models (ModelLoader)
+        'models': {
+            'malnutrition': ModelLoader.is_loaded('malnutrition'),
+            'growth': ModelLoader.is_loaded('growth'),
+            'vaccination': ModelLoader.is_loaded('vaccination'),
+        },
     })
 
 

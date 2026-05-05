@@ -179,6 +179,114 @@ export async function deleteZone(campId: string, zoneId: string): Promise<void> 
   await apiClient.delete(`/camps/${campId}/zones/${zoneId}/`);
 }
 
+// ── Guardians ─────────────────────────────────────────────────────────────────
+
+export interface Guardian {
+  id: string;
+  full_name: string;
+  phone_number: string;
+  relationship: string;
+  national_id?: string;
+  has_account: boolean;
+  user_id?: string | null;
+  user_email?: string | null;
+}
+
+export async function listGuardians(search?: string): Promise<Guardian[]> {
+  const { data } = await apiClient.get('/children/guardians/', {
+    params: search ? { search } : {},
+  });
+  const payload = data.data ?? data;
+  return payload?.results ?? payload ?? [];
+}
+
+export async function linkGuardianAccount(guardianId: string, userId: string | null): Promise<Guardian> {
+  const { data } = await apiClient.post(`/children/guardians/${guardianId}/link-account/`, { user_id: userId });
+  return data.data;
+}
+
+// ── Vaccinations ──────────────────────────────────────────────────────────────
+
+export interface VaccinationRecord {
+  id: string;
+  child: string;
+  child_name: string;
+  vaccine: string;
+  vaccine_name: string;
+  vaccine_code: string;
+  dose_number: number;
+  scheduled_date: string;
+  administered_date: string | null;
+  administered_by: string | null;
+  administered_by_name: string | null;
+  status: 'SCHEDULED' | 'DONE' | 'MISSED' | 'SKIPPED';
+  batch_number: string;
+  dropout_probability: string | null;
+  dropout_risk_tier: string | null;
+  is_overdue: boolean;
+  notes: string;
+  created_at: string;
+}
+
+export interface VaccineRecord {
+  id: string;
+  name: string;
+  short_code: string;
+  dose_number: number;
+  recommended_age_weeks: number;
+  is_active: boolean;
+}
+
+export async function listVaccinations(params?: {
+  camp?: string;
+  zone?: string;
+  status?: string;
+  child?: string;
+  page?: number;
+}): Promise<{ results: VaccinationRecord[]; count: number }> {
+  const { data } = await apiClient.get('/vaccinations/', { params });
+  const payload = data.data ?? data;
+  return {
+    results: payload?.results ?? (Array.isArray(payload) ? payload : []),
+    count: payload?.count ?? 0,
+  };
+}
+
+export async function createVaccination(payload: {
+  child: string;
+  vaccine: string;
+  scheduled_date: string;
+  status?: string;
+  notes?: string;
+}): Promise<VaccinationRecord> {
+  const { data } = await apiClient.post('/vaccinations/', payload);
+  return data.data ?? data;
+}
+
+export async function updateVaccination(
+  id: string,
+  payload: Partial<{
+    status: string;
+    scheduled_date: string;
+    administered_date: string;
+    batch_number: string;
+    notes: string;
+  }>,
+): Promise<VaccinationRecord> {
+  const { data } = await apiClient.patch(`/vaccinations/${id}/`, payload);
+  return data.data ?? data;
+}
+
+export async function deleteVaccination(id: string): Promise<void> {
+  await apiClient.delete(`/vaccinations/${id}/`);
+}
+
+export async function listVaccines(params?: { search?: string; is_active?: boolean }): Promise<VaccineRecord[]> {
+  const { data } = await apiClient.get('/vaccinations/vaccines/', { params });
+  const payload = data.data ?? data;
+  return payload?.results ?? (Array.isArray(payload) ? payload : []);
+}
+
 // ── Audit log ─────────────────────────────────────────────────────────────────
 
 export interface AuditLogEntry {

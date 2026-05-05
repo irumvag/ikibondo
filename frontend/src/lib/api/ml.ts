@@ -48,6 +48,11 @@ export interface ModelInfo {
   macro_f1: number | null;
   high_recall: number | null;
   n_features: number;
+  models: {
+    malnutrition: boolean;
+    growth: boolean;
+    vaccination: boolean;
+  };
 }
 
 export interface PredictionLog {

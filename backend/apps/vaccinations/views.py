@@ -2,10 +2,12 @@ from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets, filters
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.core.responses import success_response, error_response
 from apps.accounts.models import UserRole
+from apps.accounts.permissions import IsSupervisorOrAdmin
 from .models import VaccinationRecord, Vaccine, DoseStatus
 from .serializers import VaccinationRecordSerializer, VaccineSerializer, AdministerSerializer
 from .filters import VaccineFilter, VaccinationRecordFilter
@@ -23,10 +25,11 @@ class VaccineViewSet(viewsets.ReadOnlyModelViewSet):
 class VaccinationRecordViewSet(viewsets.ModelViewSet):
     queryset = VaccinationRecord.objects.select_related('child', 'vaccine', 'administered_by').all()
     serializer_class = VaccinationRecordSerializer
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = VaccinationRecordFilter
     ordering_fields = ['scheduled_date', 'created_at']
-    http_method_names = ['get', 'post', 'patch', 'head', 'options']
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def perform_update(self, serializer):
         """When marking a dose DONE, record administered_by and date."""
@@ -36,6 +39,18 @@ class VaccinationRecordViewSet(viewsets.ModelViewSet):
             if not instance.administered_date:
                 instance.administered_date = timezone.now().date()
             instance.save(update_fields=['administered_by', 'administered_date', 'updated_at'])
+
+    def destroy(self, request, *args, **kwargs):
+        """Soft-delete a vaccination record — SUPERVISOR/ADMIN only."""
+        if request.user.role not in (UserRole.SUPERVISOR, UserRole.ADMIN):
+            return error_response(
+                'Only supervisors and admins may delete vaccination records.',
+                'FORBIDDEN',
+                status_code=403,
+            )
+        record = self.get_object()
+        record.soft_delete()
+        return success_response(message='Vaccination record deleted.')
 
     @extend_schema(request=AdministerSerializer, responses=VaccinationRecordSerializer)
     @action(detail=True, methods=['post'], url_path='administer')
