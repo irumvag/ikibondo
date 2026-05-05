@@ -45,7 +45,7 @@ function isForcePwExempt(pathname: string) {
   );
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip Next internals + static files
