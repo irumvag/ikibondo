@@ -35,6 +35,30 @@ Co-Authored-By: Gentille Tumukunde <tumukundegentille001@gmail.com>
 - pytest + pytest-django (not unittest runner)
 - Windows dev — avoid Unicode box-drawing chars in scripts (cp1252 encoding)
 
+## Token Optimization — Never Read These
+
+Skip reading, scanning, or globbing any of the following — they are irrelevant to the project and waste tokens:
+
+**Directories to ignore entirely:**
+- `node_modules/` (any depth)
+- `frontend/.next/`
+- `frontend/out/`
+- `venv/`, `.venv/`, `env/`, `.env/` (Python virtual environments)
+- `__pycache__/`, `*.pyc`, `*.pyo`
+- `.git/` internals (use git CLI commands instead)
+- `backend/staticfiles/`, `backend/media/`
+- `ml/models/` (large binary `.joblib` files — reference by name only)
+- `*.egg-info/`, `dist/`, `build/`
+
+**File types to skip:**
+- `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml` (lock files)
+- `*.log`, `*.pid`
+- `*.joblib`, `*.pkl`, `*.h5`, `*.onnx` (ML binary artifacts)
+- `*.png`, `*.jpg`, `*.jpeg`, `*.gif`, `*.ico`, `*.svg` (images — unless the task is specifically about UI assets)
+- `.env`, `.env.*` (never read — may contain secrets)
+
+**Rule:** If a path contains `node_modules`, `venv`, `.next`, `__pycache__`, or `staticfiles`, stop and skip it without reading.
+
 ## Key Locations
 
 - Settings: `backend/config/settings/`
