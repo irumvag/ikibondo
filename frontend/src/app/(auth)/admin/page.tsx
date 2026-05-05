@@ -1,17 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { Users, MapPin, ScrollText, Cpu, Baby, AlertTriangle, Shield, Activity, Syringe } from 'lucide-react';
+import { Users, MapPin, ScrollText, Cpu, Baby, AlertTriangle, Shield, Activity, Syringe, UserCheck } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { KPICard } from '@/components/ui/KPICard';
 import { useLandingStats, usePendingApprovals } from '@/lib/api/queries';
 
 const QUICK_LINKS = [
-  { href: '/admin/users',         icon: Users,    label: 'User Management',  desc: 'Manage staff accounts and approve pending registrations.' },
-  { href: '/admin/camps',         icon: MapPin,   label: 'Camps & Zones',    desc: 'Create and configure camps, zones, and CHW assignments.' },
-  { href: '/admin/vaccinations',  icon: Syringe,  label: 'Vaccinations',     desc: 'Full CRUD on vaccination records across all camps.' },
-  { href: '/admin/audit',         icon: ScrollText, label: 'Audit Log',      desc: 'Review ML prediction history and system activity.' },
-  { href: '/admin/ml',            icon: Cpu,      label: 'ML Models',        desc: 'Inspect model metadata, accuracy, and all 3 model statuses.' },
+  { href: '/admin/users',      icon: Users,      label: 'User Management', desc: 'Manage staff accounts and approve pending registrations.' },
+  { href: '/admin/camps',      icon: MapPin,     label: 'Camps & Zones',   desc: 'Create and configure camps, zones, and CHW assignments.' },
+  { href: '/admin/guardians',  icon: UserCheck,  label: 'CHW Assignments', desc: 'Assign CHWs to guardian families for home visit tracking.' },
+  { href: '/admin/vaccinations', icon: Syringe,  label: 'Vaccinations',    desc: 'Full CRUD on vaccination records across all camps.' },
+  { href: '/admin/audit',      icon: ScrollText, label: 'Audit Log',       desc: 'Review ML prediction history and system activity.' },
+  { href: '/admin/ml',         icon: Cpu,        label: 'ML Models',       desc: 'Inspect model metadata, accuracy, and all 3 model statuses.' },
 ];
 
 export default function AdminDashboard() {

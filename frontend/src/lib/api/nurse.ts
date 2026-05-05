@@ -70,7 +70,63 @@ export interface HealthRecordDetail {
   created_at: string;
 }
 
+export interface ParentUser {
+  id: string;
+  full_name: string;
+  email: string;
+  phone_number: string;
+  role: 'PARENT';
+  camp: string | null;
+  is_approved: boolean;
+}
+
+export interface RegisteredChild {
+  id: string;
+  registration_number: string;
+  full_name: string;
+  guardian: string;  // guardian id
+}
+
 // ── API calls ─────────────────────────────────────────────────────────────────
+
+export async function listCampParents(search?: string): Promise<ParentUser[]> {
+  const { data } = await apiClient.get('/auth/users/', {
+    params: { role: 'PARENT', ...(search ? { search } : {}) },
+  });
+  return data.data ?? [];
+}
+
+export async function createParentAccount(payload: {
+  full_name: string;
+  email: string;
+  phone_number: string;
+}): Promise<ParentUser> {
+  const { data } = await apiClient.post('/auth/users/', { ...payload, role: 'PARENT' });
+  return data.data;
+}
+
+export async function registerChild(payload: {
+  full_name: string;
+  date_of_birth: string;
+  sex: 'M' | 'F';
+  camp: string;
+  zone?: string;
+  notes?: string;
+  guardian: {
+    full_name: string;
+    phone_number: string;
+    relationship: string;
+    national_id?: string;
+  };
+}): Promise<RegisteredChild & { guardian_id: string }> {
+  const { data } = await apiClient.post('/children/', payload);
+  const child = data.data ?? data;
+  return { ...child, guardian_id: child.guardian };
+}
+
+export async function linkParentToGuardian(guardianId: string, userId: string): Promise<void> {
+  await apiClient.post(`/children/guardians/${guardianId}/link-account/`, { user_id: userId });
+}
 
 export async function getGrowthData(childId: string): Promise<GrowthData> {
   const { data } = await apiClient.get(`/growth-data/${childId}/`);

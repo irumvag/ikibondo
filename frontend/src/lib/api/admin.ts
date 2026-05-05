@@ -190,6 +190,8 @@ export interface Guardian {
   has_account: boolean;
   user_id?: string | null;
   user_email?: string | null;
+  assigned_chw?: string | null;
+  assigned_chw_name?: string | null;
 }
 
 export async function listGuardians(search?: string): Promise<Guardian[]> {
@@ -203,6 +205,19 @@ export async function listGuardians(search?: string): Promise<Guardian[]> {
 export async function linkGuardianAccount(guardianId: string, userId: string | null): Promise<Guardian> {
   const { data } = await apiClient.post(`/children/guardians/${guardianId}/link-account/`, { user_id: userId });
   return data.data;
+}
+
+export async function assignCHWToGuardian(guardianId: string, chwId: string | null): Promise<Guardian> {
+  const { data } = await apiClient.post(`/children/guardians/${guardianId}/assign-chw/`, { chw_id: chwId });
+  return data.data;
+}
+
+export async function listGuardiansBycamp(campId?: string): Promise<Guardian[]> {
+  const { data } = await apiClient.get('/children/guardians/', {
+    params: campId ? { camp: campId } : {},
+  });
+  const payload = data.data ?? data;
+  return payload?.results ?? (Array.isArray(payload) ? payload : []);
 }
 
 // ── Vaccinations ──────────────────────────────────────────────────────────────

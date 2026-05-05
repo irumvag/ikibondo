@@ -1,17 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { Baby, Syringe, RefreshCw, UserPlus, Stethoscope } from 'lucide-react';
+import { Baby, Syringe, RefreshCw, Stethoscope } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { KPICard } from '@/components/ui/KPICard';
 import { useCampChildren, useVaccinationQueue } from '@/lib/api/queries';
 import { useSyncStore } from '@/store/syncStore';
 
 const QUICK_ACTIONS = [
-  { href: '/chw/register', icon: UserPlus,    label: 'Register a child',    desc: 'Add a new child to the system.' },
-  { href: '/chw/visit',    icon: Stethoscope, label: 'Log a visit',         desc: 'Record measurements and symptoms.' },
-  { href: '/chw/vaccines', icon: Syringe,     label: 'Vaccination queue',   desc: 'Administer scheduled doses.' },
-  { href: '/chw/sync',     icon: RefreshCw,   label: 'Sync queue',          desc: 'Push offline records to the server.' },
+  { href: '/chw/visit',    icon: Stethoscope, label: 'Log a visit',       desc: 'Record measurements and symptoms.' },
+  { href: '/chw/vaccines', icon: Syringe,     label: 'Vaccination queue', desc: 'Administer scheduled doses.' },
+  { href: '/chw/sync',     icon: RefreshCw,   label: 'Sync queue',        desc: 'Push offline records to the server.' },
 ];
 
 export default function CHWDashboard() {
@@ -39,9 +38,10 @@ export default function CHWDashboard() {
       {/* KPIs */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
-          label="Children assigned"
+          label="Assigned families"
           value={children ? children.count.toLocaleString() : '—'}
           icon={<Baby size={18} />}
+          subtext="Children in your caseload"
           isLoading={childrenLoading}
         />
         <KPICard
