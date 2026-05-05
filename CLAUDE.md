@@ -5,7 +5,7 @@
 - Concise commit messages — no long paragraphs
 - Co-author every commit: `Co-Authored-By: Gentille Tumukunde <tumukundegentille001@gmail.com>`
 - Do NOT add Claude as co-author
-- Backend work → `backend` branch, multiple focused commits per feature area
+- All backend/API work → `dev` branch directly. Do NOT create new branches.
 - ML pipeline work → `ml` branch, commits per pipeline stage
 
 ## Branch Strategy
@@ -13,9 +13,10 @@
 | Branch | Scope |
 |--------|-------|
 | `main` | stable releases only |
-| `dev` | integration |
-| `backend` | Django REST API changes |
+| `dev` | all Django REST API + frontend changes — work here directly |
 | `ml` | ML training/evaluation scripts and saved models |
+
+**Do NOT create new branches for this project. Work directly on `dev` for backend changes.**
 
 ## Commit Format
 
