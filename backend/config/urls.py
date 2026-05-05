@@ -32,6 +32,9 @@ urlpatterns = [
     # Notifications
     path('api/v1/notifications/', include('apps.notifications.urls')),
 
+    # CHW ↔ Nurse consultations
+    path('api/v1/consultations/', include('apps.consultations.urls')),
+
     # FAQ (public read, admin CRUD)
     path('api/v1/faq/', include('apps.core.urls')),
 

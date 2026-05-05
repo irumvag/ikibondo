@@ -26,7 +26,8 @@ export const metadata: Metadata = {
   description:
     "Child nutrition and health monitoring for displacement camps in Rwanda.",
   keywords: ["child health", "nutrition", "Rwanda", "refugee camps", "malnutrition"],
-  robots: { index: false, follow: false }, // private health system
+  robots: { index: false, follow: false },
+  manifest: '/manifest.webmanifest',
 };
 
 export default function RootLayout({
@@ -51,6 +52,13 @@ export default function RootLayout({
         }}
       >
         <Providers>{children}</Providers>
+        <Script
+          id="sw-register"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}`,
+          }}
+        />
       </body>
     </html>
   );

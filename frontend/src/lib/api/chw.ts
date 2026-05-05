@@ -114,3 +114,94 @@ export async function syncBatch(operations: SyncOperation[]): Promise<SyncResult
   const { data } = await apiClient.post('/sync/batch/', { operations });
   return data.results ?? [];
 }
+
+// ── Visit Requests (CHW side) ─────────────────────────────────────────────────
+
+export type VisitRequestStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'COMPLETED';
+
+export interface CHWVisitRequest {
+  id: string;
+  child: string;
+  child_name: string;
+  requested_by: string;
+  requested_by_name: string | null;
+  urgency: 'ROUTINE' | 'SOON' | 'URGENT';
+  concern_text: string;
+  symptom_flags: string[];
+  status: VisitRequestStatus;
+  assigned_chw: string | null;
+  assigned_chw_name: string | null;
+  eta: string | null;
+  decline_reason: string;
+  accepted_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export async function listCHWVisitRequests(status?: VisitRequestStatus): Promise<CHWVisitRequest[]> {
+  const params = status ? { status } : {};
+  const { data } = await apiClient.get('/children/visit-requests/', { params });
+  return data.data ?? [];
+}
+
+export async function acceptVisitRequest(id: string, eta?: string): Promise<CHWVisitRequest> {
+  const { data } = await apiClient.post(`/children/visit-requests/${id}/accept/`, { eta });
+  return data.data;
+}
+
+export async function declineVisitRequest(id: string, reason: string): Promise<CHWVisitRequest> {
+  const { data } = await apiClient.post(`/children/visit-requests/${id}/decline/`, { reason });
+  return data.data;
+}
+
+export async function completeVisitRequest(id: string): Promise<CHWVisitRequest> {
+  const { data } = await apiClient.post(`/children/visit-requests/${id}/complete/`, {});
+  return data.data;
+}
+
+// ── Consultations ─────────────────────────────────────────────────────────────
+
+export interface ConsultationMessage {
+  id: string;
+  author: string;
+  author_name: string | null;
+  body: string;
+  created_at: string;
+}
+
+export interface Consultation {
+  id: string;
+  child: string;
+  child_name: string;
+  opened_by: string;
+  opened_by_name: string | null;
+  assigned_nurse: string | null;
+  assigned_nurse_name: string | null;
+  status: 'OPEN' | 'RESOLVED' | 'ESCALATED';
+  helpful_rating: number | null;
+  disputed_classification: boolean;
+  resolved_at: string | null;
+  created_at: string;
+  messages: ConsultationMessage[];
+  message_count: number;
+}
+
+export async function listConsultations(): Promise<Consultation[]> {
+  const { data } = await apiClient.get('/consultations/');
+  return data.data ?? data.results ?? [];
+}
+
+export async function openConsultation(childId: string): Promise<Consultation> {
+  const { data } = await apiClient.post('/consultations/', { child: childId });
+  return data.data;
+}
+
+export async function sendConsultationMessage(consultationId: string, body: string): Promise<ConsultationMessage> {
+  const { data } = await apiClient.post(`/consultations/${consultationId}/reply/`, { body });
+  return data.data;
+}
+
+export async function resolveConsultation(consultationId: string, rating?: number): Promise<Consultation> {
+  const { data } = await apiClient.post(`/consultations/${consultationId}/resolve/`, { helpful_rating: rating });
+  return data.data;
+}

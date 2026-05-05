@@ -1,11 +1,13 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Menu } from 'lucide-react';
+import { Menu, WifiOff, RefreshCw } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { NotificationBell } from './NotificationBell';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useAuthStore } from '@/store/authStore';
+import { useSyncStore } from '@/store/syncStore';
 
 // Map route prefixes → readable page titles
 const PAGE_TITLES: Record<string, string> = {
@@ -55,6 +57,18 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const title = getPageTitle(pathname);
+  const pendingCount = useSyncStore((s) => s.pending.length);
+  const lastSyncAt = useSyncStore((s) => s.lastSyncAt);
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const up = () => setIsOnline(true);
+    const down = () => setIsOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
+  }, []);
 
   const initials = user?.full_name
     .split(' ')
@@ -94,6 +108,19 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
       {/* Right controls */}
       <div className="flex items-center gap-1">
+        {/* Sync / offline indicator */}
+        {!isOnline ? (
+          <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+            <WifiOff className="h-3 w-3" />
+            Offline
+          </div>
+        ) : pendingCount > 0 ? (
+          <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium" title={`${pendingCount} pending · Last sync ${lastSyncAt ? new Date(lastSyncAt).toLocaleTimeString() : 'never'}`}>
+            <RefreshCw className="h-3 w-3 animate-spin" />
+            {pendingCount} pending
+          </div>
+        ) : null}
+
         <LanguageSwitcher />
         <NotificationBell />
         <ThemeToggle />
