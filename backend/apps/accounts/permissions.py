@@ -1,6 +1,23 @@
 """Role-based permission classes for Ikibondo API views."""
-from rest_framework.permissions import BasePermission
+from functools import wraps
+from rest_framework.permissions import BasePermission, IsAuthenticatedOrReadOnly
+from rest_framework.response import Response
+from rest_framework import status
 from .models import UserRole
+
+
+def role_required(*roles):
+    """Function-based view decorator that returns 403 unless request.user.role is in roles."""
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if not request.user or not request.user.is_authenticated:
+                return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
+            if request.user.role not in roles:
+                return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
 
 
 class IsCHW(BasePermission):
@@ -76,3 +93,13 @@ class IsStaffCreatorOrNurse(BasePermission):
             request.user and request.user.is_authenticated
             and request.user.role in (UserRole.ADMIN, UserRole.SUPERVISOR, UserRole.NURSE)
         )
+
+
+class IsAdminOrReadOnly(BasePermission):
+    """ADMIN for write operations; all authenticated users for reads."""
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return True
+        return request.user.role == UserRole.ADMIN

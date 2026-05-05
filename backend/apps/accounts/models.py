@@ -76,6 +76,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         choices=[('system', 'System'), ('light', 'Light'), ('dark', 'Dark')],
         default='system',
     )
+    # Notification preferences: {"sms": {"HIGH_RISK": true, "VAX_REMINDER": true}, "push": {...}}
+    notification_prefs = models.JSONField(default=dict, blank=True)
+    # Set when a user completes the onboarding wizard for their role
+    onboarded_at = models.DateTimeField(null=True, blank=True)
     date_joined = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

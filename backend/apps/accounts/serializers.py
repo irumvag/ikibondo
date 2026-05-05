@@ -57,14 +57,20 @@ class IdentifierAuthSerializer(serializers.Serializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     camp_name = serializers.CharField(source='camp.name', read_only=True, allow_null=True)
+    has_guardian_record = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
         fields = [
             'id', 'email', 'full_name', 'role', 'phone_number', 'camp', 'camp_name',
-            'is_approved', 'must_change_password', 'preferred_language', 'theme_preference', 'date_joined',
+            'is_approved', 'must_change_password', 'preferred_language', 'theme_preference',
+            'notification_prefs', 'onboarded_at', 'has_guardian_record', 'date_joined',
         ]
         read_only_fields = ['id', 'date_joined', 'is_approved', 'must_change_password', 'role', 'camp']
+
+    def get_has_guardian_record(self, obj) -> bool:
+        from apps.children.models import Guardian
+        return Guardian.objects.filter(user=obj).exists()
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):

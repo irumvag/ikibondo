@@ -95,7 +95,7 @@ function EditModal({
             <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--ink)' }}>Status</label>
             <select
               value={form.status}
-              onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))}
+              onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as 'SCHEDULED' | 'DONE' | 'MISSED' | 'SKIPPED' }))}
               className="w-full text-sm px-3 py-2 rounded-lg border outline-none"
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
             >
