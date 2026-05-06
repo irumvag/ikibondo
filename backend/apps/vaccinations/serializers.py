@@ -64,7 +64,7 @@ class ClinicSessionSerializer(serializers.ModelSerializer):
             'status', 'notes', 'created_at',
             'attendances', 'attendance_count',
         ]
-        read_only_fields = ['id', 'opened_by', 'opened_by_name', 'created_at', 'attendance_count']
+        read_only_fields = ['id', 'camp', 'camp_name', 'opened_by', 'opened_by_name', 'created_at', 'attendance_count']
 
     def get_attendance_count(self, obj):
         return obj.attendances.count()

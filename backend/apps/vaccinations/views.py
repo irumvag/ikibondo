@@ -178,9 +178,12 @@ class ClinicSessionViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         if request.user.role not in (UserRole.NURSE, UserRole.SUPERVISOR, UserRole.ADMIN):
             return error_response('Only nurses and above can open clinic sessions.', 'FORBIDDEN', status_code=403)
+        camp = getattr(request.user, 'camp', None)
+        if camp is None:
+            return error_response('Your account is not assigned to a camp.', 'NO_CAMP', status_code=400)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        session = serializer.save(opened_by=request.user)
+        session = serializer.save(opened_by=request.user, camp=camp)
         return created_response(
             data=ClinicSessionSerializer(session).data,
             message='Clinic session opened.',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, XCircle, Loader2, Plus, Syringe, CalendarDays } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
@@ -51,6 +51,13 @@ export default function ClinicSessionPage() {
     queryFn:  listSessions,
   });
   const { data: vaccines = [] } = useQuery({ queryKey: ['vaccines'],              queryFn: listVaccines });
+
+  // Auto-select the first vaccine when the list loads
+  useEffect(() => {
+    if (vaccines.length > 0 && !newVaccine) {
+      setNewVaccine(vaccines[0].id);
+    }
+  }, [vaccines]); // eslint-disable-line react-hooks/exhaustive-deps
   const { data: children = [] } = useQuery({ queryKey: ['nurse', 'children-list'], queryFn: listChildren });
 
   const openSessionMut = useMutation({
@@ -320,7 +327,7 @@ export default function ClinicSessionPage() {
                 className="rounded-lg border px-3 py-2 text-sm outline-none"
                 style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
               >
-                <option value="">Select vaccine…</option>
+                {vaccines.length === 0 && <option value="">Loading…</option>}
                 {vaccines.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
               </select>
             </div>
