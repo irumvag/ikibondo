@@ -1,6 +1,7 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
+from .views import consent_view, consent_withdraw_view
 
 urlpatterns = [
     path('login/', views.LoginView.as_view(), name='auth-login'),
@@ -15,4 +16,7 @@ urlpatterns = [
     path('users/<uuid:user_id>/suspend/', views.suspend_user_view, name='auth-suspend-user'),
     path('pending-approvals/', views.pending_approvals_view, name='auth-pending-approvals'),
     path('approve/<uuid:user_id>/', views.approve_user_view, name='auth-approve-user'),
+    path('onboarding/complete/', views.complete_onboarding_view, name='auth-onboarding-complete'),
+    path('consent/', consent_view, name='auth-consent'),
+    path('consent/<uuid:consent_id>/withdraw/', consent_withdraw_view, name='auth-consent-withdraw'),
 ]

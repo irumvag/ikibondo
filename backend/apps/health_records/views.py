@@ -8,7 +8,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.core.responses import success_response, created_response, error_response
 from apps.accounts.models import UserRole
-from .models import HealthRecord, ClinicalNote
+from .models import HealthRecord, ClinicalNote, AmendmentLog
 from .serializers import HealthRecordSerializer, ClinicalNoteSerializer
 
 logger = logging.getLogger(__name__)
@@ -98,6 +98,60 @@ class HealthRecordViewSet(viewsets.ModelViewSet):
         return created_response(
             data=ClinicalNoteSerializer(note).data,
             message='Clinical note added.',
+        )
+
+    @action(detail=True, methods=['patch'], url_path='amend')
+    def amend(self, request, pk=None):
+        """
+        PATCH /api/v1/health-records/<id>/amend/
+        Body: {<fields to amend>, reason: "..."}
+        CHW: 24 h window from record creation. Nurse/Admin: any time.
+        Creates AmendmentLog + updates the record.
+        """
+        record = self.get_object()
+        reason = request.data.get('reason', '').strip()
+        if not reason:
+            return error_response('reason is required for amendments.', 'VALIDATION_ERROR')
+
+        user = request.user
+        # CHW 24-hour window
+        if user.role == UserRole.CHW:
+            age = timezone.now() - record.created_at
+            if age.total_seconds() > 86400:
+                return error_response(
+                    'CHW amendment window has expired (24 h from record creation).',
+                    'AMENDMENT_WINDOW_EXPIRED',
+                    status_code=403,
+                )
+
+        # Snapshot before
+        allowed_fields = ['weight_kg', 'height_cm', 'muac_cm', 'oedema', 'notes',
+                          'temperature_c', 'respiratory_rate', 'heart_rate', 'spo2']
+        update_data = {k: v for k, v in request.data.items() if k in allowed_fields}
+        if not update_data:
+            return error_response('No amendable fields provided.', 'VALIDATION_ERROR')
+
+        before_data = {k: str(getattr(record, k, '')) for k in update_data}
+
+        serializer = self.get_serializer(record, data=update_data, partial=True)
+        if not serializer.is_valid():
+            return error_response(str(serializer.errors), 'VALIDATION_ERROR')
+        serializer.save()
+
+        after_data = {k: str(getattr(record, k, '')) for k in update_data}
+
+        from django.contrib.contenttypes.models import ContentType
+        AmendmentLog.objects.create(
+            content_type=ContentType.objects.get_for_model(HealthRecord),
+            object_id=record.id,
+            amended_by=user,
+            reason=reason,
+            before_data=before_data,
+            after_data=after_data,
+        )
+        return success_response(
+            data=HealthRecordSerializer(record).data,
+            message='Record amended and logged.',
         )
 
     @action(detail=False, methods=['get'], url_path='zone-summary')

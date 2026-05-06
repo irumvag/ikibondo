@@ -17,7 +17,7 @@ from .serializers import (
     ChangePasswordSerializer,
 )
 from .permissions import IsAdminUser, IsSupervisorOrAdmin, IsStaffCreator, IsStaffCreatorOrNurse, IsNurseOrSupervisorOrAdmin
-from .models import CustomUser, UserRole
+from .models import CustomUser, UserRole, ConsentRecord
 
 
 class LoginView(TokenObtainPairView):
@@ -426,6 +426,75 @@ def bulk_suspend_view(request):
         except CustomUser.DoesNotExist:
             pass
     return success_response(data={'affected': count}, message=f'{count} user(s) updated.')
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def complete_onboarding_view(request):
+    """POST /api/v1/auth/onboarding/complete/ — mark onboarding done for the current user."""
+    from django.utils import timezone
+    user = request.user
+    if user.onboarded_at:
+        return success_response(message='Already onboarded.', data=UserProfileSerializer(user).data)
+    user.onboarded_at = timezone.now()
+    user.save(update_fields=['onboarded_at', 'updated_at'])
+    return success_response(data=UserProfileSerializer(user).data, message='Onboarding complete.')
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def consent_view(request):
+    """
+    GET  /api/v1/auth/consent/ — list current user's consent records.
+    POST /api/v1/auth/consent/ — grant consent (body: {scope, version}).
+    """
+    if request.method == 'POST':
+        scope = request.data.get('scope', 'data_collection')
+        version = request.data.get('version', '1.0')
+        record = ConsentRecord.objects.create(
+            user=request.user, scope=scope, version=version, granted=True
+        )
+        return created_response(
+            data={
+                'id': str(record.id),
+                'scope': record.scope,
+                'version': record.version,
+                'granted': record.granted,
+                'granted_at': record.granted_at.isoformat(),
+                'withdrawn_at': None,
+            },
+            message='Consent recorded.',
+        )
+    records = ConsentRecord.objects.filter(user=request.user)
+    data = [
+        {
+            'id': str(r.id),
+            'scope': r.scope,
+            'version': r.version,
+            'granted': r.granted,
+            'granted_at': r.granted_at.isoformat(),
+            'withdrawn_at': r.withdrawn_at.isoformat() if r.withdrawn_at else None,
+        }
+        for r in records
+    ]
+    return success_response(data=data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def consent_withdraw_view(request, consent_id):
+    """POST /api/v1/auth/consent/<consent_id>/withdraw/ — withdraw a consent record."""
+    from django.utils import timezone
+    try:
+        record = ConsentRecord.objects.get(id=consent_id, user=request.user)
+    except ConsentRecord.DoesNotExist:
+        return error_response('Consent record not found.', 'NOT_FOUND', status_code=404)
+    if record.withdrawn_at:
+        return error_response('Already withdrawn.', 'ALREADY_WITHDRAWN')
+    record.withdrawn_at = timezone.now()
+    record.granted = False
+    record.save(update_fields=['withdrawn_at', 'granted'])
+    return success_response(message='Consent withdrawn.')
 
 
 def _send_account_approved_email(user):

@@ -10,7 +10,7 @@ from apps.core.responses import success_response, created_response, error_respon
 from apps.accounts.models import UserRole
 from apps.accounts.permissions import IsSupervisorOrAdmin
 from django.utils import timezone as tz
-from .models import Child, Guardian, VisitRequest, VisitRequestStatus, VisitUrgency
+from .models import Child, Guardian, VisitRequest, VisitRequestStatus, VisitUrgency, ChildClosure, ChildZoneTransfer
 from .serializers import ChildSerializer, ChildCreateSerializer, GuardianSerializer, VisitRequestSerializer
 from .filters import ChildFilter
 
@@ -243,6 +243,114 @@ class ChildViewSet(viewsets.ModelViewSet):
         except ImportError:
             png_b64 = None
         return success_response(data={'qr_code': child.qr_code, 'png_base64': png_b64})
+
+    @action(detail=True, methods=['post'], url_path='close', permission_classes=[IsSupervisorOrAdmin])
+    def close(self, request, pk=None):
+        """
+        POST /api/v1/children/<id>/close/
+        Body: {"status": "DECEASED|TRANSFERRED|DEPARTED", "reason": "..."}
+        Nurse, Supervisor, Admin. Sets closure_status + creates ChildClosure record.
+        """
+        from apps.accounts.permissions import IsNurseOrSupervisorOrAdmin
+        if not IsNurseOrSupervisorOrAdmin().has_permission(request, self):
+            return error_response('Permission denied.', 'FORBIDDEN', status_code=403)
+        child = self.get_object()
+        status_val = request.data.get('status', '').upper()
+        reason = request.data.get('reason', '').strip()
+        allowed = ('DECEASED', 'TRANSFERRED', 'DEPARTED')
+        if status_val not in allowed:
+            return error_response(f'status must be one of {allowed}.', 'VALIDATION_ERROR')
+        if not reason:
+            return error_response('reason is required.', 'VALIDATION_ERROR')
+        ChildClosure.objects.create(
+            child=child, status=status_val, reason=reason, closed_by=request.user,
+        )
+        child.closure_status = status_val
+        child.is_active = False
+        child.save(update_fields=['closure_status', 'is_active', 'updated_at'])
+        return success_response(
+            data=ChildSerializer(child).data,
+            message=f'{child.full_name} marked as {status_val}.',
+        )
+
+    @action(detail=True, methods=['post'], url_path='transfer-zone', permission_classes=[IsSupervisorOrAdmin])
+    def transfer_zone(self, request, pk=None):
+        """
+        POST /api/v1/children/<id>/transfer-zone/
+        Body: {"to_zone": "<zone_id>", "to_camp": "<camp_id>", "reason": "..."}
+        Creates ChildZoneTransfer + updates child.zone (and camp if cross-camp).
+        Notifies old + new CHW.
+        """
+        child = self.get_object()
+        to_zone_id = request.data.get('to_zone')
+        to_camp_id = request.data.get('to_camp')
+        reason = request.data.get('reason', '')
+
+        from apps.camps.models import CampZone, Camp
+        to_zone = None
+        to_camp = None
+        if to_zone_id:
+            try:
+                to_zone = CampZone.objects.get(id=to_zone_id)
+            except CampZone.DoesNotExist:
+                return error_response('Zone not found.', 'NOT_FOUND', status_code=404)
+        if to_camp_id:
+            try:
+                to_camp = Camp.objects.get(id=to_camp_id)
+            except Camp.DoesNotExist:
+                return error_response('Camp not found.', 'NOT_FOUND', status_code=404)
+
+        ChildZoneTransfer.objects.create(
+            child=child,
+            from_zone=child.zone,
+            to_zone=to_zone,
+            from_camp=child.camp,
+            to_camp=to_camp or child.camp,
+            initiated_by=request.user,
+            reason=reason,
+        )
+        old_zone = child.zone
+        child.zone = to_zone
+        if to_camp:
+            child.camp = to_camp
+        child.save(update_fields=['zone', 'camp', 'updated_at'])
+
+        # Notify old + new CHW if zone-coordinator assignments exist
+        _notify_transfer(child, old_zone, to_zone)
+
+        return success_response(
+            data=ChildSerializer(child).data,
+            message='Zone transfer recorded.',
+        )
+
+
+def _notify_transfer(child, from_zone, to_zone):
+    """Best-effort notification to old and new CHW after a zone transfer."""
+    try:
+        from apps.notifications.tasks import send_push_task
+        from apps.camps.models import CHWZoneAssignment
+        chw_ids = set()
+        if from_zone:
+            chw_ids.update(
+                CHWZoneAssignment.objects.filter(
+                    zone=from_zone, is_active=True
+                ).values_list('chw_id', flat=True)
+            )
+        if to_zone:
+            chw_ids.update(
+                CHWZoneAssignment.objects.filter(
+                    zone=to_zone, is_active=True
+                ).values_list('chw_id', flat=True)
+            )
+        for chw_id in chw_ids:
+            send_push_task.delay(
+                user_id=str(chw_id),
+                title='Zone transfer',
+                body=f'{child.full_name} has been transferred to your zone.',
+                data={'child_id': str(child.id)},
+            )
+    except Exception:
+        pass
 
 
 @api_view(['GET'])

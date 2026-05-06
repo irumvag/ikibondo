@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { getMe } from '@/lib/api/user';
 
@@ -13,6 +13,7 @@ import { getMe } from '@/lib/api/user';
 export function AuthInitializer({ children }: { children: React.ReactNode }) {
   const { user, isLoading, setUser, setLoading, clearAuth } = useAuthStore();
   const router = useRouter();
+  const pathname = usePathname();
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -31,7 +32,13 @@ export function AuthInitializer({ children }: { children: React.ReactNode }) {
     }
 
     getMe()
-      .then((me) => setUser(me))
+      .then((me) => {
+        setUser(me);
+        // Redirect un-onboarded users to the onboarding wizard (skip if already there)
+        if (!me.onboarded_at && pathname !== '/onboarding') {
+          router.replace('/onboarding');
+        }
+      })
       .catch(() => {
         clearAuth();
         router.replace('/login');

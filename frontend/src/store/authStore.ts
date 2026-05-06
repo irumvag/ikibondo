@@ -14,6 +14,9 @@ export interface AuthUser {
   must_change_password: boolean;
   preferred_language: 'rw' | 'fr' | 'en';
   theme_preference: 'system' | 'light' | 'dark';
+  onboarded_at: string | null;
+  notification_prefs?: Record<string, unknown>;
+  has_guardian_record?: boolean;
 }
 
 interface AuthState {

@@ -124,3 +124,33 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     @property
     def is_parent(self):
         return self.role == UserRole.PARENT
+
+
+class ConsentRecord(models.Model):
+    """
+    Consent v1: single-scope "data collection & use under UNHCR policy".
+    Granular consent (research, DHIS2 sharing) deferred to backlog.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='consent_records',
+    )
+    scope = models.CharField(
+        max_length=50,
+        default='data_collection',
+        help_text='Consent scope identifier',
+    )
+    version = models.CharField(max_length=10, default='1.0')
+    granted = models.BooleanField(default=True)
+    granted_at = models.DateTimeField(auto_now_add=True)
+    withdrawn_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-granted_at']
+        verbose_name = 'Consent Record'
+
+    def __str__(self):
+        state = 'granted' if self.granted and not self.withdrawn_at else 'withdrawn'
+        return f'{self.user.full_name} — {self.scope} — {state}'

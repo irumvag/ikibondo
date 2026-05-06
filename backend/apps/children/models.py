@@ -97,6 +97,12 @@ class Child(BaseModel):
     photo = models.ImageField(upload_to='children/photos/', null=True, blank=True)
     notes = models.TextField(blank=True)
     qr_code = models.CharField(max_length=64, unique=True, blank=True, db_index=True)
+    closure_status = models.CharField(
+        max_length=15,
+        default='ACTIVE',
+        db_index=True,
+        help_text='ACTIVE (default), TRANSFERRED, DECEASED, or DEPARTED',
+    )
 
     class Meta:
         ordering = ['full_name']
@@ -145,6 +151,91 @@ class Child(BaseModel):
                     max_seq = max(max_seq, int(m.group(1)))
             self.registration_number = f'IKB-{prefix}-{year}-{max_seq + 1:04d}'
         super().save(*args, **kwargs)
+
+
+class ClosureStatus(models.TextChoices):
+    ACTIVE = 'ACTIVE', 'Active'
+    TRANSFERRED = 'TRANSFERRED', 'Transferred'
+    DECEASED = 'DECEASED', 'Deceased'
+    DEPARTED = 'DEPARTED', 'Departed from camp'
+
+
+class ChildClosure(BaseModel):
+    """
+    Records when a child's case is closed (transferred, deceased, or departed).
+    Closed children remain soft-present in the DB but are excluded from active queries.
+    """
+    child = models.ForeignKey(
+        Child,
+        on_delete=models.CASCADE,
+        related_name='closures',
+    )
+    status = models.CharField(max_length=15, choices=ClosureStatus.choices)
+    reason = models.TextField()
+    closed_by = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='closed_cases',
+    )
+    closed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-closed_at']
+        verbose_name = 'Child Closure'
+
+    def __str__(self):
+        return f'{self.child.full_name} — {self.status}'
+
+
+class ChildZoneTransfer(BaseModel):
+    """
+    Records a child moving from one zone to another within (or between) camps.
+    Both the old and new CHW are notified via the notification system.
+    """
+    child = models.ForeignKey(
+        Child,
+        on_delete=models.CASCADE,
+        related_name='zone_transfers',
+    )
+    from_zone = models.ForeignKey(
+        'camps.CampZone',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='outbound_transfers',
+    )
+    to_zone = models.ForeignKey(
+        'camps.CampZone',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='inbound_transfers',
+    )
+    from_camp = models.ForeignKey(
+        'camps.Camp',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='outbound_transfers',
+    )
+    to_camp = models.ForeignKey(
+        'camps.Camp',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='inbound_transfers',
+    )
+    initiated_by = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='initiated_transfers',
+    )
+    reason = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Zone Transfer'
+
+    def __str__(self):
+        return f'{self.child.full_name}: {self.from_zone} → {self.to_zone}'
 
 
 class VisitRequest(BaseModel):
