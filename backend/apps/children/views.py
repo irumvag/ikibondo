@@ -28,6 +28,13 @@ class GuardianViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_permissions(self):
+        # link-account is callable by any authenticated user (NURSE creates parent links)
+        if self.action == 'link_account':
+            return [IsAuthenticated()]
+        # assign-chw restricted to supervisor/admin
+        if self.action == 'assign_chw':
+            from apps.accounts.permissions import IsSupervisorOrAdmin as _SA
+            return [_SA()]
         if self.request.method in ('POST', 'PATCH', 'DELETE'):
             return [IsSupervisorOrAdmin()]
         return [IsAuthenticated()]

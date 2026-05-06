@@ -95,8 +95,8 @@ export async function listCampChildren(params?: {
   page_size?: number;
 }): Promise<Paginated<SupervisedChild>> {
   const { data } = await apiClient.get('/children/', { params });
-  return {
-    items: data.data ?? [],
-    count: data.pagination?.count ?? (data.data?.length ?? 0),
-  };
+  // Handle both custom success_response format and standard DRF pagination format
+  const items = data.data ?? data.results ?? [];
+  const count = data.pagination?.count ?? data.count ?? items.length;
+  return { items, count };
 }
