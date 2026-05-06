@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { use } from 'react';
 import Link from 'next/link';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Pin, ClipboardList, TrendingUp, Cpu,
   Printer, Trash2, RotateCcw, AlertTriangle,
@@ -74,10 +74,28 @@ function GrowthChart({ growth, childName }: { growth: GrowthData; childName: str
   const handlePrint = () => {
     const node = printRef.current;
     if (!node) return;
-    node.classList.add('print-region');
-    window.print();
-    // Remove class after print dialog closes (small timeout for Firefox)
-    setTimeout(() => node.classList.remove('print-region'), 500);
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) return;
+    const chartHtml = node.innerHTML;
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Growth Chart</title>
+  <style>
+    body { font-family: sans-serif; padding: 24px; color: #111; }
+    svg { max-width: 100%; }
+    .recharts-wrapper { width: 100% !important; }
+  </style>
+</head>
+<body>
+  <h2 style="margin-bottom:4px">WHO Growth Chart</h2>
+  <p style="color:#666;font-size:12px;margin-bottom:16px">Printed ${new Date().toLocaleDateString()}</p>
+  ${chartHtml}
+</body>
+</html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
   };
 
   return (
@@ -524,6 +542,128 @@ function MLPredictPanel({ history }: { history: HealthRecordDetail[] | undefined
   );
 }
 
+// ── Record Measurement Modal ──────────────────────────────────────────────────
+
+const TODAY = new Date().toISOString().split('T')[0];
+
+function RecordMeasurementModal({ childId, onClose }: { childId: string; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState({
+    measurement_date: TODAY,
+    weight_kg: '',
+    height_cm: '',
+    muac_cm: '',
+    oedema: false,
+    temperature_c: '',
+    notes: '',
+  });
+  const [error, setError] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: async (body: Record<string, unknown>) => {
+      const { data } = await apiClient.post('/health-records/', body);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QK.childHistory(childId) });
+      qc.invalidateQueries({ queryKey: QK.growthData(childId) });
+      onClose();
+    },
+    onError: () => {
+      setError('Failed to save measurement. Please check your inputs and try again.');
+    },
+  });
+
+  const handleSubmit = () => {
+    setError('');
+    const body: Record<string, unknown> = {
+      child: childId,
+      measurement_date: form.measurement_date,
+      data_source: 'FACILITY',
+      oedema: form.oedema,
+    };
+    if (form.weight_kg)    body.weight_kg    = parseFloat(form.weight_kg);
+    if (form.height_cm)    body.height_cm    = parseFloat(form.height_cm);
+    if (form.muac_cm)      body.muac_cm      = parseFloat(form.muac_cm);
+    if (form.temperature_c) body.temperature_c = parseFloat(form.temperature_c);
+    if (form.notes.trim()) body.notes        = form.notes.trim();
+    mutation.mutate(body);
+  };
+
+  const field = (label: string, key: keyof typeof form, type: 'number' | 'date' | 'textarea', step?: string) => (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{label}</label>
+      {type === 'textarea' ? (
+        <textarea
+          value={form[key] as string}
+          onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+          rows={2}
+          className="text-sm px-3 py-2 rounded-lg border outline-none resize-none"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
+        />
+      ) : (
+        <input
+          type={type}
+          value={form[key] as string}
+          step={step}
+          onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+          className="text-sm px-3 py-2 rounded-lg border outline-none"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
+        />
+      )}
+    </div>
+  );
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="rounded-2xl border w-full max-w-md flex flex-col gap-4 p-6 max-h-[90vh] overflow-y-auto"
+        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+      >
+        <h3 className="text-lg font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
+          Record measurement
+        </h3>
+
+        {field('Measurement date', 'measurement_date', 'date')}
+        {field('Weight (kg)', 'weight_kg', 'number', '0.1')}
+        {field('Height (cm)', 'height_cm', 'number', '0.1')}
+        {field('MUAC (cm)', 'muac_cm', 'number', '0.1')}
+        {field('Temperature (°C, optional)', 'temperature_c', 'number', '0.1')}
+
+        <div className="flex items-center gap-2">
+          <input
+            id="oedema-check"
+            type="checkbox"
+            checked={form.oedema}
+            onChange={(e) => setForm((f) => ({ ...f, oedema: e.target.checked }))}
+            className="w-4 h-4"
+          />
+          <label htmlFor="oedema-check" className="text-sm" style={{ color: 'var(--ink)' }}>
+            Oedema present
+          </label>
+        </div>
+
+        {field('Notes (optional)', 'notes', 'textarea')}
+
+        {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
+
+        <div className="flex gap-2 pt-1">
+          <Button variant="secondary" onClick={onClose} disabled={mutation.isPending} className="flex-1">
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSubmit} loading={mutation.isPending} className="flex-1">
+            Save
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Delete panel ──────────────────────────────────────────────────────────────
 
 function DeletePanel({ childId, childName, deletionRequestedAt }: {
@@ -648,6 +788,7 @@ function DeletePanel({ childId, childName, deletionRequestedAt }: {
 export default function ChildDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [activeTab, setActiveTab] = useState<'chart' | 'history' | 'notes' | 'ml'>('chart');
+  const [showMeasurementModal, setShowMeasurementModal] = useState(false);
 
   const { data: child, isLoading: childLoading }     = useChild(id);
   const { data: growth, isLoading: growthLoading }   = useGrowthData(id);
@@ -756,13 +897,20 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
         )}
 
         {activeTab === 'history' && (
-          <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
-            {historyLoading
-              ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-14 m-2 rounded-lg" />)
-              : history && history.length > 0
-                ? history.map((r: HealthRecordDetail) => <HistoryRow key={r.id} record={r} />)
-                : <p className="p-6 text-sm" style={{ color: 'var(--text-muted)' }}>No visit history yet.</p>
-            }
+          <div className="flex flex-col gap-3">
+            <div className="flex justify-end">
+              <Button variant="primary" size="sm" onClick={() => setShowMeasurementModal(true)}>
+                Record measurement
+              </Button>
+            </div>
+            <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
+              {historyLoading
+                ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-14 m-2 rounded-lg" />)
+                : history && history.length > 0
+                  ? history.map((r: HealthRecordDetail) => <HistoryRow key={r.id} record={r} />)
+                  : <p className="p-6 text-sm" style={{ color: 'var(--text-muted)' }}>No visit history yet.</p>
+              }
+            </div>
           </div>
         )}
 
@@ -790,6 +938,10 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
           deletionRequestedAt={deletionRequestedAt}
         />
       </div>
+
+      {showMeasurementModal && (
+        <RecordMeasurementModal childId={id} onClose={() => setShowMeasurementModal(false)} />
+      )}
     </div>
   );
 }

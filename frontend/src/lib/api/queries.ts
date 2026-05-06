@@ -29,7 +29,7 @@ export const QK = {
   zoneStats:          (campId: string, zoneId: string) => ['zone-stats', campId, zoneId] as const,
   chwActivity:        (campId: string, zoneId: string) => ['chw-activity', campId, zoneId] as const,
   highRiskRecords:    (zone?: string, page?: number)   => ['high-risk-records', zone, page] as const,
-  campChildren:       (camp?: string, status?: string, page?: number) => ['camp-children', camp, status, page] as const,
+  campChildren:       (camp?: string, status?: string, page?: number, search?: string) => ['camp-children', camp, status, page, search] as const,
   growthData:         (childId: string) => ['growth-data', childId] as const,
   child:              (childId: string) => ['child', childId] as const,
   childHistory:       (childId: string) => ['child-history', childId] as const,
@@ -169,10 +169,10 @@ export function useHighRiskRecords(zone?: string, page = 1) {
   });
 }
 
-export function useCampChildren(camp?: string, status?: string, page = 1) {
+export function useCampChildren(camp?: string, status?: string, page = 1, search?: string) {
   return useQuery({
-    queryKey: QK.campChildren(camp, status, page),
-    queryFn: () => listCampChildren({ camp, status, page, page_size: 20 }),
+    queryKey: QK.campChildren(camp, status, page, search),
+    queryFn: () => listCampChildren({ camp, status, page, page_size: 20, search: search || undefined }),
     // Always enabled — backend scopes results by role even without a camp filter
     staleTime: 30_000,
     retry: 1,

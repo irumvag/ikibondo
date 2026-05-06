@@ -8,6 +8,7 @@ export interface AuthUser {
   full_name: string;
   role: UserRole;
   phone_number: string | null;
+  national_id?: string | null;
   camp: string | null;
   camp_name: string | null;
   is_approved: boolean;

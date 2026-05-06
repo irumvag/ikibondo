@@ -52,6 +52,30 @@ export default function ProfilePage() {
   const [saved,  setSaved]  = useState(false);
   const [error,  setError]  = useState('');
 
+  // Personal info editing
+  const [editName,       setEditName]       = useState(user?.full_name       ?? '');
+  const [editPhone,      setEditPhone]      = useState(user?.phone_number    ?? '');
+  const [editNationalId, setEditNationalId] = useState((user as (typeof user & { national_id?: string }) | null)?.national_id ?? '');
+  const [infoSaving,     setInfoSaving]     = useState(false);
+  const [infoSaved,      setInfoSaved]      = useState(false);
+  const [infoError,      setInfoError]      = useState('');
+
+  const handleSaveInfo = async () => {
+    setInfoSaving(true);
+    setInfoError('');
+    setInfoSaved(false);
+    try {
+      const updated = await patchMe({ full_name: editName, phone_number: editPhone, national_id: editNationalId });
+      setUser(updated);
+      setInfoSaved(true);
+      setTimeout(() => setInfoSaved(false), 2500);
+    } catch {
+      setInfoError('Failed to save. Please try again.');
+    } finally {
+      setInfoSaving(false);
+    }
+  };
+
   // Change password
   const [pwForm, setPwForm]   = useState({ old: '', next: '', confirm: '' });
   const [pwSaving, setPwSaving] = useState(false);
@@ -229,6 +253,50 @@ export default function ProfilePage() {
             </span>
           </div>
         ))}
+      </div>
+
+      {/* Personal info */}
+      <div className="flex flex-col gap-4">
+        <p className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Personal info</p>
+        <div
+          className="rounded-2xl border p-5 flex flex-col gap-3"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+        >
+          <Input
+            label="Full name"
+            type="text"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            autoComplete="name"
+          />
+          <Input
+            label="Phone number"
+            type="tel"
+            value={editPhone}
+            onChange={(e) => setEditPhone(e.target.value)}
+            autoComplete="tel"
+          />
+          <Input
+            label="National ID"
+            type="text"
+            value={editNationalId}
+            onChange={(e) => setEditNationalId(e.target.value)}
+            autoComplete="off"
+          />
+          {infoError && (
+            <p className="text-sm" style={{ color: 'var(--danger)' }}>{infoError}</p>
+          )}
+          <Button
+            variant="primary"
+            onClick={handleSaveInfo}
+            loading={infoSaving}
+            className="self-start"
+          >
+            {infoSaved
+              ? <><Check size={15} className="mr-1.5" aria-hidden="true" />Saved</>
+              : 'Save info'}
+          </Button>
+        </div>
       </div>
 
       {/* Security — shown first when force-change is active */}

@@ -9,6 +9,7 @@ import { Plus, CheckCircle2, Loader2, ExternalLink } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Button } from '@/components/ui/Button';
 
 interface Referral {
   id: string;
@@ -50,11 +51,32 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
-const STATUS_COLOR: Record<string, string> = {
-  PENDING: 'text-amber-700 bg-amber-50',
-  ACCEPTED: 'text-blue-700 bg-blue-50',
-  COMPLETED: 'text-green-700 bg-green-50',
-  CANCELLED: 'text-gray-500 bg-gray-100',
+type StatusKey = 'PENDING' | 'ACCEPTED' | 'COMPLETED' | 'CANCELLED';
+
+const STATUS_STYLE: Record<StatusKey, React.CSSProperties> = {
+  PENDING:   { backgroundColor: 'var(--med-bg)',  color: 'var(--warn)' },
+  ACCEPTED:  { backgroundColor: 'var(--low-bg)',  color: 'var(--success)' },
+  COMPLETED: { backgroundColor: 'var(--low-bg)',  color: 'var(--success)' },
+  CANCELLED: { backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' },
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: '0.875rem',
+  fontWeight: 500,
+  marginBottom: '0.25rem',
+  color: 'var(--ink)',
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  borderRadius: '0.5rem',
+  border: '1px solid var(--border)',
+  backgroundColor: 'var(--bg)',
+  color: 'var(--ink)',
+  padding: '0.5rem 0.75rem',
+  fontSize: '0.875rem',
+  outline: 'none',
 };
 
 export default function NurseReferralsPage() {
@@ -81,50 +103,66 @@ export default function NurseReferralsPage() {
   });
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Referrals</h1>
-          <p className="mt-1 text-sm text-gray-500">Outgoing referrals to district facilities.</p>
+          <h1
+            className="text-2xl font-bold"
+            style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
+          >
+            Referrals
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+            Outgoing referrals to district facilities.
+          </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
+        <Button variant="primary" onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4" />
           New referral
-        </button>
+        </Button>
       </div>
 
       {/* Create form modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-lg font-semibold">New Referral</h2>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+          onClick={() => setShowForm(false)}
+        >
+          <div
+            className="rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4"
+            style={{ backgroundColor: 'var(--bg-elev)', border: '1px solid var(--border)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>New Referral</h2>
             <form onSubmit={handleSubmit((v) => createMut.mutate(v))} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Child *</label>
-                <select {...register('child')} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                <label style={labelStyle}>Child *</label>
+                <select {...register('child')} style={inputStyle}>
                   <option value="">Select child…</option>
-                  {children.map((c) => <option key={c.id} value={c.id}>{c.full_name} ({c.registration_number})</option>)}
+                  {children.map((c) => (
+                    <option key={c.id} value={c.id}>{c.full_name} ({c.registration_number})</option>
+                  ))}
                 </select>
-                {errors.child && <p className="text-xs text-red-600 mt-1">{errors.child.message}</p>}
+                {errors.child && <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.child.message}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Target facility *</label>
-                <input {...register('target_facility')} placeholder="e.g. Kigali University Hospital" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-                {errors.target_facility && <p className="text-xs text-red-600 mt-1">{errors.target_facility.message}</p>}
+                <label style={labelStyle}>Target facility *</label>
+                <input {...register('target_facility')} placeholder="e.g. Kigali University Hospital" style={inputStyle} />
+                {errors.target_facility && <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.target_facility.message}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
-                <textarea {...register('reason')} rows={3} placeholder="Clinical reason for referral…" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm resize-none" />
-                {errors.reason && <p className="text-xs text-red-600 mt-1">{errors.reason.message}</p>}
+                <label style={labelStyle}>Reason *</label>
+                <textarea {...register('reason')} rows={3} placeholder="Clinical reason for referral…" style={{ ...inputStyle, resize: 'none' }} />
+                {errors.reason && <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.reason.message}</p>}
               </div>
               <div className="flex gap-2 pt-1">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm">Cancel</button>
-                <button type="submit" disabled={createMut.isPending} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white disabled:opacity-60">
-                  {createMut.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Create
-                </button>
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowForm(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" variant="primary" className="flex-1" loading={createMut.isPending}>
+                  Create
+                </Button>
               </div>
             </form>
           </div>
@@ -133,41 +171,86 @@ export default function NurseReferralsPage() {
 
       {/* Complete outcome modal */}
       {completingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Record outcome</h2>
-            <textarea value={outcome} onChange={(e) => setOutcome(e.target.value)} rows={3} placeholder="Outcome at receiving facility…" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm resize-none" />
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+          onClick={() => setCompletingId(null)}
+        >
+          <div
+            className="rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4"
+            style={{ backgroundColor: 'var(--bg-elev)', border: '1px solid var(--border)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>Record outcome</h2>
+            <textarea
+              value={outcome}
+              onChange={(e) => setOutcome(e.target.value)}
+              rows={3}
+              placeholder="Outcome at receiving facility…"
+              style={{ ...inputStyle, resize: 'none' }}
+            />
             <div className="flex gap-2">
-              <button onClick={() => setCompletingId(null)} className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm">Cancel</button>
-              <button onClick={() => completeMut.mutate({ id: completingId, outcome })} disabled={completeMut.isPending} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm text-white disabled:opacity-60">
-                {completeMut.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Save
-              </button>
+              <Button variant="secondary" className="flex-1" onClick={() => setCompletingId(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1"
+                loading={completeMut.isPending}
+                onClick={() => completeMut.mutate({ id: completingId, outcome })}
+              >
+                Save
+              </Button>
             </div>
           </div>
         </div>
       )}
 
       {isLoading ? (
-        <div className="flex flex-col gap-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
+        </div>
       ) : referrals.length === 0 ? (
         <EmptyState icon={<ExternalLink size={28} />} title="No referrals" description="Create a referral to send a child to another facility." />
       ) : (
         <div className="flex flex-col gap-3">
           {referrals.map((ref) => (
-            <div key={ref.id} className="rounded-xl border border-gray-200 bg-white p-4 flex items-start justify-between gap-3">
+            <div
+              key={ref.id}
+              className="rounded-2xl border p-4 flex items-start justify-between gap-3"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+            >
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-gray-900">{ref.child_name}</p>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_COLOR[ref.status]}`}>{ref.status}</span>
+                  <p className="font-semibold" style={{ color: 'var(--ink)' }}>{ref.child_name}</p>
+                  <span
+                    className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                    style={STATUS_STYLE[ref.status]}
+                  >
+                    {ref.status}
+                  </span>
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5">→ {ref.target_facility} · {new Date(ref.referred_at).toLocaleDateString()}</p>
-                <p className="text-sm text-gray-600 mt-1">{ref.reason}</p>
-                {ref.outcome && <p className="text-xs text-green-700 bg-green-50 rounded px-2 py-1 mt-1">Outcome: {ref.outcome}</p>}
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  → {ref.target_facility} · {new Date(ref.referred_at).toLocaleDateString()}
+                </p>
+                <p className="text-sm mt-1" style={{ color: 'var(--ink)' }}>{ref.reason}</p>
+                {ref.outcome && (
+                  <p
+                    className="text-xs rounded px-2 py-1 mt-1"
+                    style={{ backgroundColor: 'var(--low-bg)', color: 'var(--success)' }}
+                  >
+                    Outcome: {ref.outcome}
+                  </p>
+                )}
               </div>
               {ref.status === 'PENDING' && (
-                <button onClick={() => setCompletingId(ref.id)} className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-green-300 px-2.5 py-1.5 text-xs text-green-700 hover:bg-green-50">
+                <Button
+                  variant="secondary"
+                  onClick={() => setCompletingId(ref.id)}
+                  className="shrink-0 text-xs"
+                >
                   <CheckCircle2 className="h-3.5 w-3.5" /> Complete
-                </button>
+                </Button>
               )}
             </div>
           ))}

@@ -420,8 +420,12 @@ function SidebarContent({
 
       {/* User footer */}
       <div className="px-2 py-3 border-t shrink-0" style={{ borderColor: 'var(--border)' }}>
-        {!collapsed && (
-          <div className="flex items-center gap-3 px-2 mb-2">
+        {!collapsed ? (
+          <Link
+            href="/profile"
+            onClick={onClose}
+            className="flex items-center gap-3 px-2 mb-2 rounded-xl transition-colors cursor-pointer hover:bg-[var(--bg-sand)]"
+          >
             <div
               className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold select-none"
               style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}
@@ -429,7 +433,7 @@ function SidebarContent({
             >
               {initials}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 py-1.5">
               <p className="text-sm font-semibold truncate" style={{ color: 'var(--ink)' }}>
                 {user?.full_name ?? '—'}
               </p>
@@ -437,19 +441,24 @@ function SidebarContent({
                 {user ? ROLE_LABEL[user.role] : '—'}
               </p>
             </div>
-          </div>
+          </Link>
+        ) : (
+          <Link
+            href="/profile"
+            onClick={onClose}
+            title="Profile"
+            className="flex items-center justify-center mb-2 w-full rounded-xl transition-colors hover:bg-[var(--bg-sand)]"
+          >
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold select-none"
+              style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}
+              aria-hidden="true"
+            >
+              {initials}
+            </div>
+          </Link>
         )}
 
-        <Link
-          href="/profile"
-          onClick={onClose}
-          title={collapsed ? 'Profile & settings' : undefined}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-[var(--bg-sand)]"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          <Settings size={16} aria-hidden="true" className="shrink-0" />
-          {!collapsed && <span>Profile &amp; settings</span>}
-        </Link>
         <button
           type="button"
           onClick={handleLogout}

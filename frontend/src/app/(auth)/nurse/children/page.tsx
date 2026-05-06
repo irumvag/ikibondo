@@ -81,9 +81,10 @@ export default function NurseChildrenPage() {
   const campId = user?.camp ?? undefined;
   const [statusFilter, setStatusFilter] = useState('');
   const [sexFilter, setSexFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useCampChildren(campId, statusFilter || undefined, page);
+  const { data, isLoading } = useCampChildren(campId, statusFilter || undefined, page, search || undefined);
 
   const displayed = sexFilter
     ? (data?.items ?? []).filter((c: SupervisedChild) => c.sex === sexFilter)
@@ -106,6 +107,14 @@ export default function NurseChildrenPage() {
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <Baby size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
+        <input
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          placeholder="Search by name or parent…"
+          className="text-sm px-3 py-1.5 rounded-lg border outline-none flex-1 min-w-[200px]"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
+          aria-label="Search children"
+        />
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
@@ -119,7 +128,7 @@ export default function NurseChildrenPage() {
         </select>
         <select
           value={sexFilter}
-          onChange={(e) => setSexFilter(e.target.value)}
+          onChange={(e) => { setSexFilter(e.target.value); setPage(1); }}
           className="text-sm px-3 py-1.5 rounded-lg border outline-none"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
           aria-label="Filter by sex"

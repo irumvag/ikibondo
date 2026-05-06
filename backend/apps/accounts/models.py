@@ -49,6 +49,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     full_name = models.CharField(max_length=200)
     role = models.CharField(max_length=20, choices=UserRole.choices, default=UserRole.CHW)
     phone_number = models.CharField(max_length=20, blank=True, unique=True, null=True, db_index=True)
+    national_id = models.CharField(max_length=50, blank=True, null=True, unique=True, db_index=True)
 
     # Camp assignment — null for ADMIN users who oversee multiple camps
     camp = models.ForeignKey(

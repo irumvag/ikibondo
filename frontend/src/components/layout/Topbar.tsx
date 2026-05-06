@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { Menu, WifiOff, RefreshCw } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { NotificationBell } from './NotificationBell';
@@ -125,15 +126,19 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         <NotificationBell />
         <ThemeToggle />
 
-        {/* User avatar — decorative, sidebar has full info */}
-        <div
-          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold select-none ml-1"
-          style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}
-          aria-hidden="true"
-          title={user?.full_name}
-        >
-          {initials}
-        </div>
+        {/* User avatar — links to profile */}
+        <Link href="/profile" className="flex items-center gap-2 ml-1" aria-label="Go to profile">
+          <span className="hidden md:block text-sm font-medium" style={{ color: 'var(--ink)' }}>
+            {user?.full_name?.split(' ')[0]}
+          </span>
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold select-none"
+            style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}
+            title={user?.full_name}
+          >
+            {initials}
+          </div>
+        </Link>
       </div>
     </header>
   );
