@@ -41,7 +41,7 @@ const COLUMNS = [
                 {v as string}
               </p>
               {c.deletion_requested_at && (
-                <AlertTriangle size={12} style={{ color: 'var(--danger)' }} title="Deletion pending" />
+                <span title="Deletion pending"><AlertTriangle size={12} style={{ color: 'var(--danger)' }} /></span>
               )}
             </div>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{c.registration_number}</p>

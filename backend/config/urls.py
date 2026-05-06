@@ -4,6 +4,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from apps.health_records.views import growth_data_view
+from apps.children.views import daily_plan_view
 from apps.core.views import health_check, landing_stats_view, stats_trend_view, audit_log_view
 from apps.core.sync_views import batch_sync_view
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -44,6 +45,9 @@ urlpatterns = [
     # Public stats for landing page
     path('api/v1/stats/landing/', landing_stats_view, name='landing-stats'),
     path('api/v1/stats/trend/', stats_trend_view, name='stats-trend'),
+
+    # CHW daily plan
+    path('api/v1/chw/daily-plan/', daily_plan_view, name='chw-daily-plan'),
 
     # Offline CHW batch sync
     path('api/v1/sync/batch/', batch_sync_view, name='sync-batch'),

@@ -554,3 +554,127 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
         notify_visit_request_completed.delay(str(vr.id))
 
         return success_response(data=VisitRequestSerializer(vr).data, message='Visit marked as complete.')
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def daily_plan_view(request):
+    """
+    GET /api/v1/chw/daily-plan/
+    Returns the CHW's prioritised visit list for today, ranked by:
+      1. Pending visit requests (urgent first)
+      2. HIGH risk children
+      3. Overdue vaccination
+      4. Children not visited in >30 days
+      5. Children never visited
+    CHW role only; scoped to their assigned children (guardian.assigned_chw).
+    """
+    from django.utils import timezone
+    from apps.accounts.models import UserRole
+    from apps.vaccinations.models import VaccinationRecord, DoseStatus
+    from apps.health_records.models import HealthRecord
+
+    user = request.user
+    if user.role != UserRole.CHW:
+        return error_response('Only CHWs can access the daily plan.', 'FORBIDDEN', status_code=403)
+
+    today = timezone.now().date()
+
+    # Base queryset: children assigned to this CHW
+    children = Child.objects.filter(
+        guardian__assigned_chw=user,
+        is_active=True,
+        deletion_requested_at__isnull=True,
+    ).select_related('zone', 'camp', 'guardian')
+
+    # Latest health record per child for risk_level
+    from django.db.models import Subquery, OuterRef, Max
+    latest_hr_date = (
+        HealthRecord.objects
+        .filter(child=OuterRef('pk'))
+        .order_by('-measurement_date')
+        .values('measurement_date')[:1]
+    )
+    latest_risk = (
+        HealthRecord.objects
+        .filter(child=OuterRef('pk'))
+        .order_by('-measurement_date')
+        .values('risk_level')[:1]
+    )
+    latest_visit_date = (
+        HealthRecord.objects
+        .filter(child=OuterRef('pk'))
+        .order_by('-measurement_date')
+        .values('measurement_date')[:1]
+    )
+
+    children = children.annotate(
+        latest_risk=Subquery(latest_risk),
+        last_visit=Subquery(latest_visit_date),
+    )
+
+    # Pending visit requests
+    pending_vr_child_ids = set(
+        VisitRequest.objects.filter(
+            child__guardian__assigned_chw=user,
+            status=VisitRequestStatus.PENDING,
+        ).values_list('child_id', flat=True)
+    )
+
+    # Overdue vaccination child IDs
+    overdue_vax_child_ids = set(
+        VaccinationRecord.objects.filter(
+            child__guardian__assigned_chw=user,
+            status=DoseStatus.SCHEDULED,
+            scheduled_date__lt=today,
+        ).values_list('child_id', flat=True)
+    )
+
+    result = []
+    for child in children:
+        risk = (child.latest_risk or 'UNKNOWN').upper()
+        last_visit = child.last_visit
+        last_visit_days = (today - last_visit).days if last_visit else None
+
+        has_request = child.id in pending_vr_child_ids
+        has_overdue = child.id in overdue_vax_child_ids
+        never_visited = last_visit is None
+
+        reasons = []
+        score = 0
+        if has_request:
+            reasons.append('Visit request')
+            score += 40
+        if risk == 'HIGH':
+            reasons.append('High risk')
+            score += 30
+        elif risk == 'MEDIUM':
+            score += 10
+        if has_overdue:
+            reasons.append('Overdue vaccine')
+            score += 20
+        if never_visited:
+            reasons.append('Never visited')
+            score += 15
+        elif last_visit_days is not None and last_visit_days > 30:
+            reasons.append(f'Last visit {last_visit_days}d ago')
+            score += 5
+
+        from apps.children.serializers import ChildSerializer as _CS
+        age_display = getattr(child, 'age_display', '')
+
+        result.append({
+            'child_id': str(child.id),
+            'child_name': child.full_name,
+            'registration_number': child.registration_number,
+            'age_display': age_display,
+            'priority_score': score,
+            'priority_reasons': reasons,
+            'risk_level': risk,
+            'has_pending_request': has_request,
+            'has_overdue_vaccine': has_overdue,
+            'last_visit_days_ago': last_visit_days,
+        })
+
+    result.sort(key=lambda x: -x['priority_score'])
+    return success_response(data=result)

@@ -204,7 +204,7 @@ function AddHealthRecordModal({ onClose }: { onClose: () => void }) {
       return data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QK.healthRecords });
+      qc.invalidateQueries({ queryKey: ['health-records'] });
       onClose();
     },
     onError: (err: unknown) => {

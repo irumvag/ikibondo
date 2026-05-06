@@ -334,21 +334,7 @@ function GrowthChart({ growth, childName }: { growth: GrowthData; childName: str
         </div>
       </div>
 
-      {/*
-        Hidden static charts rendered at fixed pixel size — used for SVG capture on print.
-        Positioned off-screen so they never affect layout.
-      */}
-      <div
-        aria-hidden="true"
-        style={{ position: 'absolute', left: -9999, top: -9999, pointerEvents: 'none' }}
-      >
-        <div ref={printWeightRef}>
-          <StaticGrowthChart growth={growth} mode="weight" width={760} height={260} />
-        </div>
-        <div ref={printHeightRef}>
-          <StaticGrowthChart growth={growth} mode="height" width={760} height={260} />
-        </div>
-      </div>
+      {/* Charts rendered via buildPrintSVG() on demand — no hidden DOM refs needed */}
     </div>
   );
 }
