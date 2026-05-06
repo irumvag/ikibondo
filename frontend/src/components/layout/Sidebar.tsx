@@ -140,10 +140,11 @@ const ROLE_NAV: Record<UserRole, NavEntry[]> = {
   ],
 
   PARENT: [
-    { href: '/parent',               label: 'My Children',    icon: Heart },
-    { href: '/parent/vaccines',      label: 'Vaccination Card', icon: Syringe },
-    { href: '/parent/request-visit', label: 'Request a Visit', icon: Calendar },
-    { href: '/parent/notifications', label: 'Notifications',  icon: Bell },
+    { href: '/parent',               label: 'My Children',      icon: Heart },
+    { href: '/parent/vaccines',      label: 'Vaccination Card',  icon: Syringe },
+    { href: '/parent/request-visit', label: 'Request a Visit',   icon: Calendar },
+    { href: '/parent/notifications', label: 'Notifications',     icon: Bell },
+    { href: '/parent/consent',       label: 'Consent & Privacy', icon: ShieldCheck },
   ],
 };
 

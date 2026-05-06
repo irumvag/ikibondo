@@ -173,7 +173,7 @@ export function useCampChildren(camp?: string, status?: string, page = 1) {
   return useQuery({
     queryKey: QK.campChildren(camp, status, page),
     queryFn: () => listCampChildren({ camp, status, page, page_size: 20 }),
-    enabled: !!camp,
+    // Always enabled — backend scopes results by role even without a camp filter
     staleTime: 30_000,
     retry: 1,
   });

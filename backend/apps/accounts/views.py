@@ -193,6 +193,14 @@ def create_user_view(request):
         role = request.query_params.get('role')
         if role:
             qs = qs.filter(role=role)
+        search = request.query_params.get('search', '').strip()
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(full_name__icontains=search) |
+                Q(phone_number__icontains=search) |
+                Q(email__icontains=search)
+            )
         return success_response(data=UserProfileSerializer(qs, many=True).data)
 
     # --- POST: create user ---

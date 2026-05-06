@@ -111,6 +111,17 @@ export default function NurseRegisterPage() {
   const setP = (k: keyof ParentForm, v: string) => setParentForm((p) => ({ ...p, [k]: v }));
   const setN = (k: keyof NewbornForm, v: string) => setNewbornForm((p) => ({ ...p, [k]: v }));
 
+  // When an existing parent is selected, auto-fill guardian details from their account
+  useEffect(() => {
+    if (selectedParent) {
+      setNewbornForm((prev) => ({
+        ...prev,
+        guardian_full_name: selectedParent.full_name,
+        guardian_phone: selectedParent.phone_number,
+      }));
+    }
+  }, [selectedParent]);
+
   const parentReady = selectedParent !== null || (
     showNewForm && parentForm.full_name.trim() && parentForm.email.trim() && parentForm.phone_number.trim()
   );
@@ -222,7 +233,7 @@ export default function NurseRegisterPage() {
   const stepIdx = steps.findIndex((s) => s.key === step);
 
   return (
-    <div className="flex flex-col gap-6 max-w-lg">
+    <div className="flex flex-col gap-6 max-w-lg mx-auto w-full">
       <div>
         <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
           Admit newborn
@@ -444,19 +455,41 @@ export default function NurseRegisterPage() {
           />
 
           <p className="text-xs font-semibold uppercase tracking-wider mt-2" style={{ color: 'var(--text-muted)' }}>Guardian</p>
-          <Input
-            label="Guardian full name"
-            value={newbornForm.guardian_full_name}
-            onChange={(e) => setN('guardian_full_name', e.target.value)}
-            required
-          />
-          <Input
-            label="Guardian phone"
-            type="tel"
-            value={newbornForm.guardian_phone}
-            onChange={(e) => setN('guardian_phone', e.target.value)}
-            required
-          />
+
+          {/* When an existing parent is selected, name/phone are pre-filled and read-only */}
+          {selectedParent ? (
+            <div
+              className="rounded-xl border px-4 py-3 flex flex-col gap-1"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-sand)' }}
+            >
+              <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+                Pre-filled from parent account
+              </p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+                {selectedParent.full_name}
+              </p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {selectedParent.phone_number}
+              </p>
+            </div>
+          ) : (
+            <>
+              <Input
+                label="Guardian full name"
+                value={newbornForm.guardian_full_name}
+                onChange={(e) => setN('guardian_full_name', e.target.value)}
+                required
+              />
+              <Input
+                label="Guardian phone"
+                type="tel"
+                value={newbornForm.guardian_phone}
+                onChange={(e) => setN('guardian_phone', e.target.value)}
+                required
+              />
+            </>
+          )}
+
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
               Relationship <span style={{ color: 'var(--danger)' }}>*</span>
