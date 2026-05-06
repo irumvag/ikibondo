@@ -10,7 +10,9 @@ urlpatterns = [
     path('change-password/', views.change_password_view, name='auth-change-password'),
     path('register/', views.register_view, name='auth-register'),
     path('users/', views.create_user_view, name='auth-create-user'),
+    path('users/bulk-suspend/', views.bulk_suspend_view, name='auth-bulk-suspend'),
     path('users/<uuid:user_id>/', views.manage_user_view, name='auth-manage-user'),
+    path('users/<uuid:user_id>/suspend/', views.suspend_user_view, name='auth-suspend-user'),
     path('pending-approvals/', views.pending_approvals_view, name='auth-pending-approvals'),
     path('approve/<uuid:user_id>/', views.approve_user_view, name='auth-approve-user'),
 ]

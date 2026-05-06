@@ -1,6 +1,10 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from . import views
 from .views_risk import predict_risk, model_info, list_predictions
+
+router = DefaultRouter()
+router.register(r'model-versions', views.MLModelVersionViewSet, basename='ml-model-version')
 
 urlpatterns = [
     # Legacy endpoints (kept for backward-compat)
@@ -11,4 +15,6 @@ urlpatterns = [
     path('predict/', predict_risk, name='ml-predict-risk'),
     path('model-info/', model_info, name='ml-model-info'),
     path('predictions/', list_predictions, name='ml-prediction-list'),
+    # Model version registry
+    path('', include(router.urls)),
 ]

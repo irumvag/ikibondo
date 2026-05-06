@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, Pencil, UserCheck, UserPlus, UserX, Users } from 'lucide-react';
+import { Check, Pencil, UserCheck, UserPlus, UserX, Users, ShieldOff } from 'lucide-react';
 import { useAdminUsers, useAdminCamps, usePendingApprovals, QK } from '@/lib/api/queries';
-import { approveUser, createStaffUser, updateUser, deactivateUser } from '@/lib/api/admin';
+import { approveUser, createStaffUser, updateUser, deactivateUser, suspendUser } from '@/lib/api/admin';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -59,6 +59,8 @@ const USER_COLUMNS = (
   onCancelDeactivate: () => void,
   onConfirmDeactivate: (id: string) => void,
   deactivating: string | null,
+  onSuspend: (id: string, suspended: boolean) => void,
+  suspending: string | null,
 ) => [
   { key: 'full_name',  header: 'Name',   width: '180px' },
   { key: 'email',      header: 'Email',  width: '220px' },
@@ -100,6 +102,15 @@ const USER_COLUMNS = (
         <div className="flex items-center gap-1.5">
           <Button size="sm" variant="secondary" onClick={() => onEdit(user)}>
             <Pencil size={12} aria-hidden="true" />Edit
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            title={(user as unknown as { suspended_at: string | null }).suspended_at ? 'Unsuspend' : 'Suspend'}
+            loading={suspending === user.id}
+            onClick={() => onSuspend(user.id, !(user as unknown as { suspended_at: string | null }).suspended_at)}
+          >
+            <ShieldOff size={12} aria-hidden="true" />
           </Button>
           <Button size="sm" variant="ghost" onClick={() => onRequestDeactivate(user.id)}>
             <UserX size={12} aria-hidden="true" />
@@ -158,6 +169,9 @@ export default function UsersPage() {
   // Deactivate
   const [confirmingDeactivate, setConfirmingDeactivate] = useState<string | null>(null);
   const [deactivating, setDeactivating] = useState<string | null>(null);
+
+  // Suspend
+  const [suspending, setSuspending] = useState<string | null>(null);
 
   const { data: users, isLoading: usersLoading } = useAdminUsers(roleFilter || undefined);
   const { data: pending, isLoading: pendingLoading } = usePendingApprovals();
@@ -227,6 +241,16 @@ export default function UsersPage() {
       setEditError(msg ?? 'Failed to save changes.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSuspend = async (userId: string, suspend: boolean) => {
+    setSuspending(userId);
+    try {
+      await suspendUser(userId, { suspended: suspend });
+      qc.invalidateQueries({ queryKey: QK.adminUsers });
+    } finally {
+      setSuspending(null);
     }
   };
 
@@ -333,6 +357,8 @@ export default function UsersPage() {
             () => setConfirmingDeactivate(null),
             handleDeactivate,
             deactivating,
+            handleSuspend,
+            suspending,
           ) as Parameters<typeof DataTable>[0]['columns']}
           data={users ?? []}
           keyField="id"

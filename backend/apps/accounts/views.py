@@ -359,6 +359,75 @@ def approve_user_view(request, user_id):
     )
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def suspend_user_view(request, user_id):
+    """
+    POST /api/v1/auth/users/<user_id>/suspend/
+    Body: {"reason": "...", "suspended": true|false}
+    Admin only. Toggles account suspension.
+    """
+    if request.user.role != UserRole.ADMIN:
+        return error_response('Admin only.', 'FORBIDDEN', status_code=403)
+    try:
+        target = CustomUser.objects.get(id=user_id)
+    except CustomUser.DoesNotExist:
+        return error_response('User not found.', 'NOT_FOUND', status_code=404)
+
+    suspended = request.data.get('suspended', True)
+    from django.utils import timezone
+    if suspended:
+        target.suspended_at = timezone.now()
+        target.suspension_reason = request.data.get('reason', '')
+        target.suspended_by = request.user
+        target.is_active = False
+    else:
+        target.suspended_at = None
+        target.suspension_reason = ''
+        target.suspended_by = None
+        target.is_active = True
+    target.save(update_fields=['suspended_at', 'suspension_reason', 'suspended_by', 'is_active', 'updated_at'])
+    return success_response(
+        data=UserProfileSerializer(target).data,
+        message='User suspension status updated.',
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_suspend_view(request):
+    """
+    POST /api/v1/auth/users/bulk-suspend/
+    Body: {"user_ids": ["<uuid>", ...], "reason": "...", "suspended": true}
+    Admin only.
+    """
+    if request.user.role != UserRole.ADMIN:
+        return error_response('Admin only.', 'FORBIDDEN', status_code=403)
+    user_ids = request.data.get('user_ids', [])
+    reason = request.data.get('reason', '')
+    suspended = request.data.get('suspended', True)
+    from django.utils import timezone
+    count = 0
+    for uid in user_ids[:100]:
+        try:
+            target = CustomUser.objects.get(id=uid)
+            if suspended:
+                target.suspended_at = timezone.now()
+                target.suspension_reason = reason
+                target.suspended_by = request.user
+                target.is_active = False
+            else:
+                target.suspended_at = None
+                target.suspension_reason = ''
+                target.suspended_by = None
+                target.is_active = True
+            target.save(update_fields=['suspended_at', 'suspension_reason', 'suspended_by', 'is_active', 'updated_at'])
+            count += 1
+        except CustomUser.DoesNotExist:
+            pass
+    return success_response(data={'affected': count}, message=f'{count} user(s) updated.')
+
+
 def _send_account_approved_email(user):
     """Notify the user that their account has been approved."""
     try:

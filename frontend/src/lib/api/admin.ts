@@ -302,6 +302,75 @@ export async function listVaccines(params?: { search?: string; is_active?: boole
   return payload?.results ?? (Array.isArray(payload) ? payload : []);
 }
 
+// ── User suspension ───────────────────────────────────────────────────────────
+
+export async function suspendUser(
+  userId: string,
+  payload: { suspended: boolean; reason?: string },
+): Promise<AuthUser> {
+  const { data } = await apiClient.post(`/auth/users/${userId}/suspend/`, payload);
+  return data.data;
+}
+
+export async function bulkSuspendUsers(
+  userIds: string[],
+  suspended: boolean,
+  reason?: string,
+): Promise<{ affected: number }> {
+  const { data } = await apiClient.post('/auth/users/bulk-suspend/', {
+    user_ids: userIds,
+    suspended,
+    reason: reason ?? '',
+  });
+  return data.data;
+}
+
+// ── ML Model Versions ─────────────────────────────────────────────────────────
+
+export interface MLModelVersion {
+  id: string;
+  model_name: string;
+  version: string;
+  file_path: string;
+  f1_score: string | null;
+  recall: string | null;
+  precision: string | null;
+  deployed: boolean;
+  notes: string;
+  uploaded_by: string | null;
+  uploaded_by_name: string | null;
+  created_at: string;
+}
+
+export async function listMLModelVersions(): Promise<MLModelVersion[]> {
+  const { data } = await apiClient.get('/ml/model-versions/');
+  const payload = data.data ?? data;
+  return payload?.results ?? (Array.isArray(payload) ? payload : []);
+}
+
+export async function createMLModelVersion(payload: {
+  model_name: string;
+  version: string;
+  file_path?: string;
+  f1_score?: number;
+  recall?: number;
+  precision?: number;
+  notes?: string;
+}): Promise<MLModelVersion> {
+  const { data } = await apiClient.post('/ml/model-versions/', payload);
+  return data.data ?? data;
+}
+
+export async function promoteMLModelVersion(id: string): Promise<MLModelVersion> {
+  const { data } = await apiClient.post(`/ml/model-versions/${id}/promote/`);
+  return data.data;
+}
+
+export async function rollbackMLModelVersion(id: string): Promise<MLModelVersion> {
+  const { data } = await apiClient.post(`/ml/model-versions/${id}/rollback/`);
+  return data.data;
+}
+
 // ── Audit log ─────────────────────────────────────────────────────────────────
 
 export interface AuditLogEntry {

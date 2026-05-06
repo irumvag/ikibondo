@@ -158,6 +158,77 @@ def stats_trend_view(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def audit_log_view(request):
+    """
+    GET /api/v1/audit/log/
+    Returns paginated auditlog entries. Admin only.
+    Supports ?page=&page_size=&user=&action=
+    """
+    from apps.accounts.permissions import IsAdminUser
+    perm_check = IsAdminUser()
+    if not (request.user and request.user.is_authenticated and perm_check.has_permission(request, None)):
+        from rest_framework.response import Response
+        from rest_framework import status as st
+        return Response({'detail': 'Admin only.'}, status=st.HTTP_403_FORBIDDEN)
+
+    try:
+        from auditlog.models import LogEntry
+    except ImportError:
+        from apps.core.responses import error_response
+        return error_response('django-auditlog not installed.', 'NOT_AVAILABLE')
+
+    page_size = min(int(request.query_params.get('page_size', 25)), 100)
+    page = max(int(request.query_params.get('page', 1)), 1)
+    user_filter = request.query_params.get('user')
+    action_filter = request.query_params.get('action')
+
+    qs = LogEntry.objects.all().order_by('-timestamp')
+    if user_filter:
+        qs = qs.filter(actor_id=user_filter)
+    if action_filter is not None and action_filter != '':
+        qs = qs.filter(action=int(action_filter))
+
+    total = qs.count()
+    offset = (page - 1) * page_size
+    entries = qs[offset:offset + page_size]
+
+    from django.contrib.contenttypes.models import ContentType
+    from apps.accounts.models import CustomUser
+
+    results = []
+    for e in entries:
+        try:
+            ct = ContentType.objects.get_for_id(e.content_type_id)
+            model_label = f'{ct.app_label}.{ct.model}'
+        except Exception:
+            model_label = str(e.content_type_id)
+
+        actor_name = ''
+        if e.actor_id:
+            try:
+                u = CustomUser.objects.get(pk=e.actor_id)
+                actor_name = u.full_name
+            except Exception:
+                actor_name = str(e.actor_id)
+
+        results.append({
+            'id': e.pk,
+            'user': str(e.actor_id) if e.actor_id else None,
+            'user_name': actor_name,
+            'action': str(e.action),
+            'model': model_label,
+            'object_id': str(e.object_id),
+            'object_repr': e.object_repr,
+            'timestamp': e.timestamp.isoformat(),
+            'changes': e.changes,
+        })
+
+    from rest_framework.response import Response
+    return Response({'data': {'count': total, 'results': results}})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def health_check(request):
     """GET /api/v1/health/ — system status."""
     from django.db import connection

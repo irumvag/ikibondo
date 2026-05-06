@@ -80,6 +80,15 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     notification_prefs = models.JSONField(default=dict, blank=True)
     # Set when a user completes the onboarding wizard for their role
     onboarded_at = models.DateTimeField(null=True, blank=True)
+    # Account suspension
+    suspended_at = models.DateTimeField(null=True, blank=True)
+    suspension_reason = models.TextField(blank=True)
+    suspended_by = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='suspended_users',
+    )
     date_joined = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import MLPredictionLog
+from .models import MLPredictionLog, MLModelVersion
 
 
 class MLPredictionLogSerializer(serializers.ModelSerializer):
@@ -8,6 +8,21 @@ class MLPredictionLogSerializer(serializers.ModelSerializer):
         fields = ['id', 'model_name', 'model_version', 'predicted_label',
                   'confidence', 'output_data', 'created_at']
         read_only_fields = fields
+
+
+class MLModelVersionSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MLModelVersion
+        fields = [
+            'id', 'model_name', 'version', 'file_path', 'f1_score', 'recall',
+            'precision', 'deployed', 'notes', 'uploaded_by', 'uploaded_by_name', 'created_at',
+        ]
+        read_only_fields = ['id', 'deployed', 'uploaded_by', 'created_at']
+
+    def get_uploaded_by_name(self, obj):
+        return obj.uploaded_by.full_name if obj.uploaded_by else None
 
 
 class MalnutritionPredictSerializer(serializers.Serializer):

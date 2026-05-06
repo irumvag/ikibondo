@@ -1,13 +1,19 @@
 'use client';
 
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Cpu, CheckCircle, XCircle, Calendar, Tag, Activity,
   Layers, BarChart2, Play, ChevronLeft, ChevronRight,
+  Database, Plus, ArrowUpCircle, RotateCcw,
 } from 'lucide-react';
 import { useModelInfo, usePredictions } from '@/lib/api/queries';
 import { predictRisk, buildFeaturesFromRecord } from '@/lib/api/ml';
 import type { PredictRiskResult } from '@/lib/api/ml';
+import {
+  listMLModelVersions, createMLModelVersion, promoteMLModelVersion, rollbackMLModelVersion,
+} from '@/lib/api/admin';
+import type { MLModelVersion } from '@/lib/api/admin';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -379,6 +385,217 @@ function PredictionHistory() {
   );
 }
 
+// ── Model Version Registry ────────────────────────────────────────────────────
+
+const MODEL_NAME_OPTIONS = [
+  { value: 'malnutrition', label: 'Malnutrition classifier' },
+  { value: 'growth', label: 'Growth trajectory predictor' },
+  { value: 'vaccination', label: 'Vaccination dropout predictor' },
+];
+
+interface RegisterForm {
+  model_name: string; version: string; file_path: string;
+  f1_score: string; recall: string; precision: string; notes: string;
+}
+
+const EMPTY_REGISTER: RegisterForm = {
+  model_name: 'malnutrition', version: '', file_path: '', f1_score: '', recall: '', precision: '', notes: '',
+};
+
+function ModelRegistry() {
+  const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState<RegisterForm>(EMPTY_REGISTER);
+  const [formError, setFormError] = useState('');
+
+  const { data: versions = [], isLoading } = useQuery({
+    queryKey: ['admin', 'ml', 'versions'],
+    queryFn: listMLModelVersions,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (f: RegisterForm) => createMLModelVersion({
+      model_name: f.model_name,
+      version: f.version,
+      file_path: f.file_path || undefined,
+      f1_score: f.f1_score ? Number(f.f1_score) : undefined,
+      recall: f.recall ? Number(f.recall) : undefined,
+      precision: f.precision ? Number(f.precision) : undefined,
+      notes: f.notes,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'ml', 'versions'] });
+      setShowForm(false);
+      setForm(EMPTY_REGISTER);
+      setFormError('');
+    },
+    onError: (e: unknown) => {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setFormError(msg ?? 'Failed to register version.');
+    },
+  });
+
+  const promoteMutation = useMutation({
+    mutationFn: promoteMLModelVersion,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'ml', 'versions'] }),
+  });
+
+  const rollbackMutation = useMutation({
+    mutationFn: rollbackMLModelVersion,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'ml', 'versions'] }),
+  });
+
+  // Group by model_name
+  const grouped: Record<string, MLModelVersion[]> = {};
+  for (const v of versions) {
+    (grouped[v.model_name] ??= []).push(v);
+  }
+
+  return (
+    <div
+      className="rounded-2xl border p-6 flex flex-col gap-5"
+      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Database size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
+          <p className="font-semibold" style={{ color: 'var(--ink)' }}>Model version registry</p>
+        </div>
+        <Button size="sm" variant="secondary" onClick={() => setShowForm((s) => !s)}>
+          <Plus size={14} className="mr-1" aria-hidden="true" />
+          Register version
+        </Button>
+      </div>
+
+      {/* Register form */}
+      {showForm && (
+        <form
+          onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form); }}
+          className="flex flex-col gap-3 rounded-xl border p-4"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-sand)' }}
+        >
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Model</label>
+              <select
+                value={form.model_name}
+                onChange={(e) => setForm({ ...form, model_name: e.target.value })}
+                className="text-sm px-3 py-2 rounded-lg border outline-none"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
+              >
+                {MODEL_NAME_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <Input
+              label="Version (e.g. v2)"
+              value={form.version}
+              onChange={(e) => setForm({ ...form, version: e.target.value })}
+              required
+            />
+          </div>
+          <Input
+            label="File path (relative to ml/models/)"
+            value={form.file_path}
+            onChange={(e) => setForm({ ...form, file_path: e.target.value })}
+          />
+          <div className="grid sm:grid-cols-3 gap-3">
+            <Input label="F1 score" type="number" step="0.0001" min="0" max="1" value={form.f1_score} onChange={(e) => setForm({ ...form, f1_score: e.target.value })} />
+            <Input label="Recall" type="number" step="0.0001" min="0" max="1" value={form.recall} onChange={(e) => setForm({ ...form, recall: e.target.value })} />
+            <Input label="Precision" type="number" step="0.0001" min="0" max="1" value={form.precision} onChange={(e) => setForm({ ...form, precision: e.target.value })} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Notes</label>
+            <textarea
+              rows={2}
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              className="text-sm px-3 py-2 rounded-lg border outline-none resize-none"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
+            />
+          </div>
+          {formError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{formError}</p>}
+          <div className="flex gap-2">
+            <Button type="submit" variant="primary" loading={createMutation.isPending}>Register</Button>
+            <Button type="button" variant="secondary" onClick={() => { setShowForm(false); setFormError(''); }}>Cancel</Button>
+          </div>
+        </form>
+      )}
+
+      {/* Version table */}
+      {isLoading ? (
+        <div className="flex flex-col gap-2">
+          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
+        </div>
+      ) : Object.keys(grouped).length === 0 ? (
+        <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>
+          No versions registered yet. Train a model and register it here.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {Object.entries(grouped).map(([modelName, vers]) => (
+            <div key={modelName}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+                {MODEL_NAME_OPTIONS.find((o) => o.value === modelName)?.label ?? modelName}
+              </p>
+              <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+                {vers.map((v) => (
+                  <div
+                    key={v.id}
+                    className="flex items-center gap-4 px-4 py-3 border-b last:border-b-0 flex-wrap"
+                    style={{ borderColor: 'var(--border)' }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Badge variant={v.deployed ? 'success' : 'default'}>
+                        {v.deployed ? 'Deployed' : v.version}
+                      </Badge>
+                      {v.deployed && <span className="text-xs font-mono" style={{ color: 'var(--ink)' }}>{v.version}</span>}
+                    </div>
+                    <div className="flex gap-4 text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {v.f1_score && <span>F1 {(parseFloat(v.f1_score) * 100).toFixed(1)}%</span>}
+                      {v.recall && <span>Recall {(parseFloat(v.recall) * 100).toFixed(1)}%</span>}
+                      {v.precision && <span>Prec {(parseFloat(v.precision) * 100).toFixed(1)}%</span>}
+                    </div>
+                    <span className="text-xs ml-auto shrink-0" style={{ color: 'var(--text-muted)' }}>
+                      {new Date(v.created_at).toLocaleDateString()}
+                      {v.uploaded_by_name && ` · ${v.uploaded_by_name}`}
+                    </span>
+                    <div className="flex gap-1 shrink-0">
+                      {!v.deployed && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          loading={promoteMutation.isPending && promoteMutation.variables === v.id}
+                          onClick={() => promoteMutation.mutate(v.id)}
+                          title="Promote to deployed"
+                        >
+                          <ArrowUpCircle size={12} className="mr-1" aria-hidden="true" />
+                          Promote
+                        </Button>
+                      )}
+                      {v.deployed && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          loading={rollbackMutation.isPending && rollbackMutation.variables === v.id}
+                          onClick={() => rollbackMutation.mutate(v.id)}
+                          title="Rollback to previous version"
+                        >
+                          <RotateCcw size={12} className="mr-1" aria-hidden="true" />
+                          Rollback
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 const MODEL_LABELS: Record<string, string> = {
@@ -517,6 +734,9 @@ export default function MLModelPage() {
           </>
         )}
       </div>
+
+      {/* Model version registry */}
+      <ModelRegistry />
 
       {/* Manual predict */}
       <PredictPanel />
