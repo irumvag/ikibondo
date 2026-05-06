@@ -163,6 +163,17 @@ REST_FRAMEWORK = {
     ),
     # Required for drf-spectacular to generate the OpenAPI schema
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # Rate limiting — auth endpoints use stricter limits
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '60/minute',
+        'user': '300/minute',
+        'auth_login': '10/minute',
+        'auth_otp': '3/hour',
+    },
 }
 
 # ---------------------------------------------------------------------------

@@ -1,9 +1,15 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
+
+
+class LoginThrottle(AnonRateThrottle):
+    """Stricter rate limit for login attempts — 10/minute per IP."""
+    scope = 'auth_login'
 
 from apps.core.responses import success_response, created_response, error_response
 from .serializers import (
@@ -23,6 +29,7 @@ from .models import CustomUser, UserRole, ConsentRecord
 class LoginView(TokenObtainPairView):
     """POST /api/v1/auth/login/ — returns JWT access + refresh + user profile."""
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [LoginThrottle]
 
     def post(self, request, *args, **kwargs):
         # Support both the standard email/password and identifier/password flows.
