@@ -6,7 +6,7 @@ import { listHighRiskRecords, listCampChildren } from '@/lib/api/supervisor';
 import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
-import { AlertTriangle, TrendingUp, Baby, Activity } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Baby, Activity, Download } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, Legend,
@@ -69,18 +69,45 @@ export default function SupervisorAnalyticsPage() {
   const totalHighRisk  = highRisk?.count ?? 0;
   const highRiskPct    = totalChildren > 0 ? ((totalHighRisk / totalChildren) * 100).toFixed(1) : '0';
 
+  function exportCSV() {
+    const rows = [
+      ['Child Name', 'Registration Number', 'Risk Level', 'Assessment Date', 'CHW'],
+      ...(highRisk?.items ?? []).map((r) => [
+        r.child_name ?? '', '',
+        r.risk_level ?? '', r.measurement_date ?? '', '',
+      ]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ikibondo-high-risk-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h2
-          className="text-2xl font-bold"
-          style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2
+            className="text-2xl font-bold"
+            style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
+          >
+            Analytics
+          </h2>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+            {user?.camp_name ?? 'Your camp'} — nutrition &amp; health overview
+          </p>
+        </div>
+        <button
+          onClick={exportCSV}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
         >
-          Analytics
-        </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          {user?.camp_name ?? 'Your camp'} — nutrition &amp; health overview
-        </p>
+          <Download className="h-4 w-4" />
+          Export CSV
+        </button>
       </div>
 
       {/* Summary cards */}

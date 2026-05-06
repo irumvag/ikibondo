@@ -58,3 +58,47 @@ class Notification(BaseModel):
 
     def __str__(self):
         return f'{self.notification_type} [{self.channel}] → {self.recipient.full_name}'
+
+
+class BroadcastScope(models.TextChoices):
+    CAMP = 'CAMP', 'Entire Camp'
+    ZONE = 'ZONE', 'Specific Zone'
+    ROLE = 'ROLE', 'All users of a role'
+    GLOBAL = 'GLOBAL', 'All users (Admin only)'
+
+
+class Broadcast(BaseModel):
+    """
+    A message sent to a group of users by a supervisor or admin.
+    Deliveries are tracked in BroadcastDelivery.
+    """
+    created_by = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='broadcasts',
+    )
+    scope_type = models.CharField(max_length=10, choices=BroadcastScope.choices)
+    # Optional scope FK — camp ID, zone ID, or role string
+    scope_id = models.CharField(max_length=100, blank=True, help_text='Camp/Zone UUID or role string')
+    channel = models.CharField(max_length=10, choices=NotificationChannel.choices, default=NotificationChannel.PUSH)
+    body = models.TextField()
+    scheduled_for = models.DateTimeField(null=True, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Broadcast({self.scope_type}, {self.created_at})'
+
+
+class BroadcastDelivery(BaseModel):
+    """One delivery row per recipient per broadcast."""
+    broadcast = models.ForeignKey(Broadcast, on_delete=models.CASCADE, related_name='deliveries')
+    recipient = models.ForeignKey('accounts.CustomUser', on_delete=models.CASCADE, related_name='received_broadcasts')
+    status = models.CharField(max_length=10, choices=NotificationStatus.choices, default=NotificationStatus.PENDING)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = [['broadcast', 'recipient']]

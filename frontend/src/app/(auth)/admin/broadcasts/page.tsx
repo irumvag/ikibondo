@@ -1,11 +1,2 @@
-import { WorkflowPlaceholder } from '@/components/workflows/WorkflowPlaceholder';
-
-export default function Page() {
-  return (
-    <WorkflowPlaceholder
-      title="Broadcast"
-      description="Send system-wide notifications to camps, zones, or specific roles."
-      phase="Phase 5"
-    />
-  );
-}
+// Admin broadcast page — re-uses supervisor broadcast UI with GLOBAL scope option
+export { default } from '@/app/(auth)/supervisor/broadcast/page';
