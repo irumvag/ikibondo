@@ -17,10 +17,37 @@ logger = logging.getLogger(__name__)
 class HealthRecordViewSet(viewsets.ModelViewSet):
     queryset = HealthRecord.objects.select_related('child', 'recorded_by', 'zone').all()
     serializer_class = HealthRecordSerializer
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['child', 'nutrition_status', 'measurement_date', 'risk_level', 'zone']
+    search_fields = ['child__full_name', 'child__registration_number']
     ordering_fields = ['measurement_date', 'created_at']
     http_method_names = ['get', 'post', 'head', 'options']  # Records are immutable once saved
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = HealthRecord.objects.select_related('child', 'recorded_by', 'zone').filter(is_active=True)
+        # Scope by camp for nurses and supervisors
+        if user.role in (UserRole.NURSE, UserRole.SUPERVISOR) and user.camp_id:
+            qs = qs.filter(child__camp_id=user.camp_id)
+        elif user.role == UserRole.CHW:
+            qs = qs.filter(child__guardian__assigned_chw=user)
+        elif user.role == UserRole.PARENT:
+            qs = qs.filter(child__guardian__user=user)
+        return qs.order_by('-measurement_date')
+
+    def list(self, request, *args, **kwargs):
+        """Override list to return the standard {data, pagination} envelope."""
+        from rest_framework.response import Response
+        qs = self.filter_queryset(self.get_queryset())
+        total = qs.count()
+        page = self.paginate_queryset(qs)
+        items = self.get_serializer(page if page is not None else qs, many=True).data
+        return Response({
+            'success': True,
+            'data': items,
+            'pagination': {'count': total},
+            'message': '',
+        })
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

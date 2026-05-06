@@ -149,7 +149,7 @@ export default function ProfilePage() {
     .toUpperCase() ?? '?';
 
   return (
-    <div className="flex flex-col gap-8 max-w-lg">
+    <div className="flex flex-col gap-8 max-w-lg mx-auto w-full">
       {/* Force-password-change banner */}
       {forceChange && (
         <div

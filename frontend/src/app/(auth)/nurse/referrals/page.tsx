@@ -41,7 +41,7 @@ async function completeReferral(id: string, outcome: string): Promise<Referral> 
 
 async function listChildren(): Promise<{ id: string; full_name: string; registration_number: string }[]> {
   const { data } = await apiClient.get('/children/', { params: { page_size: 200 } });
-  return data.data ?? [];
+  return data.data ?? data.results ?? [];
 }
 
 const schema = z.object({

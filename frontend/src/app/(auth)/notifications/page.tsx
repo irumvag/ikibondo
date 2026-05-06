@@ -80,7 +80,7 @@ export default function AllNotificationsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
+    <div className="flex flex-col gap-6 max-w-2xl mx-auto w-full">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>

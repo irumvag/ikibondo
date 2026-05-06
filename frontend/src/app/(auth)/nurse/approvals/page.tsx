@@ -31,7 +31,7 @@ export default function NurseApprovalsPage() {
   const visible = (pending ?? []).filter((u) => !approved.has(u.id) && u.role === 'PARENT');
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
+    <div className="flex flex-col gap-6 max-w-2xl mx-auto w-full">
       <div>
         <h2
           className="text-2xl font-bold"

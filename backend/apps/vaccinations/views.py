@@ -5,7 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
-from apps.core.responses import success_response, error_response
+from apps.core.responses import success_response, created_response, error_response
 from apps.accounts.models import UserRole
 from apps.accounts.permissions import IsSupervisorOrAdmin
 from .models import VaccinationRecord, Vaccine, DoseStatus, ClinicSession, ClinicSessionAttendance, ClinicSessionStatus
