@@ -97,7 +97,6 @@ const ROLE_NAV: Record<UserRole, NavEntry[]> = {
         { href: '/nurse/records',          label: 'Health Records',   icon: ClipboardList },
         { href: '/nurse/register',         label: 'Register Child',   icon: UserPlus },
         { href: '/nurse/vaccines',         label: 'Vaccinations',     icon: Syringe },
-        { href: '/nurse/vaccines/session', label: 'Clinic Session',   icon: Calendar },
       ],
     },
     {
@@ -228,32 +227,24 @@ function NavGroupItem({
   const hasActive = groupContainsActive(items, pathname);
   const isOpen = openGroups.has(id) || hasActive;
 
+  // ── Collapsed mode: render every child item icon directly ──────────────────
+  // (no group header in icon-only mode — each child link is fully reachable)
   if (collapsed) {
-    // In collapsed mode: show a button that expands the drawer; for now just show first active or group icon
     return (
-      <li>
-        <button
-          type="button"
-          title={label}
-          className={[
-            'w-full flex items-center justify-center px-3 py-2.5 rounded-xl transition-colors',
-            hasActive
-              ? 'bg-[var(--bg-sand)]'
-              : 'hover:bg-[var(--bg-sand)]',
-          ].join(' ')}
-          onClick={() => toggleGroup(id)}
-          aria-expanded={isOpen}
-        >
-          <Icon
-            size={18}
-            aria-hidden="true"
-            style={{ color: hasActive ? 'var(--ink)' : 'var(--text-muted)' }}
+      <>
+        {items.map((item) => (
+          <NavLeafItem
+            key={item.href}
+            {...item}
+            collapsed={true}
+            onClose={onClose}
           />
-        </button>
-      </li>
+        ))}
+      </>
     );
   }
 
+  // ── Expanded mode: collapsible group with children ─────────────────────────
   return (
     <li>
       <button
@@ -311,6 +302,7 @@ function SidebarContent({
   const router = useRouter();
   const { user, clearAuth } = useAuthStore();
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Load persisted open groups on mount
   useEffect(() => {
@@ -332,6 +324,11 @@ function SidebarContent({
   const handleLogout = () => {
     clearAuth();
     router.push('/login');
+  };
+
+  const handleLogoutConfirmed = () => {
+    setShowLogoutConfirm(false);
+    handleLogout();
   };
 
   const initials = user?.full_name
@@ -461,7 +458,7 @@ function SidebarContent({
 
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           title={collapsed ? 'Sign out' : undefined}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-[var(--high-bg)]"
           style={{ color: 'var(--text-muted)' }}
@@ -470,6 +467,51 @@ function SidebarContent({
           {!collapsed && <span>Sign out</span>}
         </button>
       </div>
+
+      {/* Logout confirmation dialog */}
+      {showLogoutConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setShowLogoutConfirm(false); }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border p-6 flex flex-col gap-4 shadow-xl"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--danger, #ef4444) 12%, var(--bg-sand))', color: 'var(--danger, #ef4444)' }}
+              >
+                <LogOut size={18} aria-hidden="true" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Sign out</p>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Are you sure you want to sign out?</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 py-2 rounded-xl border text-sm font-medium transition-colors hover:bg-[var(--bg-sand)]"
+                style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleLogoutConfirmed}
+                className="flex-1 py-2 rounded-xl text-sm font-medium transition-colors"
+                style={{ backgroundColor: 'var(--ink)', color: 'var(--bg)' }}
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -165,7 +165,16 @@ class ClinicSessionViewSet(viewsets.ModelViewSet):
     """
     serializer_class = ClinicSessionSerializer
     permission_classes = [IsAuthenticated]
-    http_method_names = ['get', 'post', 'patch', 'head', 'options']
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+
+    def destroy(self, request, *args, **kwargs):
+        """DELETE /vaccinations/clinic-sessions/<id>/ — NURSE/SUPERVISOR/ADMIN only."""
+        from apps.accounts.models import UserRole
+        if request.user.role not in (UserRole.NURSE, UserRole.SUPERVISOR, UserRole.ADMIN):
+            return error_response('Only nurses and above may delete clinic sessions.', 'FORBIDDEN', status_code=403)
+        session = self.get_object()
+        session.delete()
+        return success_response(message='Clinic session deleted.')
 
     def get_queryset(self):
         user = self.request.user
@@ -258,3 +267,76 @@ class ClinicSessionViewSet(viewsets.ModelViewSet):
             data=ClinicSessionSerializer(session).data,
             message='Session closed.',
         )
+
+    @action(detail=True, methods=['get'], url_path='eligible-children')
+    def eligible_children(self, request, pk=None):
+        """
+        GET /vaccinations/clinic-sessions/<id>/eligible-children/
+        Returns children in the camp who have a SCHEDULED VaccinationRecord
+        for this session's vaccine. Each row includes whether the child has
+        already been recorded in this session so the UI can disable re-recording.
+        """
+        session = self.get_object()
+
+        # Only children with a scheduled dose for this vaccine in this camp
+        eligible_records = (
+            VaccinationRecord.objects
+            .filter(
+                vaccine=session.vaccine,
+                status=DoseStatus.SCHEDULED,
+                child__camp=session.camp,
+                child__is_active=True,
+                child__deletion_requested_at__isnull=True,
+            )
+            .select_related('child')
+            .order_by('child__full_name')
+        )
+
+        # Children already recorded in this session
+        recorded = {
+            str(a.child_id): a.status
+            for a in ClinicSessionAttendance.objects.filter(session=session)
+        }
+
+        result = []
+        for vax_rec in eligible_records:
+            child = vax_rec.child
+            cid = str(child.id)
+            result.append({
+                'id': cid,
+                'full_name': child.full_name,
+                'registration_number': child.registration_number,
+                'age_display': getattr(child, 'age_display', ''),
+                'scheduled_date': str(vax_rec.scheduled_date),
+                'is_overdue': vax_rec.is_overdue,
+                'already_recorded': cid in recorded,
+                'recorded_status': recorded.get(cid),
+            })
+
+        return success_response(data=result)
+
+    @action(detail=True, methods=['get'], url_path='attendees')
+    def attendees(self, request, pk=None):
+        """
+        GET /vaccinations/clinic-sessions/<id>/attendees/
+        Returns the attendance list for any session (useful for closed sessions).
+        """
+        session = self.get_object()
+        rows = (
+            ClinicSessionAttendance.objects
+            .filter(session=session)
+            .select_related('child')
+            .order_by('child__full_name')
+        )
+        data = [
+            {
+                'child_id': str(a.child_id),
+                'full_name': a.child.full_name,
+                'registration_number': a.child.registration_number,
+                'age_display': getattr(a.child, 'age_display', ''),
+                'status': a.status,
+                'batch_number': a.batch_number,
+            }
+            for a in rows
+        ]
+        return success_response(data=data)

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle, Search, UserPlus, X, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Search, UserPlus, X, AlertTriangle, Copy } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { useAuthStore } from '@/store/authStore';
@@ -509,6 +509,21 @@ export default function NurseRegisterPage() {
             </div>
           ) : (
             <>
+              {/* "Same as parent" shortcut — only when creating a new parent account */}
+              {showNewForm && parentForm.full_name.trim() && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setN('guardian_full_name', parentForm.full_name);
+                    setN('guardian_phone', parentForm.phone_number);
+                  }}
+                  className="self-start flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-[var(--bg-sand)]"
+                  style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+                >
+                  <Copy size={13} aria-hidden="true" />
+                  Same as parent (copy parent info to guardian)
+                </button>
+              )}
               <Input
                 label="Guardian full name"
                 value={newbornForm.guardian_full_name}

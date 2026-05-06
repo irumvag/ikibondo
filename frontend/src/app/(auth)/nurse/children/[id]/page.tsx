@@ -61,41 +61,180 @@ function buildChartData(growth: GrowthData, mode: ChartMode) {
   return Array.from(allAges.values()).sort((a, b) => (a.age as number) - (b.age as number));
 }
 
-function GrowthChart({ growth, childName }: { growth: GrowthData; childName: string }) {
-  const [mode, setMode] = useState<ChartMode>('weight');
-  const printRef = useRef<HTMLDivElement>(null);
+// ── Pure-SVG chart generator for print (no DOM capture, no Recharts) ──────────
+// Generates a complete self-contained SVG string from raw data. Works in any
+// context (new window, iframe, download) without needing React or CSS variables.
+
+function buildPrintSVG(growth: GrowthData, mode: ChartMode, w = 740, h = 280): string {
   const data = buildChartData(growth, mode);
+  if (data.length === 0) return '<text x="10" y="20" font-size="12" fill="#999">No data</text>';
+
+  const ML = { top: 28, right: 20, bottom: 46, left: 54 }; // margins
+  const cw = w - ML.left - ML.right;
+  const ch = h - ML.top - ML.bottom;
+
+  const ages    = data.map((d) => d.age as number);
+  const minAge  = Math.min(...ages);
+  const maxAge  = Math.max(...ages);
+
+  const allVals = data.flatMap((d) =>
+    (['p3', 'p50', 'p97', 'actual'] as const)
+      .map((k) => d[k] as number | undefined)
+      .filter((v): v is number => v != null && isFinite(v)),
+  );
+  if (allVals.length === 0) return '<text x="10" y="20" font-size="12" fill="#999">No measurements</text>';
+
+  const rawMin = Math.min(...allVals);
+  const rawMax = Math.max(...allVals);
+  const pad    = (rawMax - rawMin) * 0.08 || 1;
+  const minVal = rawMin - pad;
+  const maxVal = rawMax + pad;
+
+  const xS = (age: number)  => ((age - minAge)  / (maxAge  - minAge  || 1)) * cw;
+  const yS = (val: number)  => ch - ((val - minVal) / (maxVal - minVal || 1)) * ch;
+
+  // Smooth polyline path for a series key
+  const polyline = (key: string): string => {
+    const pts = data
+      .filter((d) => d[key] != null && isFinite(d[key] as number))
+      .map((d) => `${xS(d.age as number).toFixed(1)},${yS(d[key] as number).toFixed(1)}`);
+    return pts.length > 1 ? `M ${pts.join(' L ')}` : '';
+  };
+
+  // Shaded band between p3 and p97
+  const p3pts  = data.filter((d) => d.p3  != null && isFinite(d.p3  as number));
+  const p97pts = [...data.filter((d) => d.p97 != null && isFinite(d.p97 as number))].reverse();
+  const band   = (p3pts.length > 1 && p97pts.length > 1)
+    ? `M ${p3pts.map((d)  => `${xS(d.age as number).toFixed(1)},${yS(d.p3  as number).toFixed(1)}`).join(' L ')} ` +
+      `L ${p97pts.map((d) => `${xS(d.age as number).toFixed(1)},${yS(d.p97 as number).toFixed(1)}`).join(' L ')} Z`
+    : '';
+
+  // Dots for actual measurements
+  const dots = data
+    .filter((d) => d.actual != null && isFinite(d.actual as number))
+    .map((d) => `<circle cx="${xS(d.age as number).toFixed(1)}" cy="${yS(d.actual as number).toFixed(1)}" r="4" fill="#1d4ed8"/>`)
+    .join('');
+
+  // Grid ticks
+  const yRange    = maxVal - minVal;
+  const yStep     = yRange > 30 ? 10 : yRange > 10 ? 5 : yRange > 4 ? 2 : 1;
+  const yTicksArr: number[] = [];
+  for (let v = Math.ceil(minVal / yStep) * yStep; v <= maxVal + 0.001; v += yStep) yTicksArr.push(v);
+
+  const xTickCount = Math.min(8, ages.length);
+  const xStep  = Math.ceil((maxAge - minAge) / xTickCount) || 1;
+  const xTicksArr: number[] = [];
+  for (let a = Math.ceil(minAge / xStep) * xStep; a <= maxAge; a += xStep) xTicksArr.push(a);
+
   const yLabel = mode === 'weight' ? 'Weight (kg)' : 'Height (cm)';
 
-  // Compute p3/p97 range for the green band
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
+  <rect width="${w}" height="${h}" fill="#fff"/>
+  <g transform="translate(${ML.left},${ML.top})">
+
+    <!-- normal band -->
+    ${band ? `<path d="${band}" fill="rgba(22,163,74,0.10)"/>` : ''}
+
+    <!-- grid -->
+    ${yTicksArr.map((v) => `<line x1="0" y1="${yS(v).toFixed(1)}" x2="${cw}" y2="${yS(v).toFixed(1)}" stroke="#f0f0f0" stroke-width="1"/>`).join('')}
+    ${xTicksArr.map((a) => `<line x1="${xS(a).toFixed(1)}" y1="0" x2="${xS(a).toFixed(1)}" y2="${ch}" stroke="#f0f0f0" stroke-width="1"/>`).join('')}
+
+    <!-- axes -->
+    <line x1="0" y1="${ch}" x2="${cw}" y2="${ch}" stroke="#9ca3af" stroke-width="1"/>
+    <line x1="0" y1="0"  x2="0"  y2="${ch}" stroke="#9ca3af" stroke-width="1"/>
+
+    <!-- x tick labels -->
+    ${xTicksArr.map((a) => `<text x="${xS(a).toFixed(1)}" y="${ch + 14}" text-anchor="middle" font-size="9" fill="#6b7280">${a}</text>`).join('')}
+    <text x="${(cw / 2).toFixed(1)}" y="${ch + 32}" text-anchor="middle" font-size="10" fill="#6b7280">Age (months)</text>
+
+    <!-- y tick labels -->
+    ${yTicksArr.map((v) => `<text x="-6" y="${(yS(v) + 3).toFixed(1)}" text-anchor="end" font-size="9" fill="#6b7280">${v % 1 === 0 ? v : v.toFixed(1)}</text>`).join('')}
+    <text x="-${(ch / 2).toFixed(1)}" y="-40" text-anchor="middle" font-size="10" fill="#6b7280" transform="rotate(-90)">${yLabel}</text>
+
+    <!-- p3 -->
+    ${polyline('p3')  ? `<path d="${polyline('p3')}"  fill="none" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5,3"/>` : ''}
+    <!-- p50 -->
+    ${polyline('p50') ? `<path d="${polyline('p50')}" fill="none" stroke="#16a34a" stroke-width="2"   stroke-dasharray="8,3"/>` : ''}
+    <!-- p97 -->
+    ${polyline('p97') ? `<path d="${polyline('p97')}" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5,3"/>` : ''}
+    <!-- actual line -->
+    ${polyline('actual') ? `<path d="${polyline('actual')}" fill="none" stroke="#1d4ed8" stroke-width="2.5"/>` : ''}
+    <!-- actual dots -->
+    ${dots}
+  </g>
+</svg>`;
+}
+
+function GrowthChart({ growth, childName }: { growth: GrowthData; childName: string }) {
+  const [mode, setMode] = useState<ChartMode>('weight');
+
+  const data   = buildChartData(growth, mode);
+  const yLabel = mode === 'weight' ? 'Weight (kg)' : 'Height (cm)';
   const p3min  = Math.min(...data.map((d) => (d.p3  as number) ?? Infinity).filter(isFinite));
   const p97max = Math.max(...data.map((d) => (d.p97 as number) ?? -Infinity).filter(isFinite));
 
   const handlePrint = () => {
-    const node = printRef.current;
-    if (!node) return;
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    // Generate both charts as pure SVG strings — no DOM capture needed
+    const weightSvg = buildPrintSVG(growth, 'weight');
+    const heightSvg = buildPrintSVG(growth, 'height');
+
+    const printWindow = window.open('', '_blank', 'width=860,height=800');
     if (!printWindow) return;
-    const chartHtml = node.innerHTML;
+
     printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
-  <title>Growth Chart</title>
+  <meta charset="utf-8"/>
+  <title>WHO Growth Chart — ${childName}</title>
   <style>
-    body { font-family: sans-serif; padding: 24px; color: #111; }
-    svg { max-width: 100%; }
-    .recharts-wrapper { width: 100% !important; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; padding: 24px 32px; color: #111; background: #fff; }
+    h1  { font-size: 20px; font-weight: 700; margin-bottom: 3px; }
+    .meta { font-size: 11px; color: #6b7280; margin-bottom: 18px; }
+    .name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .chart-title { font-size: 12px; font-weight: 600; color: #374151; margin: 14px 0 4px; }
+    svg { display: block; }
+    .legend { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 16px; align-items: center; }
+    .li { display: flex; align-items: center; gap: 6px; font-size: 10px; color: #6b7280; }
+    .band-swatch { width: 18px; height: 9px; border-radius: 2px;
+                   background: rgba(22,163,74,0.12); border: 1px solid #16a34a; }
+    @media print {
+      body { padding: 8px 10px; }
+      @page { size: A4 landscape; margin: 0.5cm; }
+    }
   </style>
 </head>
 <body>
-  <h2 style="margin-bottom:4px">WHO Growth Chart</h2>
-  <p style="color:#666;font-size:12px;margin-bottom:16px">Printed ${new Date().toLocaleDateString()}</p>
-  ${chartHtml}
+  <h1>WHO Growth Chart</h1>
+  <p class="meta">Printed ${new Date().toLocaleDateString()}</p>
+  <p class="name">${childName}</p>
+  <p class="meta">Weight-for-age and Height-for-age vs WHO Child Growth Standards (p3/p50/p97)</p>
+
+  <p class="chart-title">Weight for age</p>
+  ${weightSvg}
+
+  <p class="chart-title">Height for age</p>
+  ${heightSvg}
+
+  <div class="legend">
+    <div class="li">
+      <svg width="28" height="6"><line x1="0" y1="3" x2="28" y2="3" stroke="#1d4ed8" stroke-width="2.5"/><circle cx="14" cy="3" r="3" fill="#1d4ed8"/></svg>
+      Child measurements
+    </div>
+    <div class="li">
+      <svg width="28" height="6"><line x1="0" y1="3" x2="28" y2="3" stroke="#16a34a" stroke-width="2" stroke-dasharray="7,3"/></svg>
+      p50 median (WHO)
+    </div>
+    <div class="li">
+      <svg width="28" height="6"><line x1="0" y1="3" x2="28" y2="3" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5,3"/></svg>
+      p3 / p97 limits
+    </div>
+    <div class="li"><div class="band-swatch"></div> Normal range (p3–p97)</div>
+  </div>
+  <script>window.onload=function(){window.print();};<\/script>
 </body>
 </html>`);
     printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
   };
 
   return (
@@ -121,115 +260,93 @@ function GrowthChart({ growth, childName }: { growth: GrowthData; childName: str
         <button
           type="button"
           onClick={handlePrint}
-          className="no-print flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-colors hover:opacity-80"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-colors hover:opacity-80"
           style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', backgroundColor: 'var(--bg-sand)' }}
-          title="Print growth chart"
+          title="Print both charts (weight + height)"
         >
           <Printer size={14} aria-hidden="true" />
-          Print
+          Print charts
         </button>
       </div>
 
-      {/* The chart — wrapped in ref for print targeting */}
-      <div ref={printRef}>
-        {/* Print-only header */}
-        <div className="hidden print:block mb-4">
-          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>
-            WHO Growth Chart — {childName}
-          </h2>
-          <p style={{ fontSize: 12, color: '#555' }}>
-            {mode === 'weight' ? 'Weight for age' : 'Height for age'} · Printed {new Date().toLocaleDateString()}
-          </p>
-        </div>
+      {/* Interactive chart (ResponsiveContainer — visible on screen) */}
+      <ResponsiveContainer width="100%" height={320}>
+        <ComposedChart data={data} margin={{ top: 8, right: 20, bottom: 16, left: 0 }}>
+          {isFinite(p3min) && isFinite(p97max) && (
+            <ReferenceArea y1={p3min} y2={p97max} fill={WHO.band} />
+          )}
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+          <XAxis
+            dataKey="age" type="number" domain={['dataMin', 'dataMax']} tickCount={8}
+            label={{ value: 'Age (months)', position: 'insideBottom', offset: -6, fontSize: 11 }}
+            tick={{ fontSize: 11 }}
+          />
+          <YAxis
+            label={{ value: yLabel, angle: -90, position: 'insideLeft', offset: 12, fontSize: 11 }}
+            tick={{ fontSize: 11 }} width={48}
+          />
+          <Tooltip
+            formatter={(value, name) => [
+              value != null ? Number(value).toFixed(1) : '—',
+              name === 'actual' ? 'Measurement'
+                : name === 'p3'  ? 'p3 — lower limit'
+                : name === 'p50' ? 'p50 — median'
+                : 'p97 — upper limit',
+            ]}
+            labelFormatter={(v) => `Age: ${v} months`}
+          />
+          <Legend
+            formatter={(v) =>
+              v === 'actual' ? 'Child measurement'
+                : v === 'p3'  ? 'p3 (3rd %ile)'
+                : v === 'p50' ? 'p50 median'
+                : 'p97 (97th %ile)'}
+          />
+          <Line type="monotone" dataKey="p3"  stroke={WHO.p3}  strokeDasharray="5 3" dot={false} strokeWidth={1.5} connectNulls name="p3" />
+          <Line type="monotone" dataKey="p50" stroke={WHO.p50} strokeDasharray="8 3" dot={false} strokeWidth={2}   connectNulls name="p50" />
+          <Line type="monotone" dataKey="p97" stroke={WHO.p97} strokeDasharray="5 3" dot={false} strokeWidth={1.5} connectNulls name="p97" />
+          <Line type="monotone" dataKey="actual" stroke={WHO.actual} strokeWidth={2.5}
+            dot={{ r: 4, fill: WHO.actual, strokeWidth: 0 }}
+            activeDot={{ r: 6 }} connectNulls name="actual" />
+        </ComposedChart>
+      </ResponsiveContainer>
 
-        <ResponsiveContainer width="100%" height={320}>
-          <ComposedChart data={data} margin={{ top: 8, right: 20, bottom: 16, left: 0 }}>
-            {/* Healthy band: between p3 and p97 */}
-            {isFinite(p3min) && isFinite(p97max) && (
-              <ReferenceArea y1={p3min} y2={p97max} fill={WHO.band} />
-            )}
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-            <XAxis
-              dataKey="age"
-              type="number"
-              domain={['dataMin', 'dataMax']}
-              tickCount={8}
-              label={{ value: 'Age (months)', position: 'insideBottom', offset: -6, fontSize: 11 }}
-              tick={{ fontSize: 11 }}
-            />
-            <YAxis
-              label={{ value: yLabel, angle: -90, position: 'insideLeft', offset: 12, fontSize: 11 }}
-              tick={{ fontSize: 11 }}
-              width={48}
-            />
-            <Tooltip
-              formatter={(value, name) => [
-                value != null ? Number(value).toFixed(1) : '—',
-                name === 'actual' ? 'Measurement'
-                  : name === 'p3'  ? 'p3 — lower limit'
-                  : name === 'p50' ? 'p50 — median'
-                  : 'p97 — upper limit',
-              ]}
-              labelFormatter={(v) => `Age: ${v} months`}
-            />
-            <Legend
-              formatter={(v) =>
-                v === 'actual' ? 'Child measurement'
-                  : v === 'p3'  ? 'p3 (3rd %ile)'
-                  : v === 'p50' ? 'p50 median'
-                  : 'p97 (97th %ile)'
+      {/* Legend explainer */}
+      <div className="flex flex-wrap gap-4 mt-3">
+        {[
+          { color: WHO.actual, label: 'Child measurements', solid: true },
+          { color: WHO.p50,    label: 'p50 median (WHO)',   solid: false },
+          { color: WHO.p3,     label: 'p3 / p97 limits',   solid: false },
+        ].map(({ color, label, solid }) => (
+          <div key={label} className="flex items-center gap-1.5">
+            <svg width="24" height="4" aria-hidden="true">
+              {solid
+                ? <line x1="0" y1="2" x2="24" y2="2" stroke={color} strokeWidth="2.5" />
+                : <line x1="0" y1="2" x2="24" y2="2" stroke={color} strokeWidth="2" strokeDasharray="5 3" />
               }
-            />
-            {/* p3 — red dashed lower limit */}
-            <Line
-              type="monotone" dataKey="p3"
-              stroke={WHO.p3} strokeDasharray="5 3" dot={false} strokeWidth={1.5}
-              connectNulls name="p3"
-            />
-            {/* p50 — green median */}
-            <Line
-              type="monotone" dataKey="p50"
-              stroke={WHO.p50} strokeDasharray="8 3" dot={false} strokeWidth={2}
-              connectNulls name="p50"
-            />
-            {/* p97 — red dashed upper limit */}
-            <Line
-              type="monotone" dataKey="p97"
-              stroke={WHO.p97} strokeDasharray="5 3" dot={false} strokeWidth={1.5}
-              connectNulls name="p97"
-            />
-            {/* Actual child measurements — solid blue */}
-            <Line
-              type="monotone" dataKey="actual"
-              stroke={WHO.actual} strokeWidth={2.5}
-              dot={{ r: 4, fill: WHO.actual, strokeWidth: 0 }}
-              activeDot={{ r: 6 }}
-              connectNulls name="actual"
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-
-        {/* Legend explainer */}
-        <div className="flex flex-wrap gap-4 mt-3">
-          {[
-            { color: WHO.actual, label: 'Child measurements', solid: true },
-            { color: WHO.p50,    label: 'p50 median (WHO)',   solid: false },
-            { color: WHO.p3,     label: 'p3 / p97 limits',   solid: false },
-          ].map(({ color, label, solid }) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <svg width="24" height="4" aria-hidden="true">
-                {solid
-                  ? <line x1="0" y1="2" x2="24" y2="2" stroke={color} strokeWidth="2.5" />
-                  : <line x1="0" y1="2" x2="24" y2="2" stroke={color} strokeWidth="2" strokeDasharray="5 3" />
-                }
-              </svg>
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</span>
-            </div>
-          ))}
-          <div className="flex items-center gap-1.5">
-            <div className="w-6 h-3 rounded-sm" style={{ backgroundColor: WHO.band, border: `1px solid ${WHO.p50}` }} />
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Normal range (p3–p97)</span>
+            </svg>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</span>
           </div>
+        ))}
+        <div className="flex items-center gap-1.5">
+          <div className="w-6 h-3 rounded-sm" style={{ backgroundColor: WHO.band, border: `1px solid ${WHO.p50}` }} />
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Normal range (p3–p97)</span>
+        </div>
+      </div>
+
+      {/*
+        Hidden static charts rendered at fixed pixel size — used for SVG capture on print.
+        Positioned off-screen so they never affect layout.
+      */}
+      <div
+        aria-hidden="true"
+        style={{ position: 'absolute', left: -9999, top: -9999, pointerEvents: 'none' }}
+      >
+        <div ref={printWeightRef}>
+          <StaticGrowthChart growth={growth} mode="weight" width={760} height={260} />
+        </div>
+        <div ref={printHeightRef}>
+          <StaticGrowthChart growth={growth} mode="height" width={760} height={260} />
         </div>
       </div>
     </div>
@@ -286,6 +403,14 @@ function HistoryRow({ record }: { record: HealthRecordDetail }) {
           {record.muac_cm && (
             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
               MUAC {parseFloat(record.muac_cm).toFixed(1)} cm
+            </span>
+          )}
+          {record.zone_name && (
+            <span
+              className="text-xs px-1.5 py-0.5 rounded"
+              style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+            >
+              {record.zone_name}
             </span>
           )}
         </div>
@@ -426,17 +551,46 @@ function NotesPanel({ childId }: { childId: string }) {
 
 // ── ML Predict panel ──────────────────────────────────────────────────────────
 
-function MLPredictPanel({ history }: { history: HealthRecordDetail[] | undefined }) {
-  const [result, setResult] = useState<PredictRiskResult | null>(null);
-  const [running, setRunning] = useState(false);
-  const [error, setError] = useState('');
+interface GrowthForecastResult {
+  predicted_whz_30d: number | null;
+  predicted_whz_60d: number | null;
+  predicted_whz_90d: number | null;
+  risk_flag: boolean;
+  method: string;
+}
+
+interface VaxDropoutResult {
+  dropout_probability: number;
+  risk_tier: string;
+}
+
+interface RunHistoryEntry {
+  ts: string;
+  risk: string;
+  confidence: number;
+}
+
+function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | undefined; childId: string }) {
+  const [riskResult, setRiskResult]     = useState<PredictRiskResult | null>(null);
+  const [growthResult, setGrowthResult] = useState<GrowthForecastResult | null>(null);
+  const [vaxResult, setVaxResult]       = useState<VaxDropoutResult | null>(null);
+  const [riskError, setRiskError]       = useState('');
+  const [growthError, setGrowthError]   = useState('');
+  const [vaxError, setVaxError]         = useState('');
+  const [running, setRunning]           = useState(false);
+  const [runHistory, setRunHistory]     = useState<RunHistoryEntry[]>([]);
 
   const latestRecord = history?.[0];
 
   const handlePredict = async () => {
     if (!latestRecord) return;
     setRunning(true);
-    setError('');
+    setRiskError('');
+    setGrowthError('');
+    setVaxError('');
+
+    // ── 1. Risk assessment (existing endpoint) ────────────────────────────────
+    let newRisk: PredictRiskResult | null = null;
     try {
       const features = buildFeaturesFromRecord({
         weight_kg: latestRecord.weight_kg,
@@ -454,25 +608,57 @@ function MLPredictPanel({ history }: { history: HealthRecordDetail[] | undefined
       if (flags.includes('diarrhea')) features.has_diarrhea = 1;
       if (flags.includes('vomiting')) features.has_vomiting = 1;
       if (latestRecord.oedema)        features.has_oedema   = 1;
-      const res = await predictRisk(features);
-      setResult(res);
+      newRisk = await predictRisk(features);
+      setRiskResult(newRisk);
     } catch {
-      setError('Prediction failed. Ensure the ML model is loaded.');
-    } finally {
-      setRunning(false);
+      setRiskError('Risk prediction failed. Ensure the ML model is loaded.');
     }
+
+    // ── 2. Growth forecast ────────────────────────────────────────────────────
+    try {
+      const { data } = await apiClient.post('/ml/predict/growth/', { child_id: childId });
+      setGrowthResult(data.data ?? data);
+    } catch {
+      setGrowthError('Growth forecast unavailable.');
+    }
+
+    // ── 3. Vaccination dropout ────────────────────────────────────────────────
+    try {
+      const { data } = await apiClient.post('/ml/predict/vaccination/', {
+        child_id: childId,
+        vaccine_id: '00000000-0000-0000-0000-000000000000',
+      });
+      setVaxResult(data.data ?? data);
+    } catch {
+      setVaxError('No scheduled vaccines or vaccination model unavailable.');
+    }
+
+    // ── Append to local run history ───────────────────────────────────────────
+    if (newRisk) {
+      setRunHistory((prev) => [
+        { ts: new Date().toLocaleTimeString(), risk: newRisk!.risk_level, confidence: newRisk!.confidence },
+        ...prev,
+      ].slice(0, 5));
+    }
+
+    setRunning(false);
   };
 
   const barColor = (level: string) =>
     level === 'HIGH' ? 'var(--danger)' : level === 'MEDIUM' ? 'var(--warn)' : 'var(--success)';
 
-  const factorEntries = result
-    ? Object.entries(result.top_factors).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 8)
+  const factorEntries = riskResult
+    ? Object.entries(riskResult.top_factors)
+        .map(([k, v]) => [k, typeof v === 'number' ? v : parseFloat(String(v))] as [string, number])
+        .filter(([, v]) => isFinite(v))
+        .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+        .slice(0, 8)
     : [];
   const maxFactor = factorEntries.length > 0 ? Math.max(...factorEntries.map(([, v]) => Math.abs(v))) : 1;
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Latest record summary */}
       {latestRecord ? (
         <div className="rounded-xl border p-4 text-sm" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-sand)' }}>
           <p className="font-semibold mb-2" style={{ color: 'var(--ink)' }}>Latest record features</p>
@@ -489,35 +675,57 @@ function MLPredictPanel({ history }: { history: HealthRecordDetail[] | undefined
         </p>
       )}
 
-      {error && <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>}
-
       <Button variant="primary" onClick={handlePredict} loading={running} disabled={!latestRecord} className="self-start">
         <Cpu size={15} className="mr-1.5" aria-hidden="true" />
-        Run ML prediction
+        Run predictions
       </Button>
 
-      {result && (
+      {/* Recent runs */}
+      {runHistory.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Recent runs</p>
+          <div className="flex flex-wrap gap-2">
+            {runHistory.map((entry, i) => (
+              <span
+                key={i}
+                className="text-xs px-2 py-1 rounded-full"
+                style={{
+                  backgroundColor: entry.risk === 'HIGH' ? 'var(--high-bg)' : entry.risk === 'MEDIUM' ? 'var(--med-bg)' : 'var(--bg-sand)',
+                  color: entry.risk === 'HIGH' ? 'var(--danger)' : entry.risk === 'MEDIUM' ? 'var(--warn)' : 'var(--success)',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                {entry.ts} · {entry.risk} {Math.round(entry.confidence * 100)}%
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Card 1: Risk assessment ─────────────────────────────────────────── */}
+      {riskError && <p className="text-sm" style={{ color: 'var(--danger)' }}>{riskError}</p>}
+      {riskResult && (
         <div className="rounded-xl border p-5 flex flex-col gap-4" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Risk assessment</p>
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>Risk prediction</p>
-              <Badge variant={result.risk_level === 'HIGH' ? 'danger' : result.risk_level === 'MEDIUM' ? 'warn' : 'success'} className="text-sm px-3 py-1">
-                {result.risk_level} risk
+              <Badge variant={riskResult.risk_level === 'HIGH' ? 'danger' : riskResult.risk_level === 'MEDIUM' ? 'warn' : 'success'} className="text-sm px-3 py-1">
+                {riskResult.risk_level} risk
               </Badge>
             </div>
             <div className="text-right">
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Confidence</p>
               <p className="text-3xl font-bold" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>
-                {Math.round(result.confidence * 100)}%
+                {Math.round(riskResult.confidence * 100)}%
               </p>
               <div className="flex items-center gap-2 mt-1">
                 <div className="w-24 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-sand)' }}>
-                  <div className="h-full rounded-full" style={{ width: `${Math.round(result.confidence * 100)}%`, backgroundColor: barColor(result.risk_level) }} />
+                  <div className="h-full rounded-full" style={{ width: `${Math.round(riskResult.confidence * 100)}%`, backgroundColor: barColor(riskResult.risk_level) }} />
                 </div>
               </div>
             </div>
           </div>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Model: {result.model_version}</p>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Model: {riskResult.model_version}</p>
           {factorEntries.length > 0 && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>SHAP feature contributions</p>
@@ -526,7 +734,7 @@ function MLPredictPanel({ history }: { history: HealthRecordDetail[] | undefined
                   <div key={feature} className="flex items-center gap-3">
                     <span className="text-xs w-40 truncate" style={{ color: 'var(--text-muted)' }}>{feature.replace(/_/g, ' ')}</span>
                     <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-sand)' }}>
-                      <div className="h-full rounded-full" style={{ width: `${(Math.abs(value) / maxFactor) * 100}%`, backgroundColor: value > 0 ? barColor(result.risk_level) : 'var(--text-muted)' }} />
+                      <div className="h-full rounded-full" style={{ width: `${(Math.abs(value) / maxFactor) * 100}%`, backgroundColor: value > 0 ? barColor(riskResult.risk_level) : 'var(--text-muted)' }} />
                     </div>
                     <span className="text-xs font-mono w-14 text-right" style={{ color: 'var(--ink)' }}>
                       {value > 0 ? '+' : ''}{value.toFixed(3)}
@@ -536,6 +744,73 @@ function MLPredictPanel({ history }: { history: HealthRecordDetail[] | undefined
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Card 2: Growth forecast ─────────────────────────────────────────── */}
+      {growthError && <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{growthError}</p>}
+      {growthResult && (
+        <div className="rounded-xl border p-5 flex flex-col gap-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Growth forecast</p>
+            {growthResult.risk_flag && (
+              <Badge variant="warn">Growth risk flagged</Badge>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-4 text-sm">
+            {growthResult.predicted_whz_30d != null && (
+              <div className="flex flex-col">
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>30-day WHZ</span>
+                <span className="font-bold" style={{ color: 'var(--ink)' }}>{growthResult.predicted_whz_30d.toFixed(2)}</span>
+              </div>
+            )}
+            {growthResult.predicted_whz_60d != null && (
+              <div className="flex flex-col">
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>60-day WHZ</span>
+                <span className="font-bold" style={{ color: 'var(--ink)' }}>{growthResult.predicted_whz_60d.toFixed(2)}</span>
+              </div>
+            )}
+            {growthResult.predicted_whz_90d != null && (
+              <div className="flex flex-col">
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>90-day WHZ</span>
+                <span className="font-bold" style={{ color: 'var(--ink)' }}>{growthResult.predicted_whz_90d.toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+          {growthResult.method && (
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Method: {growthResult.method}</p>
+          )}
+        </div>
+      )}
+
+      {/* ── Card 3: Vaccination dropout ─────────────────────────────────────── */}
+      {vaxError && <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{vaxError}</p>}
+      {vaxResult && (
+        <div className="rounded-xl border p-5 flex flex-col gap-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Vaccination dropout</p>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Dropout probability</span>
+              <span className="text-2xl font-bold" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>
+                {Math.round(vaxResult.dropout_probability * 100)}%
+              </span>
+            </div>
+            <Badge variant={
+              vaxResult.risk_tier === 'HIGH' ? 'danger' :
+              vaxResult.risk_tier === 'MEDIUM' ? 'warn' : 'success'
+            }>
+              {vaxResult.risk_tier} tier
+            </Badge>
+          </div>
+          <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-sand)' }}>
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${Math.round(vaxResult.dropout_probability * 100)}%`,
+                backgroundColor: vaxResult.risk_tier === 'HIGH' ? 'var(--danger)' : vaxResult.risk_tier === 'MEDIUM' ? 'var(--warn)' : 'var(--success)',
+              }}
+            />
+          </div>
         </div>
       )}
     </div>
@@ -922,7 +1197,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
 
         {activeTab === 'ml' && (
           <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
-            <MLPredictPanel history={history} />
+            <MLPredictPanel history={history} childId={id} />
           </div>
         )}
       </div>
