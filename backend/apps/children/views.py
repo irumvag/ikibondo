@@ -126,6 +126,184 @@ class GuardianViewSet(viewsets.ModelViewSet):
             message=f'Guardian assigned to {chw.full_name}.',
         )
 
+    @action(detail=True, methods=['get'], url_path='family-overview')
+    def family_overview(self, request, pk=None):
+        """
+        GET /api/v1/children/guardians/<id>/family-overview/
+        Returns a rich family profile for a guardian:
+          - Guardian details
+          - All their children with latest health record, vaccination summary, risk level
+          - Household nutrition status summary
+          - Vaccination coverage rate across all children
+          - Overall family risk level (worst child drives it)
+          - Recent clinical notes (pinned + last 5)
+          - Recent visit requests
+        Accessible to: NURSE, SUPERVISOR, ADMIN, and the guardian's own linked PARENT account.
+        """
+        from django.db.models import Subquery, OuterRef
+        from apps.vaccinations.models import VaccinationRecord, DoseStatus
+        from apps.health_records.models import HealthRecord, ClinicalNote
+
+        guardian = self.get_object()
+
+        # Auth: parent can only see own profile
+        user = request.user
+        if user.role == UserRole.PARENT:
+            linked = getattr(user, 'guardian_profile', None)
+            if linked is None or linked.id != guardian.id:
+                return error_response('You can only view your own family profile.', 'FORBIDDEN', status_code=403)
+
+        children_qs = Child.objects.filter(
+            guardian=guardian, is_active=True, deletion_requested_at__isnull=True,
+        ).select_related('camp', 'zone')
+
+        # Latest health record per child (subquery)
+        latest_hr_id = (
+            HealthRecord.objects
+            .filter(child=OuterRef('pk'))
+            .order_by('-measurement_date', '-created_at')
+            .values('id')[:1]
+        )
+
+        children_with_latest = children_qs.annotate(latest_hr_id=Subquery(latest_hr_id))
+
+        # Batch-fetch latest health records and all vaccination records
+        child_ids = list(children_qs.values_list('id', flat=True))
+        latest_hr_ids = [c.latest_hr_id for c in children_with_latest if c.latest_hr_id]
+        hr_map = {
+            str(hr.child_id): hr
+            for hr in HealthRecord.objects.filter(id__in=latest_hr_ids).select_related('child')
+        }
+
+        # Vaccination summary per child
+        all_vax = VaccinationRecord.objects.filter(child_id__in=child_ids).values(
+            'child_id', 'status'
+        )
+        vax_map: dict[str, dict[str, int]] = {}
+        for row in all_vax:
+            cid = str(row['child_id'])
+            if cid not in vax_map:
+                vax_map[cid] = {'SCHEDULED': 0, 'DONE': 0, 'MISSED': 0, 'SKIPPED': 0}
+            vax_map[cid][row['status']] = vax_map[cid].get(row['status'], 0) + 1
+
+        # Build child summaries
+        risk_order = {'HIGH': 3, 'MEDIUM': 2, 'LOW': 1, 'UNKNOWN': 0}
+        family_risk = 'LOW'
+        total_done = 0
+        total_vax = 0
+        nutrition_counts: dict[str, int] = {}
+        children_data = []
+
+        for child in children_with_latest:
+            cid = str(child.id)
+            hr = hr_map.get(cid)
+            vax = vax_map.get(cid, {})
+            done = vax.get('DONE', 0)
+            total_doses = sum(vax.values())
+            total_done += done
+            total_vax += total_doses
+
+            risk = (hr.risk_level if hr else 'UNKNOWN').upper()
+            if risk_order.get(risk, 0) > risk_order.get(family_risk, 0):
+                family_risk = risk
+
+            status = hr.nutrition_status if hr else 'UNKNOWN'
+            nutrition_counts[status] = nutrition_counts.get(status, 0) + 1
+
+            # Last 3 health records for trend
+            recent_hrs = HealthRecord.objects.filter(child=child).order_by('-measurement_date')[:3]
+
+            children_data.append({
+                'id': cid,
+                'full_name': child.full_name,
+                'registration_number': child.registration_number,
+                'age_display': getattr(child, 'age_display', ''),
+                'age_months': getattr(child, 'age_months', None),
+                'sex': child.sex,
+                'date_of_birth': str(child.date_of_birth),
+                'camp_name': child.camp.name if child.camp else None,
+                'zone_name': child.zone.name if child.zone else None,
+                'risk_level': risk,
+                'nutrition_status': status,
+                'nutrition_status_display': hr.nutrition_status_display if hr else '—',
+                'latest_weight_kg': str(hr.weight_kg) if hr and hr.weight_kg else None,
+                'latest_height_cm': str(hr.height_cm) if hr and hr.height_cm else None,
+                'latest_muac_cm': str(hr.muac_cm) if hr and hr.muac_cm else None,
+                'last_visit_date': str(hr.measurement_date) if hr else None,
+                'vaccination': {
+                    'total': total_doses,
+                    'done': done,
+                    'missed': vax.get('MISSED', 0),
+                    'scheduled': vax.get('SCHEDULED', 0),
+                    'coverage_pct': round((done / total_doses * 100) if total_doses else 0, 1),
+                    'is_overdue': vax.get('SCHEDULED', 0) > 0,
+                },
+                'health_trend': [
+                    {
+                        'date': str(r.measurement_date),
+                        'risk_level': r.risk_level,
+                        'weight_kg': str(r.weight_kg) if r.weight_kg else None,
+                        'muac_cm': str(r.muac_cm) if r.muac_cm else None,
+                        'nutrition_status': r.nutrition_status,
+                    }
+                    for r in recent_hrs
+                ],
+            })
+
+        # Pinned notes + last 5 notes across all children
+        recent_notes = list(
+            ClinicalNote.objects
+            .filter(child_id__in=child_ids)
+            .select_related('author', 'child')
+            .order_by('-is_pinned', '-created_at')[:8]
+        )
+        notes_data = [
+            {
+                'id': str(n.id),
+                'child_id': str(n.child_id),
+                'child_name': n.child.full_name,
+                'note_type': n.note_type,
+                'note_type_display': n.get_note_type_display(),
+                'content': n.content,
+                'is_pinned': n.is_pinned,
+                'author_name': n.author.full_name if n.author else None,
+                'created_at': n.created_at.isoformat(),
+            }
+            for n in recent_notes
+        ]
+
+        # Recent visit requests
+        recent_vr = list(
+            VisitRequest.objects
+            .filter(child_id__in=child_ids)
+            .select_related('child', 'requested_by', 'assigned_chw')
+            .order_by('-created_at')[:5]
+        )
+        vr_data = [
+            {
+                'id': str(vr.id),
+                'child_id': str(vr.child_id),
+                'child_name': vr.child.full_name,
+                'urgency': vr.urgency,
+                'status': vr.status,
+                'concern_text': vr.concern_text,
+                'created_at': vr.created_at.isoformat(),
+            }
+            for vr in recent_vr
+        ]
+
+        overview = {
+            'guardian': GuardianSerializer(guardian).data,
+            'family_risk_level': family_risk,
+            'total_children': len(children_data),
+            'vaccination_coverage_pct': round((total_done / total_vax * 100) if total_vax else 0, 1),
+            'nutrition_summary': nutrition_counts,
+            'children': children_data,
+            'recent_notes': notes_data,
+            'recent_visit_requests': vr_data,
+        }
+        return success_response(data=overview)
+
 
 class ChildViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]

@@ -1108,7 +1108,18 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
             {(c?.sex as string) === 'M' ? 'Male' : (c?.sex as string) === 'F' ? 'Female' : '—'}
           </p>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Guardian: {(c?.guardian_name as string) || '—'}
+            Guardian:{' '}
+            {c?.guardian ? (
+              <Link
+                href={`/nurse/guardians/${c.guardian as string}`}
+                className="font-medium hover:underline"
+                style={{ color: 'var(--primary)' }}
+              >
+                {(c?.guardian_name as string) || '—'}
+              </Link>
+            ) : (
+              <span>{(c?.guardian_name as string) || '—'}</span>
+            )}
             {c?.guardian_phone ? ` · ${c.guardian_phone}` : ''}
           </p>
         </div>
