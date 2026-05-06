@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle, Search, UserPlus, X } from 'lucide-react';
+import { CheckCircle, Search, UserPlus, X, AlertTriangle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api/client';
 import { useAuthStore } from '@/store/authStore';
 import {
   listCampParents,
@@ -65,6 +67,24 @@ export default function NurseRegisterPage() {
   const [result, setResult] = useState<{ child_name: string; reg_number: string; parent_name: string } | null>(null);
 
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Duplicate detection: query backend when DOB + guardian phone are filled
+  const dupEnabled = Boolean(newbornForm.date_of_birth && newbornForm.guardian_phone.length >= 6);
+  const { data: duplicates = [] } = useQuery({
+    queryKey: ['dup-check', newbornForm.date_of_birth, newbornForm.guardian_phone, newbornForm.full_name],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/children/duplicate-check/', {
+        params: {
+          dob: newbornForm.date_of_birth,
+          guardian_phone: newbornForm.guardian_phone,
+          full_name: newbornForm.full_name,
+        },
+      });
+      return (data.data ?? []) as { id: string; full_name: string; registration_number: string }[];
+    },
+    enabled: dupEnabled,
+    staleTime: 10_000,
+  });
 
   useEffect(() => {
     if (campId) {
@@ -343,6 +363,26 @@ export default function NurseRegisterPage() {
       {/* ── Step 2: Newborn details ────────────────────────────────────────── */}
       {step === 'newborn' && (
         <div className="flex flex-col gap-4">
+          {/* Duplicate warning */}
+          {duplicates.length > 0 && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 flex gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">Possible duplicate detected</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  {duplicates.length} existing record{duplicates.length > 1 ? 's' : ''} match this date of birth and guardian phone:
+                </p>
+                <ul className="mt-1 space-y-0.5">
+                  {duplicates.map((d) => (
+                    <li key={d.id} className="text-xs text-amber-700 font-medium">
+                      {d.full_name} — {d.registration_number}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-amber-600 mt-1">Confirm this is a new child before proceeding.</p>
+              </div>
+            </div>
+          )}
           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Newborn</p>
           <Input
             label="Full name"

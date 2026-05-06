@@ -1,6 +1,6 @@
 from django.utils import timezone
 from rest_framework import serializers
-from .models import Vaccine, VaccinationRecord
+from .models import Vaccine, VaccinationRecord, ClinicSession, ClinicSessionAttendance
 
 
 class VaccineSerializer(serializers.ModelSerializer):
@@ -38,3 +38,33 @@ class AdministerSerializer(serializers.Serializer):
     administered_date = serializers.DateField(default=timezone.localdate)
     batch_number = serializers.CharField(required=False, allow_blank=True, default='')
     notes = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class ClinicSessionAttendanceSerializer(serializers.ModelSerializer):
+    child_name = serializers.CharField(source='child.full_name', read_only=True)
+
+    class Meta:
+        model = ClinicSessionAttendance
+        fields = ['id', 'child', 'child_name', 'status', 'batch_number', 'vaccination_record']
+        read_only_fields = ['id', 'child_name', 'vaccination_record']
+
+
+class ClinicSessionSerializer(serializers.ModelSerializer):
+    vaccine_name = serializers.CharField(source='vaccine.name', read_only=True)
+    camp_name = serializers.CharField(source='camp.name', read_only=True)
+    opened_by_name = serializers.CharField(source='opened_by.full_name', read_only=True, allow_null=True)
+    attendances = ClinicSessionAttendanceSerializer(many=True, read_only=True)
+    attendance_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ClinicSession
+        fields = [
+            'id', 'camp', 'camp_name', 'vaccine', 'vaccine_name',
+            'session_date', 'opened_by', 'opened_by_name',
+            'status', 'notes', 'created_at',
+            'attendances', 'attendance_count',
+        ]
+        read_only_fields = ['id', 'opened_by', 'opened_by_name', 'created_at', 'attendance_count']
+
+    def get_attendance_count(self, obj):
+        return obj.attendances.count()

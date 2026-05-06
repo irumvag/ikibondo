@@ -247,6 +247,32 @@ class ChildViewSet(viewsets.ModelViewSet):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def duplicate_check_view(request):
+    """
+    GET /api/v1/children/duplicate-check/?dob=YYYY-MM-DD&guardian_phone=&full_name=
+    Returns fuzzy-matched children for duplicate detection before registration.
+    Matches: exact DOB + guardian phone OR name similarity (startswith).
+    """
+    dob = request.query_params.get('dob', '').strip()
+    phone = request.query_params.get('guardian_phone', '').strip()
+    name = request.query_params.get('full_name', '').strip()
+
+    if not dob:
+        return error_response('dob is required.', 'VALIDATION_ERROR', status_code=400)
+
+    qs = Child.objects.filter(is_active=True, date_of_birth=dob).select_related(
+        'camp', 'zone', 'guardian', 'registered_by'
+    )
+    if phone:
+        qs = qs.filter(guardian__phone_number__icontains=phone[-6:])  # last 6 digits to handle prefix variants
+    if name:
+        qs = qs.filter(full_name__icontains=name[:4])  # loose prefix match
+
+    return success_response(data=ChildSerializer(qs[:10], many=True).data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def scan_qr_view(request, qr_code):
     """GET /api/v1/children/scan/<qr_code>/ — look up a child by QR code string."""
     try:
