@@ -39,8 +39,9 @@ class ChildSerializer(serializers.ModelSerializer):
             'guardian', 'guardian_name', 'guardian_phone', 'guardian_has_account',
             'registered_by', 'registered_by_name',
             'photo', 'notes', 'is_active', 'created_at',
+            'deletion_requested_at',
         ]
-        read_only_fields = ['id', 'registration_number', 'created_at', 'registered_by']
+        read_only_fields = ['id', 'registration_number', 'created_at', 'registered_by', 'deletion_requested_at']
 
     def get_guardian_has_account(self, obj):
         return obj.guardian.user_id is not None

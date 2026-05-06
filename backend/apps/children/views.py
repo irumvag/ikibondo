@@ -171,9 +171,58 @@ class ChildViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
-        if request.user.role == UserRole.PARENT:
-            return error_response('Parents cannot delete child records.', 'FORBIDDEN', status_code=403)
-        return super().destroy(request, *args, **kwargs)
+        # Prevent hard deletes via the standard DELETE endpoint.
+        # Use /request-deletion/ for a safe 3-day grace period.
+        return error_response(
+            'Direct deletion is disabled. Use POST /children/<id>/request-deletion/ '
+            'to schedule deletion with a 3-day recovery window.',
+            'METHOD_NOT_ALLOWED',
+            status_code=405,
+        )
+
+    @action(detail=True, methods=['post'], url_path='request-deletion')
+    def request_deletion(self, request, pk=None):
+        """
+        POST /api/v1/children/<id>/request-deletion/
+        Marks the child for permanent deletion in 3 days. Nurse/Supervisor/Admin only.
+        The record stays fully accessible during this window and can be recovered.
+        """
+        from datetime import timedelta
+        if request.user.role not in (UserRole.NURSE, UserRole.SUPERVISOR, UserRole.ADMIN):
+            return error_response('Only nurses and above can request deletion.', 'FORBIDDEN', status_code=403)
+        child = self.get_object()
+        if child.deletion_requested_at:
+            due = child.deletion_requested_at + timedelta(days=3)
+            return error_response(
+                f'Deletion already requested. Due for permanent removal on {due.date()}.',
+                'CONFLICT',
+                status_code=409,
+            )
+        child.deletion_requested_at = tz.now()
+        child.deletion_requested_by = request.user
+        child.save(update_fields=['deletion_requested_at', 'deletion_requested_by', 'updated_at'])
+        due = child.deletion_requested_at + timedelta(days=3)
+        return success_response(
+            data={
+                'deletion_requested_at': child.deletion_requested_at.isoformat(),
+                'deletion_due_at': due.isoformat(),
+            },
+            message=f'{child.full_name} is scheduled for deletion on {due.date()}. Cancel within 3 days to recover.',
+        )
+
+    @action(detail=True, methods=['post'], url_path='cancel-deletion')
+    def cancel_deletion(self, request, pk=None):
+        """
+        POST /api/v1/children/<id>/cancel-deletion/
+        Cancels a pending deletion request. Available to any authenticated user with access.
+        """
+        child = self.get_object()
+        if not child.deletion_requested_at:
+            return error_response('No pending deletion to cancel.', 'NOT_FOUND', status_code=404)
+        child.deletion_requested_at = None
+        child.deletion_requested_by = None
+        child.save(update_fields=['deletion_requested_at', 'deletion_requested_by', 'updated_at'])
+        return success_response(message=f'Deletion cancelled. {child.full_name} will not be removed.')
 
     @action(detail=True, methods=['get'], url_path='history')
     def history(self, request, pk=None):

@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
 type Step = 'parent' | 'newborn' | 'confirm';
+type RegistrationMode = 'newborn' | 'existing';
 
 interface ParentForm {
   full_name: string;
@@ -51,6 +52,7 @@ export default function NurseRegisterPage() {
   const campId = user?.camp ?? '';
 
   const [step, setStep] = useState<Step>('parent');
+  const [regMode, setRegMode] = useState<RegistrationMode>('newborn');
   const [parentForm, setParentForm] = useState<ParentForm>(EMPTY_PARENT);
   const [newbornForm, setNewbornForm] = useState<NewbornForm>(EMPTY_NEWBORN);
   const [zones, setZones] = useState<Zone[]>([]);
@@ -186,7 +188,7 @@ export default function NurseRegisterPage() {
         </div>
         <div>
           <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-            Newborn registered!
+            Child registered!
           </h2>
           <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
             {result.child_name} has been added and linked to {result.parent_name}.
@@ -236,12 +238,43 @@ export default function NurseRegisterPage() {
     <div className="flex flex-col gap-6 max-w-lg mx-auto w-full">
       <div>
         <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-          Admit newborn
+          Register child
         </h2>
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
           {user?.camp_name ?? ''} &middot; Step {stepIdx + 1} of {steps.length}
         </p>
       </div>
+
+      {/* Mode toggle — only on step 1 (before entering child details) */}
+      {step === 'parent' && (
+        <div className="flex gap-2">
+          {([
+            { value: 'newborn',  label: 'Newborn (today)' },
+            { value: 'existing', label: 'Existing child'   },
+          ] as const).map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => {
+                setRegMode(value);
+                // Reset DOB when switching modes
+                setNewbornForm((prev) => ({
+                  ...prev,
+                  date_of_birth: value === 'newborn' ? new Date().toISOString().split('T')[0] : '',
+                }));
+              }}
+              className="flex-1 py-2 rounded-lg border text-sm font-medium transition-colors"
+              style={{
+                borderColor: regMode === value ? 'var(--ink)' : 'var(--border)',
+                backgroundColor: regMode === value ? 'var(--ink)' : 'transparent',
+                color: regMode === value ? 'var(--bg)' : 'var(--text-muted)',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Progress bar */}
       <div className="flex gap-2">
@@ -366,7 +399,7 @@ export default function NurseRegisterPage() {
 
           {error && <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>}
           <Button variant="primary" onClick={() => setStep('newborn')} disabled={!parentReady}>
-            Next: Newborn info
+            Next: Child info
           </Button>
         </div>
       )}
@@ -394,7 +427,9 @@ export default function NurseRegisterPage() {
               </div>
             </div>
           )}
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Newborn</p>
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+            {regMode === 'newborn' ? 'Newborn' : 'Child'}
+          </p>
           <Input
             label="Full name"
             value={newbornForm.full_name}
@@ -402,7 +437,7 @@ export default function NurseRegisterPage() {
             required
           />
           <Input
-            label="Date of birth"
+            label={regMode === 'newborn' ? 'Date of birth (today)' : 'Date of birth (known)'}
             type="date"
             value={newbornForm.date_of_birth}
             onChange={(e) => setN('date_of_birth', e.target.value)}

@@ -221,6 +221,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.notifications.tasks.daily_zone_summary',
         'schedule': crontab(hour=18, minute=0),
     },
+    'purge-scheduled-child-deletions': {
+        'task': 'children.purge_scheduled_deletions',
+        'schedule': crontab(hour=2, minute=0),  # 02:00 Kigali time
+    },
 }
 
 # External service credentials (populated via environment variables)

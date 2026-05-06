@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Baby, ArrowRight } from 'lucide-react';
+import { Baby, ArrowRight, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useCampChildren } from '@/lib/api/queries';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import type { SupervisedChild } from '@/lib/api/supervisor';
+
+// Extend SupervisedChild with the deletion field
+type ChildWithDeletion = SupervisedChild & { deletion_requested_at?: string | null };
 
 const STATUS_OPTIONS = [
   { value: '',       label: 'All statuses' },
@@ -24,18 +27,23 @@ const SEX_OPTIONS = [
 
 const COLUMNS = [
   {
-    key: 'full_name', header: 'Child', width: '200px',
+    key: 'full_name', header: 'Child', width: '220px',
     render: (v: unknown, row: unknown) => {
-      const c = row as SupervisedChild;
+      const c = row as ChildWithDeletion;
       return (
         <Link
           href={`/nurse/children/${c.id}`}
           className="flex items-center gap-2 group"
         >
           <div>
-            <p className="font-medium text-sm group-hover:underline" style={{ color: 'var(--ink)' }}>
-              {v as string}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="font-medium text-sm group-hover:underline" style={{ color: 'var(--ink)' }}>
+                {v as string}
+              </p>
+              {c.deletion_requested_at && (
+                <AlertTriangle size={12} style={{ color: 'var(--danger)' }} title="Deletion pending" />
+              )}
+            </div>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{c.registration_number}</p>
           </div>
           <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: 'var(--text-muted)' }} aria-hidden="true" />

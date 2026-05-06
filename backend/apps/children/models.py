@@ -103,6 +103,17 @@ class Child(BaseModel):
         db_index=True,
         help_text='ACTIVE (default), TRANSFERRED, DECEASED, or DEPARTED',
     )
+    # Soft-delete with 3-day grace period
+    deletion_requested_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Set when a nurse requests deletion; permanent purge runs 3 days later.',
+    )
+    deletion_requested_by = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='deletion_requests',
+    )
 
     class Meta:
         ordering = ['full_name']
