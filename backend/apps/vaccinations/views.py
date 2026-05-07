@@ -170,13 +170,24 @@ class ClinicSessionViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def destroy(self, request, *args, **kwargs):
-        """DELETE /vaccinations/clinic-sessions/<id>/ — NURSE/SUPERVISOR/ADMIN only."""
+        """DELETE /vaccinations/clinic-sessions/<id>/ — NURSE/SUPERVISOR/ADMIN only.
+        Reverts all DONE VaccinationRecords that were set by this session back to SCHEDULED.
+        """
         from apps.accounts.models import UserRole
         if request.user.role not in (UserRole.NURSE, UserRole.SUPERVISOR, UserRole.ADMIN):
             return error_response('Only nurses and above may delete clinic sessions.', 'FORBIDDEN', status_code=403)
         session = self.get_object()
+        # Revert vaccination records that were administered in this session
+        for att in ClinicSessionAttendance.objects.filter(session=session).select_related('vaccination_record'):
+            if att.vaccination_record and att.vaccination_record.status == DoseStatus.DONE:
+                vr = att.vaccination_record
+                vr.status = DoseStatus.SCHEDULED
+                vr.administered_date = None
+                vr.administered_by = None
+                vr.batch_number = ''
+                vr.save(update_fields=['status', 'administered_date', 'administered_by', 'batch_number', 'updated_at'])
         session.delete()
-        return success_response(message='Clinic session deleted.')
+        return success_response(message='Clinic session deleted and vaccination records reverted.')
 
     def get_queryset(self):
         user = self.request.user
@@ -274,14 +285,21 @@ class ClinicSessionViewSet(viewsets.ModelViewSet):
     def eligible_children(self, request, pk=None):
         """
         GET /vaccinations/clinic-sessions/<id>/eligible-children/
-        Returns children in the camp who have a SCHEDULED VaccinationRecord
-        for this session's vaccine. Each row includes whether the child has
-        already been recorded in this session so the UI can disable re-recording.
+        Returns all children for this session's vaccine in the camp — both
+        those still SCHEDULED (not yet recorded) and those already recorded
+        in this session (already_recorded=True). This keeps recorded children
+        visible in the UI so nurses can see/remove them.
         """
         session = self.get_object()
 
-        # Only children with a scheduled dose for this vaccine in this camp
-        eligible_records = (
+        # Attendances already in this session, keyed by child_id
+        attendances = {
+            str(a.child_id): a
+            for a in ClinicSessionAttendance.objects.filter(session=session).select_related('child')
+        }
+
+        # Children with a SCHEDULED dose for this vaccine in this camp
+        scheduled_records = (
             VaccinationRecord.objects
             .filter(
                 vaccine=session.vaccine,
@@ -291,31 +309,75 @@ class ClinicSessionViewSet(viewsets.ModelViewSet):
                 child__deletion_requested_at__isnull=True,
             )
             .select_related('child')
-            .order_by('child__full_name')
         )
+        scheduled_by_child = {str(vr.child_id): vr for vr in scheduled_records}
 
-        # Children already recorded in this session
-        recorded = {
-            str(a.child_id): a.status
-            for a in ClinicSessionAttendance.objects.filter(session=session)
-        }
-
+        # Merge: start with already-recorded children (may have DONE status now)
+        seen = set()
         result = []
-        for vax_rec in eligible_records:
-            child = vax_rec.child
-            cid = str(child.id)
+
+        # Already recorded (in attendance) — show first so nurse can see/remove
+        for cid, att in attendances.items():
+            seen.add(cid)
+            child = att.child
+            vr = scheduled_by_child.get(cid)
             result.append({
                 'id': cid,
                 'full_name': child.full_name,
                 'registration_number': child.registration_number,
                 'age_display': getattr(child, 'age_display', ''),
-                'scheduled_date': str(vax_rec.scheduled_date),
-                'is_overdue': vax_rec.is_overdue,
-                'already_recorded': cid in recorded,
-                'recorded_status': recorded.get(cid),
+                'scheduled_date': str(vr.scheduled_date) if vr else '',
+                'is_overdue': vr.is_overdue if vr else False,
+                'already_recorded': True,
+                'recorded_status': att.status,
             })
 
+        # Remaining eligible (not yet recorded)
+        for cid, vr in scheduled_by_child.items():
+            if cid in seen:
+                continue
+            child = vr.child
+            result.append({
+                'id': cid,
+                'full_name': child.full_name,
+                'registration_number': child.registration_number,
+                'age_display': getattr(child, 'age_display', ''),
+                'scheduled_date': str(vr.scheduled_date),
+                'is_overdue': vr.is_overdue,
+                'already_recorded': False,
+                'recorded_status': None,
+            })
+
+        result.sort(key=lambda r: r['full_name'])
         return success_response(data=result)
+
+    @action(detail=True, methods=['delete'], url_path=r'attendees/(?P<child_id>[^/.]+)')
+    def remove_attendee(self, request, pk=None, child_id=None):
+        """
+        DELETE /vaccinations/clinic-sessions/<id>/attendees/<child_id>/
+        Removes an attendance record and reverts the linked VaccinationRecord to SCHEDULED.
+        """
+        if request.user.role not in (UserRole.NURSE, UserRole.SUPERVISOR, UserRole.ADMIN):
+            return error_response('Only nurses and above may remove attendees.', 'FORBIDDEN', status_code=403)
+        session = self.get_object()
+        try:
+            att = ClinicSessionAttendance.objects.select_related('vaccination_record').get(
+                session=session, child_id=child_id,
+            )
+        except ClinicSessionAttendance.DoesNotExist:
+            return error_response('Attendee not found in this session.', 'NOT_FOUND', status_code=404)
+
+        # Revert the linked vaccination record
+        if att.vaccination_record and att.vaccination_record.status == DoseStatus.DONE:
+            vr = att.vaccination_record
+            vr.status = DoseStatus.SCHEDULED
+            vr.administered_date = None
+            vr.administered_by = None
+            vr.batch_number = ''
+            vr.save(update_fields=['status', 'administered_date', 'administered_by', 'batch_number', 'updated_at'])
+
+        att.delete()
+        return success_response(message='Attendee removed and vaccination record reverted.')
 
     @action(detail=True, methods=['get'], url_path='attendees')
     def attendees(self, request, pk=None):

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2, XCircle, Plus, Syringe, CalendarDays,
-  Users, AlertTriangle, Pencil, Trash2, X,
+  Users, AlertTriangle, Pencil, Trash2, X, UserMinus,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -227,7 +227,8 @@ function DeleteConfirmDialog({
         <p className="font-semibold" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>Delete session?</p>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
           This will permanently delete the <strong>{session.vaccine_name}</strong> session on{' '}
-          {new Date(session.session_date).toLocaleDateString()}. This cannot be undone.
+          {new Date(session.session_date).toLocaleDateString()}.{' '}
+          All recorded vaccinations from this session will be <strong>reverted to Scheduled</strong>.
         </p>
         {mutation.isError && <p className="text-sm" style={{ color: 'var(--danger)' }}>Failed to delete. Please try again.</p>}
         <div className="flex gap-2">
@@ -324,6 +325,17 @@ export default function ClinicSessionPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nurse', 'clinic-sessions'] });
       qc.invalidateQueries({ queryKey: ['clinic-session', selectedId, 'attendees'] });
+    },
+  });
+
+  const removeAttendeeMut = useMutation({
+    mutationFn: (childId: string) =>
+      apiClient.delete(`/vaccinations/clinic-sessions/${selectedId}/attendees/${childId}/`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['clinic-session', selectedId, 'eligible'] });
+      qc.invalidateQueries({ queryKey: ['clinic-session', selectedId, 'attendees'] });
+      qc.invalidateQueries({ queryKey: ['nurse', 'clinic-sessions'] });
+      qc.invalidateQueries({ queryKey: ['nurse', 'vax'] });
     },
   });
 
@@ -555,64 +567,79 @@ export default function ClinicSessionPage() {
 
                       return (
                         <div key={child.id} className="flex flex-col gap-1">
-                          <button
-                            type="button"
-                            onClick={() => toggleChild(child)}
-                            disabled={alreadyDone}
-                            className="flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm transition-colors text-left w-full"
-                            style={{
-                              borderColor: alreadyDone
-                                ? 'var(--border)'
-                                : st === 'DONE'   ? 'var(--success)'
-                                : st === 'MISSED' ? 'var(--danger)'
-                                : isFar           ? 'var(--warn)'
-                                : 'var(--border)',
-                              backgroundColor: alreadyDone
-                                ? 'var(--bg-sand)'
-                                : st === 'DONE'   ? 'var(--low-bg)'
-                                : st === 'MISSED' ? 'var(--high-bg)'
-                                : 'transparent',
-                              opacity: alreadyDone ? 0.7 : 1,
-                              cursor:  alreadyDone ? 'not-allowed' : 'pointer',
-                            }}
-                          >
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-medium text-sm" style={{ color: 'var(--ink)' }}>{child.full_name}</p>
-                                {child.is_overdue && !alreadyDone && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--high-bg)', color: 'var(--danger)' }}>
-                                    Overdue
-                                  </span>
-                                )}
-                                {isFar && !alreadyDone && !child.is_overdue && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--med-bg)', color: 'var(--warn)' }}>
-                                    {days}d away
-                                  </span>
-                                )}
-                                {alreadyDone && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' }}>
-                                    Recorded
-                                  </span>
-                                )}
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => !alreadyDone && toggleChild(child)}
+                              disabled={alreadyDone}
+                              className="flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm transition-colors text-left flex-1"
+                              style={{
+                                borderColor: alreadyDone
+                                  ? child.recorded_status === 'DONE' ? 'var(--success)' : 'var(--danger)'
+                                  : st === 'DONE'   ? 'var(--success)'
+                                  : st === 'MISSED' ? 'var(--danger)'
+                                  : isFar           ? 'var(--warn)'
+                                  : 'var(--border)',
+                                backgroundColor: alreadyDone
+                                  ? child.recorded_status === 'DONE' ? 'var(--low-bg)' : 'var(--high-bg)'
+                                  : st === 'DONE'   ? 'var(--low-bg)'
+                                  : st === 'MISSED' ? 'var(--high-bg)'
+                                  : 'transparent',
+                                cursor: alreadyDone ? 'default' : 'pointer',
+                              }}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-medium text-sm" style={{ color: 'var(--ink)' }}>{child.full_name}</p>
+                                  {alreadyDone && (
+                                    <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold"
+                                      style={{ backgroundColor: child.recorded_status === 'DONE' ? 'var(--low-bg)' : 'var(--high-bg)',
+                                               color: child.recorded_status === 'DONE' ? 'var(--success)' : 'var(--danger)' }}>
+                                      {child.recorded_status === 'DONE' ? 'Recorded ✓' : 'Missed'}
+                                    </span>
+                                  )}
+                                  {!alreadyDone && child.is_overdue && (
+                                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--high-bg)', color: 'var(--danger)' }}>Overdue</span>
+                                  )}
+                                  {!alreadyDone && isFar && !child.is_overdue && (
+                                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--med-bg)', color: 'var(--warn)' }}>{days}d away</span>
+                                  )}
+                                </div>
+                                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                                  {child.registration_number}
+                                  {child.age_display && ` · ${child.age_display}`}
+                                  {child.scheduled_date && ` · Due ${new Date(child.scheduled_date).toLocaleDateString()}`}
+                                </p>
                               </div>
-                              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                                {child.registration_number}
-                                {child.age_display && ` · ${child.age_display}`}
-                                {` · Due ${new Date(child.scheduled_date).toLocaleDateString()}`}
-                              </p>
-                            </div>
-                            <div className="shrink-0 ml-2">
-                              {alreadyDone ? (
-                                child.recorded_status === 'DONE'
-                                  ? <CheckCircle2 size={16} style={{ color: 'var(--success)' }} aria-hidden="true" />
-                                  : <XCircle     size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-                              ) : st === 'DONE' ? (
-                                <CheckCircle2 size={16} style={{ color: 'var(--success)' }} aria-hidden="true" />
-                              ) : st === 'MISSED' ? (
-                                <XCircle size={16} style={{ color: 'var(--danger)' }} aria-hidden="true" />
-                              ) : null}
-                            </div>
-                          </button>
+                              <div className="shrink-0 ml-2">
+                                {alreadyDone ? (
+                                  child.recorded_status === 'DONE'
+                                    ? <CheckCircle2 size={16} style={{ color: 'var(--success)' }} />
+                                    : <XCircle size={16} style={{ color: 'var(--danger)' }} />
+                                ) : st === 'DONE' ? (
+                                  <CheckCircle2 size={16} style={{ color: 'var(--success)' }} />
+                                ) : st === 'MISSED' ? (
+                                  <XCircle size={16} style={{ color: 'var(--danger)' }} />
+                                ) : null}
+                              </div>
+                            </button>
+                            {/* Remove button — only for already-recorded children */}
+                            {alreadyDone && (
+                              <button
+                                type="button"
+                                title="Remove from session (reverts vaccination record)"
+                                onClick={() => {
+                                  if (confirm(`Remove ${child.full_name} from this session? Their vaccination record will be reverted to scheduled.`))
+                                    removeAttendeeMut.mutate(child.id);
+                                }}
+                                disabled={removeAttendeeMut.isPending}
+                                className="shrink-0 p-2 rounded-lg border transition-colors hover:opacity-70"
+                                style={{ borderColor: 'var(--danger)', color: 'var(--danger)', backgroundColor: 'transparent' }}
+                              >
+                                <UserMinus size={14} />
+                              </button>
+                            )}
+                          </div>
 
                           {/* Far-date reminder alert */}
                           {showFarAlert && (
@@ -674,10 +701,10 @@ export default function ClinicSessionPage() {
                     {attendees.map((a, idx) => (
                       <div
                         key={a.child_id}
-                        className="flex items-center justify-between px-4 py-3 border-b last:border-b-0"
+                        className="flex items-center gap-3 px-4 py-3 border-b last:border-b-0"
                         style={{ borderColor: 'var(--border)', backgroundColor: idx % 2 === 0 ? 'var(--bg-elev)' : 'transparent' }}
                       >
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{a.full_name}</p>
                           <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                             {a.registration_number}
@@ -686,6 +713,19 @@ export default function ClinicSessionPage() {
                           </p>
                         </div>
                         <AttendeeStatusBadge status={a.status} />
+                        <button
+                          type="button"
+                          title="Remove from session (reverts vaccination record)"
+                          onClick={() => {
+                            if (confirm(`Remove ${a.full_name} from this session? Their vaccination record will be reverted to scheduled.`))
+                              removeAttendeeMut.mutate(a.child_id);
+                          }}
+                          disabled={removeAttendeeMut.isPending}
+                          className="shrink-0 p-1.5 rounded-lg border transition-opacity hover:opacity-70"
+                          style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}
+                        >
+                          <UserMinus size={13} />
+                        </button>
                       </div>
                     ))}
                   </div>

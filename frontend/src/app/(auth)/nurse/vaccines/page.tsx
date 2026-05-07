@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Syringe, AlertTriangle, CalendarDays, CheckCircle2,
-  Send, ArrowRight, Clock,
+  Send, ArrowRight, Clock, Pencil, Trash2, X,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { apiClient } from '@/lib/api/client';
@@ -59,8 +59,130 @@ function StatusBadge({ status, overdue }: { status: string; overdue: boolean }) 
   return <Badge variant="warn">Scheduled</Badge>;
 }
 
+// ── Edit vaccination record modal ─────────────────────────────────────────────
+
+function EditVaxModal({ record, onClose, onSaved }: {
+  record: VaccinationRecord;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [status, setStatus]       = useState(record.status);
+  const [adminDate, setAdminDate] = useState(record.administered_date ?? '');
+  const [batch, setBatch]         = useState(record.batch_number ?? '');
+  const [error, setError]         = useState('');
+
+  const mut = useMutation({
+    mutationFn: async () => {
+      await apiClient.patch(`/vaccinations/${record.id}/`, {
+        status,
+        administered_date: status === 'DONE' ? (adminDate || null) : null,
+        batch_number: batch,
+      });
+    },
+    onSuccess: () => { onSaved(); onClose(); },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(msg ?? 'Failed to save.');
+    },
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div
+        className="rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col gap-4"
+        style={{ backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-fraunces)' }}>Edit Vaccination</h2>
+          <button type="button" onClick={onClose}><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
+        </div>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+          {record.child_name} · {record.vaccine_name} (Dose {record.dose_number})
+        </p>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">Status</label>
+          <select value={status} onChange={(e) => setStatus(e.target.value as VaccinationRecord['status'])}
+            className="rounded-lg border px-3 py-2 text-sm outline-none"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}>
+            <option value="SCHEDULED">Scheduled</option>
+            <option value="DONE">Done</option>
+            <option value="MISSED">Missed</option>
+            <option value="SKIPPED">Skipped</option>
+          </select>
+        </div>
+
+        {status === 'DONE' && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">Administered date</label>
+            <input type="date" value={adminDate} onChange={(e) => setAdminDate(e.target.value)}
+              className="rounded-lg border px-3 py-2 text-sm outline-none"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }} />
+          </div>
+        )}
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">Batch number</label>
+          <input type="text" value={batch} onChange={(e) => setBatch(e.target.value)}
+            placeholder="e.g. BN-2024-001"
+            className="rounded-lg border px-3 py-2 text-sm outline-none"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }} />
+        </div>
+
+        {error && <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>}
+
+        <div className="flex gap-2 pt-1">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" className="flex-1" onClick={() => mut.mutate()} loading={mut.isPending}>
+            Save
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Delete confirmation ────────────────────────────────────────────────────────
+
+function DeleteVaxConfirm({ record, onClose, onDeleted }: {
+  record: VaccinationRecord;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const mut = useMutation({
+    mutationFn: () => apiClient.delete(`/vaccinations/${record.id}/`),
+    onSuccess: onDeleted,
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div
+        className="rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col gap-4"
+        style={{ backgroundColor: 'var(--bg-elev)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="font-semibold" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>Delete record?</p>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+          Remove <strong>{record.vaccine_name}</strong> record for <strong>{record.child_name}</strong>?
+          This action cannot be undone.
+        </p>
+        {mut.isError && <p className="text-sm" style={{ color: 'var(--danger)' }}>Delete failed. Do you have supervisor permissions?</p>}
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button
+            variant="primary" className="flex-1" loading={mut.isPending}
+            style={{ backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }}
+            onClick={() => mut.mutate()}
+          >Delete</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VaxTable({
-  title, icon, items, isLoading, emptyTitle, emptyDesc,
+  title, icon, items, isLoading, emptyTitle, emptyDesc, editable = false, onRefresh,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -68,7 +190,12 @@ function VaxTable({
   isLoading: boolean;
   emptyTitle: string;
   emptyDesc: string;
+  editable?: boolean;
+  onRefresh?: () => void;
 }) {
+  const [editRecord, setEditRecord]     = useState<VaccinationRecord | null>(null);
+  const [deleteRecord, setDeleteRecord] = useState<VaccinationRecord | null>(null);
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
@@ -99,7 +226,7 @@ function VaxTable({
                   <StatusBadge status={r.status} overdue={r.is_overdue} />
                 </div>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {r.vaccine_name}
+                  {r.vaccine_name} · Dose {r.dose_number}
                   {r.administered_date
                     ? ` · Given ${new Date(r.administered_date).toLocaleDateString()}`
                     : ` · Due ${new Date(r.scheduled_date).toLocaleDateString()}`}
@@ -107,9 +234,46 @@ function VaxTable({
                   {r.batch_number && ` · Batch: ${r.batch_number}`}
                 </p>
               </div>
+              {editable && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    title="Edit record"
+                    onClick={() => setEditRecord(r)}
+                    className="p-1.5 rounded-lg border transition-opacity hover:opacity-70"
+                    style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
+                  >
+                    <Pencil size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    title="Delete record (supervisor only)"
+                    onClick={() => setDeleteRecord(r)}
+                    className="p-1.5 rounded-lg border transition-opacity hover:opacity-70"
+                    style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
+      )}
+
+      {editRecord && (
+        <EditVaxModal
+          record={editRecord}
+          onClose={() => setEditRecord(null)}
+          onSaved={() => { setEditRecord(null); onRefresh?.(); }}
+        />
+      )}
+      {deleteRecord && (
+        <DeleteVaxConfirm
+          record={deleteRecord}
+          onClose={() => setDeleteRecord(null)}
+          onDeleted={() => { setDeleteRecord(null); onRefresh?.(); }}
+        />
       )}
     </div>
   );
@@ -439,6 +603,8 @@ export default function NurseVaccinesPage() {
           isLoading={historyLoading}
           emptyTitle="No completed vaccinations"
           emptyDesc="No doses have been administered yet."
+          editable
+          onRefresh={() => qc.invalidateQueries({ queryKey: ['nurse', 'vax', 'history'] })}
         />
       )}
     </div>
