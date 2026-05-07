@@ -49,6 +49,9 @@ export interface VaccinationRecord {
   id: string;
   child: string;
   child_name: string;
+  zone_name: string | null;
+  guardian_name: string | null;
+  guardian_phone: string | null;
   vaccine: string;
   vaccine_name: string;
   vaccine_code: string;

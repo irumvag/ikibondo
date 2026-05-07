@@ -16,11 +16,36 @@ class VaccinationRecordSerializer(serializers.ModelSerializer):
     child_name = serializers.CharField(source='child.full_name', read_only=True)
     administered_by_name = serializers.CharField(source='administered_by.full_name', read_only=True, allow_null=True)
     is_overdue = serializers.BooleanField(read_only=True)
+    zone_name = serializers.SerializerMethodField()
+    guardian_name = serializers.SerializerMethodField()
+    guardian_phone = serializers.SerializerMethodField()
+
+    def get_zone_name(self, obj):
+        try:
+            zone = obj.child.zone
+            return zone.name if zone else None
+        except Exception:
+            return None
+
+    def get_guardian_name(self, obj):
+        try:
+            g = obj.child.guardian_set.first()
+            return g.full_name if g else None
+        except Exception:
+            return None
+
+    def get_guardian_phone(self, obj):
+        try:
+            g = obj.child.guardian_set.first()
+            return g.phone_number if g else None
+        except Exception:
+            return None
 
     class Meta:
         model = VaccinationRecord
         fields = [
-            'id', 'child', 'child_name', 'vaccine', 'vaccine_name', 'vaccine_code', 'dose_number',
+            'id', 'child', 'child_name', 'zone_name', 'guardian_name', 'guardian_phone',
+            'vaccine', 'vaccine_name', 'vaccine_code', 'dose_number',
             'scheduled_date', 'administered_date', 'administered_by', 'administered_by_name',
             'status', 'batch_number',
             'dropout_probability', 'dropout_risk_tier',

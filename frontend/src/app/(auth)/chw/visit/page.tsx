@@ -270,7 +270,7 @@ export default function NewVisitPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-lg">
+    <div className="flex flex-col gap-6 max-w-lg mx-auto w-full">
       {/* Header */}
       <div>
         <h2
@@ -324,7 +324,13 @@ export default function NewVisitPage() {
                     <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{c.full_name}</p>
                     <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                       {c.registration_number} &middot; {c.age_display} &middot; {c.sex === 'M' ? 'Male' : 'Female'}
+                      {c.zone_name ? ` · Zone: ${c.zone_name}` : ''}
                     </p>
+                    {c.guardian_name && (
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                        Guardian: {c.guardian_name}{c.guardian_phone ? ` · ${c.guardian_phone}` : ''}
+                      </p>
+                    )}
                   </div>
                 </button>
               ))}
@@ -343,7 +349,14 @@ export default function NewVisitPage() {
             <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{child.full_name}</p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
               {child.registration_number} &middot; {child.age_display}
+              {child.zone_name ? ` · Zone: ${child.zone_name}` : ''}
+              {child.camp_name ? ` · ${child.camp_name}` : ''}
             </p>
+            {child.guardian_name && (
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                Guardian: {child.guardian_name}{child.guardian_phone ? ` · ${child.guardian_phone}` : ''}
+              </p>
+            )}
           </div>
           <button
             type="button"

@@ -51,8 +51,14 @@ export interface SupervisedChild {
   sex: 'M' | 'F';
   camp: string;
   camp_name: string;
+  zone: string | null;
+  zone_name: string | null;
+  guardian: string | null;
   guardian_name: string | null;
   guardian_phone: string | null;
+  risk_level?: 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
+  closure_status?: string | null;
+  deletion_requested_at?: string | null;
 }
 
 export interface Paginated<T> {

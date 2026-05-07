@@ -79,7 +79,7 @@ export default function VaccinesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl">
+    <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -133,14 +133,15 @@ export default function VaccinesPage() {
             <div className="overflow-x-auto">
             {/* Head */}
             <div
-              className="grid grid-cols-[140px_140px_100px_80px_100px] gap-4 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider min-w-[560px]"
+              className="grid grid-cols-[1fr_1fr_130px_90px_80px_90px] gap-3 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider min-w-[680px]"
               style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-elev)', borderBottom: '1px solid var(--border)' }}
             >
               <span>Child</span>
+              <span>Zone / Guardian</span>
               <span>Vaccine</span>
               <span>Scheduled</span>
               <span>Overdue</span>
-              <span>Dropout risk</span>
+              <span>Dropout</span>
             </div>
 
             {/* Rows */}
@@ -149,17 +150,29 @@ export default function VaccinesPage() {
                 key={rec.id}
                 type="button"
                 onClick={() => openModal(rec)}
-                className="w-full grid grid-cols-[140px_140px_100px_80px_100px] gap-4 items-center px-4 py-3.5 border-b text-left hover:bg-[var(--bg-sand)] transition-colors min-w-[560px]"
+                className="w-full grid grid-cols-[1fr_1fr_130px_90px_80px_90px] gap-3 items-center px-4 py-3.5 border-b text-left hover:bg-[var(--bg-sand)] transition-colors min-w-[680px]"
                 style={{ borderColor: 'var(--border)' }}
               >
                 <span className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>
                   {rec.child_name}
                 </span>
+                <span className="flex flex-col gap-0.5 min-w-0">
+                  {rec.zone_name && (
+                    <span className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                      📍 {rec.zone_name}
+                    </span>
+                  )}
+                  {rec.guardian_name && (
+                    <span className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                      {rec.guardian_name}
+                    </span>
+                  )}
+                </span>
                 <span className="text-sm truncate" style={{ color: 'var(--text-muted)' }}>
                   {rec.vaccine_name}{' '}
                   <span className="font-mono text-xs">({rec.vaccine_code})</span>
                 </span>
-                <span className="text-sm whitespace-nowrap" style={{ color: 'var(--ink)' }}>
+                <span className="text-xs whitespace-nowrap" style={{ color: 'var(--ink)' }}>
                   {rec.scheduled_date}
                 </span>
                 <span>
@@ -241,6 +254,12 @@ export default function VaccinesPage() {
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                 {selected.child_name} &middot; {selected.vaccine_name} ({selected.vaccine_code})
               </p>
+              {(selected.zone_name || selected.guardian_name) && (
+                <p className="text-xs mt-0.5 flex gap-2 flex-wrap" style={{ color: 'var(--text-muted)' }}>
+                  {selected.zone_name && <span>📍 {selected.zone_name}</span>}
+                  {selected.guardian_name && <span>👤 {selected.guardian_name}{selected.guardian_phone ? ` · ${selected.guardian_phone}` : ''}</span>}
+                </p>
+              )}
             </div>
 
             <Input
