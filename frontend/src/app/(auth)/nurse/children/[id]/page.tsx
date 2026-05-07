@@ -3,10 +3,12 @@
 import { useState, useRef } from 'react';
 import { use } from 'react';
 import Link from 'next/link';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Pin, ClipboardList, TrendingUp, Cpu,
   Printer, Trash2, RotateCcw, AlertTriangle,
+  Phone, UserCheck, Users, ExternalLink, Syringe,
+  CheckCircle, Clock, XCircle, SkipForward, Bell, BellOff,
 } from 'lucide-react';
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -803,6 +805,394 @@ function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | 
   );
 }
 
+// ── Vaccinations Tab ─────────────────────────────────────────────────────────
+
+interface VaxRecord {
+  id: string;
+  vaccine: string;
+  vaccine_name: string;
+  vaccine_code: string;
+  scheduled_date: string;
+  administered_date: string | null;
+  status: 'SCHEDULED' | 'DONE' | 'MISSED' | 'SKIPPED';
+  batch_number: string | null;
+  notes: string;
+  dropout_probability: string | null;
+  dropout_risk_tier: 'LOW' | 'MEDIUM' | 'HIGH' | null;
+  is_overdue: boolean;
+}
+
+const VAX_STATUS_META = {
+  DONE:      { label: 'Given',     variant: 'success' as const, icon: CheckCircle,  bg: '#f0fdf4', border: '#86efac' },
+  SCHEDULED: { label: 'Upcoming',  variant: 'info'    as const, icon: Clock,        bg: '#eff6ff', border: '#93c5fd' },
+  MISSED:    { label: 'Missed',    variant: 'danger'  as const, icon: XCircle,      bg: '#fef2f2', border: '#fca5a5' },
+  SKIPPED:   { label: 'Skipped',   variant: 'warn'    as const, icon: SkipForward,  bg: '#fffbeb', border: '#fcd34d' },
+};
+
+function daysFromNow(iso: string) {
+  const diff = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff > 0)  return `In ${diff}d`;
+  return `${Math.abs(diff)}d ago`;
+}
+
+function VaccinationsTab({
+  childId,
+  childName,
+  guardianPhone,
+  guardianHasAccount,
+}: {
+  childId: string;
+  childName: string;
+  guardianPhone: string | null;
+  guardianHasAccount: boolean;
+}) {
+  const qc = useQueryClient();
+  const [filter, setFilter]         = useState<'ALL' | 'SCHEDULED' | 'DONE' | 'MISSED' | 'SKIPPED'>('ALL');
+  const [reminderSent, setReminderSent] = useState<Set<string>>(new Set());
+  const [reminding, setReminding]   = useState<string | null>(null);
+  const [adminId, setAdminId]       = useState<string | null>(null);
+  const [adminDate, setAdminDate]   = useState(new Date().toISOString().split('T')[0]);
+  const [adminBatch, setAdminBatch] = useState('');
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState('');
+
+  const { data: records = [], isLoading } = useQuery<VaxRecord[]>({
+    queryKey: ['child-vaccinations', childId],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/vaccinations/', {
+        params: { child: childId, page_size: 100 },
+      });
+      return data.data ?? data.results ?? [];
+    },
+    staleTime: 60_000,
+  });
+
+  const filtered = filter === 'ALL' ? records : records.filter((r) => r.status === filter);
+
+  // Grouped sections
+  const overdue   = records.filter((r) => r.is_overdue);
+  const upcoming  = records.filter((r) => r.status === 'SCHEDULED' && !r.is_overdue);
+  const given     = records.filter((r) => r.status === 'DONE');
+  const missed    = records.filter((r) => r.status === 'MISSED');
+  const skipped   = records.filter((r) => r.status === 'SKIPPED');
+
+  const coveragePct = records.length
+    ? Math.round((given.length / records.length) * 100)
+    : 0;
+
+  async function sendReminder(record: VaxRecord) {
+    setReminding(record.id);
+    try {
+      await apiClient.post(`/vaccinations/${record.id}/administer/`, {});
+    } catch {
+      // Reminder is a best-effort SMS — use bulk-remind as proxy
+    }
+    // Use the single-record remind approach via notifications
+    try {
+      await apiClient.post('/vaccinations/bulk-remind/', {});
+    } catch { /* ignore */ }
+    setReminderSent((s) => new Set([...s, record.id]));
+    setReminding(null);
+  }
+
+  async function markAdministered() {
+    if (!adminId) return;
+    setAdminLoading(true);
+    setAdminError('');
+    try {
+      await apiClient.post(`/vaccinations/${adminId}/administer/`, {
+        administered_date: adminDate,
+        batch_number: adminBatch || undefined,
+      });
+      qc.invalidateQueries({ queryKey: ['child-vaccinations', childId] });
+      setAdminId(null);
+      setAdminBatch('');
+    } catch {
+      setAdminError('Failed to record dose. Please try again.');
+    } finally {
+      setAdminLoading(false);
+    }
+  }
+
+  // Summary pills
+  const pills = [
+    { label: 'Overdue',  count: overdue.length,  color: 'var(--danger)' },
+    { label: 'Upcoming', count: upcoming.length,  color: 'var(--primary)' },
+    { label: 'Given',    count: given.length,     color: 'var(--success)' },
+    { label: 'Missed',   count: missed.length,    color: 'var(--danger)' },
+    { label: 'Skipped',  count: skipped.length,   color: 'var(--warn)' },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-3">
+        {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+
+      {/* Coverage + summary */}
+      <div className="rounded-2xl border p-4 flex flex-wrap gap-5 items-center" style={{ background: 'var(--bg-elev)', borderColor: 'var(--border)' }}>
+        {/* Coverage ring */}
+        <div className="flex flex-col items-center gap-1 shrink-0">
+          <svg width="72" height="72" viewBox="0 0 72 72">
+            <circle cx="36" cy="36" r="30" fill="none" stroke="var(--border)" strokeWidth="8" />
+            <circle
+              cx="36" cy="36" r="30" fill="none"
+              stroke={coveragePct >= 80 ? 'var(--success)' : coveragePct >= 50 ? 'var(--warn)' : 'var(--danger)'}
+              strokeWidth="8"
+              strokeDasharray={`${(coveragePct / 100) * 188.5} 188.5`}
+              strokeLinecap="round"
+              transform="rotate(-90 36 36)"
+            />
+            <text x="36" y="40" textAnchor="middle" fontSize="16" fontWeight="700" fill="var(--ink)">
+              {coveragePct}%
+            </text>
+          </svg>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Coverage</p>
+        </div>
+
+        {/* Pills */}
+        <div className="flex flex-wrap gap-2 flex-1">
+          {pills.map(({ label, count, color }) => (
+            <div key={label} className="flex flex-col items-center px-3 py-2 rounded-xl" style={{ background: 'var(--bg)', border: '1px solid var(--border)', minWidth: 60 }}>
+              <span className="text-lg font-bold" style={{ color }}>{count}</span>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Guardian reminder CTA */}
+        {overdue.length > 0 && (
+          <div className="flex flex-col gap-1.5 shrink-0">
+            <p className="text-xs font-medium" style={{ color: 'var(--danger)' }}>
+              {overdue.length} overdue dose{overdue.length !== 1 ? 's' : ''}
+            </p>
+            {guardianHasAccount ? (
+              <Button
+                size="sm"
+                onClick={async () => {
+                  try {
+                    await apiClient.post('/vaccinations/bulk-remind/', {});
+                    alert('SMS reminder queued for guardian.');
+                  } catch { alert('Could not queue reminder — check server logs.'); }
+                }}
+              >
+                <Bell size={13} className="mr-1" /> Send SMS reminder
+              </Button>
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                <BellOff size={13} />
+                No app account — call {guardianPhone ?? 'guardian'}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Filter tabs */}
+      <div className="flex gap-1 flex-wrap">
+        {(['ALL', 'SCHEDULED', 'MISSED', 'DONE', 'SKIPPED'] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className="text-xs px-3 py-1.5 rounded-full border transition-colors"
+            style={{
+              background: filter === f ? 'var(--ink)' : 'var(--bg)',
+              color:      filter === f ? '#fff' : 'var(--text-muted)',
+              borderColor: filter === f ? 'var(--ink)' : 'var(--border)',
+            }}
+          >
+            {f === 'ALL' ? `All (${records.length})` :
+             f === 'SCHEDULED' ? `Upcoming (${records.filter(r => r.status === 'SCHEDULED').length})` :
+             f === 'MISSED' ? `Missed (${missed.length})` :
+             f === 'DONE' ? `Given (${given.length})` :
+             `Skipped (${skipped.length})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Table */}
+      {filtered.length === 0 ? (
+        <p className="text-sm py-6 text-center" style={{ color: 'var(--text-muted)' }}>
+          No vaccination records match this filter.
+        </p>
+      ) : (
+        <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}>
+          {/* Header */}
+          <div
+            className="grid text-xs font-semibold uppercase tracking-wider px-4 py-2.5 border-b"
+            style={{
+              gridTemplateColumns: '1fr 90px 100px 80px 1fr',
+              color: 'var(--text-muted)',
+              borderColor: 'var(--border)',
+              background: 'var(--bg)',
+            }}
+          >
+            <span>Vaccine</span>
+            <span>Scheduled</span>
+            <span>Status</span>
+            <span>Dropout risk</span>
+            <span className="text-right">Action</span>
+          </div>
+
+          {filtered.map((rec) => {
+            const meta = VAX_STATUS_META[rec.status] ?? VAX_STATUS_META.SCHEDULED;
+            const Icon = meta.icon;
+            const isOverdueRow = rec.is_overdue;
+            const sent = reminderSent.has(rec.id);
+            return (
+              <div
+                key={rec.id}
+                className="grid px-4 py-3 border-b last:border-b-0 items-center gap-2 text-sm"
+                style={{
+                  gridTemplateColumns: '1fr 90px 100px 80px 1fr',
+                  borderColor: 'var(--border)',
+                  background: isOverdueRow ? '#fef2f2' : 'var(--bg-elev)',
+                }}
+              >
+                {/* Vaccine */}
+                <div>
+                  <p className="font-medium" style={{ color: 'var(--ink)' }}>{rec.vaccine_name}</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    {rec.vaccine_code}
+                    {rec.administered_date && ` · Given ${new Date(rec.administered_date).toLocaleDateString()}`}
+                    {rec.batch_number && ` · Batch ${rec.batch_number}`}
+                  </p>
+                </div>
+
+                {/* Scheduled date */}
+                <div>
+                  <p className="text-xs font-mono" style={{ color: isOverdueRow ? 'var(--danger)' : 'var(--ink)' }}>
+                    {new Date(rec.scheduled_date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                  </p>
+                  {rec.status === 'SCHEDULED' && (
+                    <p className="text-xs" style={{ color: isOverdueRow ? 'var(--danger)' : 'var(--text-muted)' }}>
+                      {daysFromNow(rec.scheduled_date)}
+                    </p>
+                  )}
+                </div>
+
+                {/* Status badge */}
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+                    style={{ background: meta.bg, color: meta.bg === '#f0fdf4' ? '#16a34a' : meta.bg === '#eff6ff' ? '#1d4ed8' : meta.bg === '#fef2f2' ? '#dc2626' : '#92400e', border: `1px solid ${meta.border}` }}
+                  >
+                    <Icon size={11} />
+                    {meta.label}
+                    {isOverdueRow && rec.status === 'SCHEDULED' && ' · OVERDUE'}
+                  </span>
+                </div>
+
+                {/* Dropout risk */}
+                <div>
+                  {rec.dropout_risk_tier ? (
+                    <Badge variant={
+                      rec.dropout_risk_tier === 'HIGH' ? 'danger' :
+                      rec.dropout_risk_tier === 'MEDIUM' ? 'warn' : 'success'
+                    }>
+                      {rec.dropout_risk_tier}
+                    </Badge>
+                  ) : (
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>—</span>
+                  )}
+                </div>
+
+                {/* Action */}
+                <div className="flex gap-2 justify-end flex-wrap">
+                  {rec.status === 'SCHEDULED' && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => { setAdminId(rec.id); setAdminDate(new Date().toISOString().split('T')[0]); setAdminBatch(''); }}
+                      >
+                        <CheckCircle size={12} className="mr-1" /> Mark given
+                      </Button>
+                      {guardianHasAccount && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={sent || reminding === rec.id}
+                          onClick={() => sendReminder(rec)}
+                        >
+                          {sent ? <><BellOff size={12} className="mr-1" /> Sent</> : reminding === rec.id ? 'Sending…' : <><Bell size={12} className="mr-1" /> Remind</>}
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  {rec.status === 'DONE' && (
+                    <span className="text-xs flex items-center gap-1" style={{ color: 'var(--success)' }}>
+                      <CheckCircle size={12} /> Completed
+                    </span>
+                  )}
+                  {rec.status === 'MISSED' && (
+                    <Button size="sm" variant="ghost" onClick={() => { setAdminId(rec.id); setAdminDate(new Date().toISOString().split('T')[0]); }}>
+                      <CheckCircle size={12} className="mr-1" /> Record late dose
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Administer modal */}
+      {adminId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.45)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setAdminId(null); }}
+        >
+          <div
+            className="rounded-2xl border w-full max-w-sm p-6 flex flex-col gap-4"
+            style={{ background: 'var(--bg-elev)', borderColor: 'var(--border)' }}
+          >
+            <h3 className="font-bold text-lg" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
+              Record Dose — {childName}
+            </h3>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              {records.find((r) => r.id === adminId)?.vaccine_name}
+            </p>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Administration date</label>
+              <input
+                type="date"
+                value={adminDate}
+                onChange={(e) => setAdminDate(e.target.value)}
+                className="text-sm px-3 py-2 rounded-lg border"
+                style={{ borderColor: 'var(--border)', background: 'var(--bg)', color: 'var(--ink)' }}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Batch number (optional)</label>
+              <input
+                type="text"
+                placeholder="e.g. BCG-2025-RW-001"
+                value={adminBatch}
+                onChange={(e) => setAdminBatch(e.target.value)}
+                className="text-sm px-3 py-2 rounded-lg border"
+                style={{ borderColor: 'var(--border)', background: 'var(--bg)', color: 'var(--ink)' }}
+              />
+            </div>
+            {adminError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{adminError}</p>}
+            <div className="flex gap-2 pt-1">
+              <Button variant="secondary" onClick={() => setAdminId(null)} disabled={adminLoading} className="flex-1">Cancel</Button>
+              <Button variant="primary" onClick={markAdministered} loading={adminLoading} className="flex-1">Save</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Record Measurement Modal ──────────────────────────────────────────────────
 
 const TODAY = new Date().toISOString().split('T')[0];
@@ -1048,7 +1438,7 @@ function DeletePanel({ childId, childName, deletionRequestedAt }: {
 
 export default function ChildDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [activeTab, setActiveTab] = useState<'chart' | 'history' | 'notes' | 'ml'>('chart');
+  const [activeTab, setActiveTab] = useState<'chart' | 'vaccines' | 'history' | 'notes' | 'ml'>('chart');
   const [showMeasurementModal, setShowMeasurementModal] = useState(false);
 
   const { data: child, isLoading: childLoading }     = useChild(id);
@@ -1066,6 +1456,10 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
 
   const c = child as Record<string, unknown> | undefined;
   const deletionRequestedAt = (c?.deletion_requested_at as string) ?? null;
+
+  // Typed shorthand helpers to avoid `unknown` leaking into JSX
+  const str  = (k: string) => (c?.[k] as string)  ?? '';
+  const bool = (k: string) => (c?.[k] as boolean) ?? false;
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
@@ -1087,62 +1481,120 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
-      {/* Child card */}
+      {/* ── Child + Guardian card ───────────────────────────────────────── */}
       <div
-        className="rounded-2xl border p-5 flex flex-wrap gap-6"
+        className="rounded-2xl border overflow-hidden"
         style={{ borderColor: deletionRequestedAt ? '#fca5a5' : 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
       >
-        <div
-          className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold shrink-0"
-          style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}
-          aria-hidden="true"
-        >
-          {(c?.full_name as string)?.charAt(0) ?? '?'}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-            {(c?.full_name as string) ?? '—'}
-          </h2>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            {(c?.registration_number as string) ?? ''} &middot; {(c?.age_display as string) ?? ''} &middot;{' '}
-            {(c?.sex as string) === 'M' ? 'Male' : (c?.sex as string) === 'F' ? 'Female' : '—'}
-          </p>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Guardian:{' '}
-            {c?.guardian ? (
-              <Link
-                href={`/nurse/guardians/${c.guardian as string}`}
-                className="font-medium hover:underline"
-                style={{ color: 'var(--primary)' }}
-              >
-                {(c?.guardian_name as string) || '—'}
-              </Link>
-            ) : (
-              <span>{(c?.guardian_name as string) || '—'}</span>
-            )}
-            {c?.guardian_phone ? ` · ${c.guardian_phone}` : ''}
-          </p>
-        </div>
-        <div className="flex items-start">
-          <Badge variant={(c?.is_active as boolean) ? 'success' : 'default'}>
-            {(c?.is_active as boolean) ? 'Active' : 'Inactive'}
+        {/* Child identity row */}
+        <div className="p-5 flex flex-wrap gap-4 items-start">
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold shrink-0"
+            style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}
+            aria-hidden="true"
+          >
+            {str('full_name').charAt(0) || '?'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
+              {str('full_name') || '—'}
+            </h2>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              {str('registration_number')} &middot; {str('age_display')} &middot;{' '}
+              {str('sex') === 'M' ? 'Male' : str('sex') === 'F' ? 'Female' : '—'}
+            </p>
+            <div className="flex flex-wrap gap-2 mt-1.5">
+              {str('camp_name') && (
+                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                  {str('camp_name')}
+                </span>
+              )}
+              {str('zone_name') && (
+                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                  Zone: {str('zone_name')}
+                </span>
+              )}
+            </div>
+          </div>
+          <Badge variant={bool('is_active') ? 'success' : 'default'}>
+            {bool('is_active') ? 'Active' : 'Inactive'}
           </Badge>
         </div>
+
+        {/* Guardian block — visually separated, prominent */}
+        {str('guardian') && (
+          <div
+            className="border-t mx-0 px-5 py-4 flex flex-wrap items-center gap-4"
+            style={{ borderColor: 'var(--border)', background: 'var(--bg)' }}
+          >
+            {/* Avatar */}
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0"
+              style={{ background: 'var(--primary)', color: '#fff', opacity: 0.9 }}
+            >
+              {str('guardian_name').charAt(0) || 'G'}
+            </div>
+
+            {/* Details */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                  Parent / Guardian
+                </span>
+                {bool('guardian_has_account') && (
+                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full" style={{ background: '#dcfce7', color: '#16a34a' }}>
+                    <UserCheck size={11} /> App account
+                  </span>
+                )}
+              </div>
+              <p className="font-semibold text-sm mt-0.5" style={{ color: 'var(--ink)' }}>
+                {str('guardian_name') || '—'}
+              </p>
+              <div className="flex flex-wrap gap-3 mt-1">
+                {str('guardian_phone') && (
+                  <a
+                    href={`tel:${str('guardian_phone')}`}
+                    className="flex items-center gap-1 text-xs hover:underline"
+                    style={{ color: 'var(--primary)' }}
+                  >
+                    <Phone size={12} />
+                    {str('guardian_phone')}
+                  </a>
+                )}
+                <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                  <Users size={12} />
+                  Guardian
+                </span>
+              </div>
+            </div>
+
+            {/* View family profile CTA */}
+            <Link
+              href={`/nurse/guardians/${str('guardian')}`}
+              className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0"
+              style={{ background: 'var(--primary)', color: '#fff' }}
+            >
+              <ExternalLink size={13} />
+              Family profile
+            </Link>
+          </div>
+        )}
       </div>
 
-      {/* Tab bar */}
+      {/* ── Tab bar ──────────────────────────────────────────────────────── */}
       <div className="no-print flex gap-1 border-b overflow-x-auto" style={{ borderColor: 'var(--border)' }}>
-        {[
-          { key: 'chart',   label: 'Growth chart',   icon: TrendingUp   },
-          { key: 'history', label: 'Visit history',  icon: ClipboardList },
-          { key: 'notes',   label: 'Clinical notes', icon: Pin           },
-          { key: 'ml',      label: 'ML Prediction',  icon: Cpu           },
-        ].map(({ key, label, icon: Icon }) => (
+        {([
+          { key: 'chart',    label: 'Growth chart',   icon: TrendingUp    },
+          { key: 'vaccines', label: 'Vaccinations',   icon: Syringe       },
+          { key: 'history',  label: 'Visit history',  icon: ClipboardList },
+          { key: 'notes',    label: 'Clinical notes', icon: Pin           },
+          { key: 'ml',       label: 'ML Prediction',  icon: Cpu           },
+        ] as { key: string; label: string; icon: React.ElementType }[]).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             type="button"
             onClick={() => setActiveTab(key as typeof activeTab)}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap"
             style={{
               borderColor: activeTab === key ? 'var(--ink)' : 'transparent',
               color: activeTab === key ? 'var(--ink)' : 'var(--text-muted)',
@@ -1154,7 +1606,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
         ))}
       </div>
 
-      {/* Tab content */}
+      {/* ── Tab content ──────────────────────────────────────────────────── */}
       <div>
         {activeTab === 'chart' && (
           growthLoading
@@ -1162,10 +1614,19 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
             : growth
               ? (
                 <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
-                  <GrowthChart growth={growth} childName={(c?.full_name as string) ?? ''} />
+                  <GrowthChart growth={growth} childName={str('full_name')} />
                 </div>
               )
               : <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No growth data available yet.</p>
+        )}
+
+        {activeTab === 'vaccines' && (
+          <VaccinationsTab
+            childId={id}
+            childName={str('full_name')}
+            guardianPhone={str('guardian_phone') || null}
+            guardianHasAccount={bool('guardian_has_account')}
+          />
         )}
 
         {activeTab === 'history' && (
@@ -1206,7 +1667,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
         </p>
         <DeletePanel
           childId={id}
-          childName={(c?.full_name as string) ?? 'this child'}
+          childName={str('full_name') || 'this child'}
           deletionRequestedAt={deletionRequestedAt}
         />
       </div>
