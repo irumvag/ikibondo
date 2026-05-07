@@ -21,7 +21,7 @@ class HealthRecordViewSet(viewsets.ModelViewSet):
     filterset_fields = ['child', 'nutrition_status', 'measurement_date', 'risk_level', 'zone']
     search_fields = ['child__full_name', 'child__registration_number']
     ordering_fields = ['measurement_date', 'created_at']
-    http_method_names = ['get', 'post', 'head', 'options']  # Records are immutable once saved
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']  # patch only via /amend/ action
 
     def get_queryset(self):
         user = self.request.user
