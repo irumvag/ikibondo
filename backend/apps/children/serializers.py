@@ -6,6 +6,7 @@ class GuardianSerializer(serializers.ModelSerializer):
     has_account = serializers.SerializerMethodField()
     user_email = serializers.EmailField(source='user.email', read_only=True, allow_null=True)
     assigned_chw_name = serializers.CharField(source='assigned_chw.full_name', read_only=True, allow_null=True)
+    children_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Guardian
@@ -13,8 +14,9 @@ class GuardianSerializer(serializers.ModelSerializer):
             'id', 'full_name', 'phone_number', 'relationship', 'national_id',
             'has_account', 'user_id', 'user_email',
             'assigned_chw', 'assigned_chw_name',
+            'children_count',
         ]
-        read_only_fields = ['id', 'has_account', 'user_email', 'assigned_chw_name']
+        read_only_fields = ['id', 'has_account', 'user_email', 'assigned_chw_name', 'children_count']
 
     def get_has_account(self, obj):
         return obj.user_id is not None

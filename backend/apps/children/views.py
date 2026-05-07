@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.core.responses import success_response, created_response, error_response
+from apps.core.pagination import StandardPagination
 from apps.accounts.models import UserRole
 from apps.accounts.permissions import IsSupervisorOrAdmin
 from django.utils import timezone as tz
@@ -40,15 +41,19 @@ class GuardianViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        from django.db.models import Count, Q
+        qs = Guardian.objects.select_related('user', 'assigned_chw').annotate(
+            children_count=Count('children', filter=Q(children__is_active=True), distinct=True)
+        )
         user = self.request.user
         if user.role == UserRole.NURSE and user.camp_id:
-            # Nurse sees guardians of children in their camp
             qs = qs.filter(children__camp_id=user.camp_id).distinct()
         elif user.role == UserRole.CHW:
-            # CHW sees only their assigned guardians
             qs = qs.filter(assigned_chw=user)
-        return qs
+        # Exclude orphan guardians (no active children AND no linked user) by default
+        if self.request.query_params.get('include_orphans') != 'true':
+            qs = qs.filter(Q(children_count__gt=0) | Q(user__isnull=False))
+        return qs.order_by('full_name')
 
     @action(detail=True, methods=['post'], url_path='link-account', permission_classes=[IsAuthenticated])
     def link_account(self, request, pk=None):
@@ -310,6 +315,7 @@ class ChildViewSet(viewsets.ModelViewSet):
     filterset_class = ChildFilter
     search_fields = ['full_name', 'registration_number', 'guardian__full_name']
     ordering_fields = ['full_name', 'date_of_birth', 'created_at']
+    pagination_class = StandardPagination
 
     def get_queryset(self):
         qs = Child.objects.filter(is_active=True).select_related(

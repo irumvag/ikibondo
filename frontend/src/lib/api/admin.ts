@@ -192,6 +192,7 @@ export interface Guardian {
   user_email?: string | null;
   assigned_chw?: string | null;
   assigned_chw_name?: string | null;
+  children_count: number;
 }
 
 export async function listGuardians(search?: string): Promise<Guardian[]> {
