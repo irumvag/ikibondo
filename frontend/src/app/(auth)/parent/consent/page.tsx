@@ -61,7 +61,7 @@ export default function ConsentPage() {
   const hasConsented = !!activeConsent;
 
   return (
-    <div className="max-w-2xl flex flex-col gap-8">
+    <div className="max-w-2xl mx-auto w-full flex flex-col gap-8">
       {/* Header */}
       <div>
         <h2

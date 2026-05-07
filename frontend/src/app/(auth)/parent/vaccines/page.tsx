@@ -119,7 +119,7 @@ export default function VaccinationCardPage() {
   const children = data?.items ?? [];
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
+    <div className="flex flex-col gap-6 max-w-2xl mx-auto w-full">
       {/* Header */}
       <div>
         <h2
