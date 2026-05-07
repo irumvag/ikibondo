@@ -78,6 +78,7 @@ export interface ParentUser {
   role: 'PARENT';
   camp: string | null;
   is_approved: boolean;
+  guardian_id: string | null;   // UUID of their linked Guardian, if any
 }
 
 export interface RegisteredChild {
@@ -112,7 +113,10 @@ export async function registerChild(payload: {
   camp: string;
   zone?: string;
   notes?: string;
-  guardian: {
+  /** Pass this instead of `guardian` when registering a second child for a parent
+   *  who already has a Guardian record — skips creating a duplicate Guardian. */
+  existing_guardian_id?: string;
+  guardian?: {
     full_name: string;
     phone_number: string;
     relationship: string;

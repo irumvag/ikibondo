@@ -70,15 +70,44 @@ class VisitRequestSerializer(serializers.ModelSerializer):
 
 
 class ChildCreateSerializer(serializers.ModelSerializer):
-    """Used for registration — accepts guardian data inline."""
-    guardian = GuardianSerializer()
+    """
+    Used for registration — accepts guardian data inline OR an existing_guardian_id.
+
+    When `existing_guardian_id` is supplied (e.g. nurse is registering a second
+    child for a parent who already has a Guardian record) the new child is attached
+    to that existing Guardian and no new Guardian row is created.  The separate
+    link-account step is also skipped because the parent is already linked.
+    """
+    guardian = GuardianSerializer(required=False)
+    existing_guardian_id = serializers.UUIDField(required=False, write_only=True)
 
     class Meta:
         model = Child
-        fields = ['full_name', 'date_of_birth', 'sex', 'camp', 'zone', 'guardian', 'notes', 'photo']
+        fields = ['full_name', 'date_of_birth', 'sex', 'camp', 'zone',
+                  'guardian', 'existing_guardian_id', 'notes', 'photo']
+
+    def validate(self, attrs):
+        has_guardian     = bool(attrs.get('guardian'))
+        has_existing_id  = bool(attrs.get('existing_guardian_id'))
+        if not has_guardian and not has_existing_id:
+            raise serializers.ValidationError(
+                'Either guardian details or existing_guardian_id must be provided.'
+            )
+        return attrs
 
     def create(self, validated_data):
-        guardian_data = validated_data.pop('guardian')
-        guardian = Guardian.objects.create(**guardian_data)
+        existing_guardian_id = validated_data.pop('existing_guardian_id', None)
+        guardian_data        = validated_data.pop('guardian', None)
+
+        if existing_guardian_id:
+            try:
+                guardian = Guardian.objects.get(id=existing_guardian_id)
+            except Guardian.DoesNotExist:
+                raise serializers.ValidationError(
+                    {'existing_guardian_id': 'Guardian not found.'}
+                )
+        else:
+            guardian = Guardian.objects.create(**guardian_data)
+
         child = Child.objects.create(guardian=guardian, **validated_data)
         return child

@@ -135,7 +135,7 @@ export default function NurseRegisterPage() {
     setSubmitting(true);
     setError('');
     try {
-      // Step 1: get or create parent
+      // Step 1: get or create parent account
       let parentUser = selectedParent;
       if (!parentUser) {
         parentUser = await createParentAccount({
@@ -145,23 +145,43 @@ export default function NurseRegisterPage() {
         });
       }
 
-      // Step 2: register newborn + guardian
-      const child = await registerChild({
-        full_name: newbornForm.full_name.trim(),
-        date_of_birth: newbornForm.date_of_birth,
-        sex: newbornForm.sex as 'M' | 'F',
-        camp: campId,
-        zone: newbornForm.zone || undefined,
-        notes: newbornForm.notes || undefined,
-        guardian: {
-          full_name: newbornForm.guardian_full_name.trim(),
-          phone_number: newbornForm.guardian_phone.trim(),
-          relationship: newbornForm.guardian_relationship,
-        },
-      });
+      // Step 2: register child.
+      // If the selected parent already has a guardian record, reuse it so we
+      // don't create a duplicate Guardian and avoid the 409 on link-account.
+      const existingGuardianId = parentUser.guardian_id ?? undefined;
 
-      // Step 3: link parent account to guardian
-      await linkParentToGuardian(child.guardian_id, parentUser.id);
+      const child = await registerChild(
+        existingGuardianId
+          ? {
+              // Attach new child to the parent's existing Guardian — no new Guardian created
+              full_name: newbornForm.full_name.trim(),
+              date_of_birth: newbornForm.date_of_birth,
+              sex: newbornForm.sex as 'M' | 'F',
+              camp: campId,
+              zone: newbornForm.zone || undefined,
+              notes: newbornForm.notes || undefined,
+              existing_guardian_id: existingGuardianId,
+            }
+          : {
+              // First registration for this parent — create a new Guardian
+              full_name: newbornForm.full_name.trim(),
+              date_of_birth: newbornForm.date_of_birth,
+              sex: newbornForm.sex as 'M' | 'F',
+              camp: campId,
+              zone: newbornForm.zone || undefined,
+              notes: newbornForm.notes || undefined,
+              guardian: {
+                full_name: newbornForm.guardian_full_name.trim(),
+                phone_number: newbornForm.guardian_phone.trim(),
+                relationship: newbornForm.guardian_relationship,
+              },
+            },
+      );
+
+      // Step 3: link parent account → guardian (only needed when a new Guardian was created)
+      if (!existingGuardianId) {
+        await linkParentToGuardian(child.guardian_id, parentUser.id);
+      }
 
       setResult({
         child_name: child.full_name,
