@@ -29,14 +29,15 @@ class VaccinationRecordSerializer(serializers.ModelSerializer):
 
     def get_guardian_name(self, obj):
         try:
-            g = obj.child.guardian_set.first()
+            # Child has a direct guardian FK
+            g = obj.child.guardian
             return g.full_name if g else None
         except Exception:
             return None
 
     def get_guardian_phone(self, obj):
         try:
-            g = obj.child.guardian_set.first()
+            g = obj.child.guardian
             return g.phone_number if g else None
         except Exception:
             return None

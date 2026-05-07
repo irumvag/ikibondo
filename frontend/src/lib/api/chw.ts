@@ -99,10 +99,10 @@ export async function listVaccinationQueue(params?: {
   const { data } = await apiClient.get('/vaccinations/', {
     params: { status: 'SCHEDULED', ...params },
   });
-  return {
-    items: data.data ?? [],
-    count: data.pagination?.count ?? (data.data?.length ?? 0),
-  };
+  // Endpoint uses standard DRF pagination: {count, results} not custom {data, pagination}
+  const items = data.data ?? data.results ?? [];
+  const count = data.pagination?.count ?? data.count ?? items.length;
+  return { items, count };
 }
 
 export async function administerVaccine(
