@@ -91,6 +91,26 @@ export async function createVisit(payload: VisitPayload): Promise<VisitResult> {
   return data.data;
 }
 
+export async function amendHealthRecord(
+  recordId: string,
+  payload: {
+    reason: string;
+    weight_kg?: number | null;
+    height_cm?: number | null;
+    muac_cm?: number | null;
+    oedema?: boolean;
+    temperature_c?: number | null;
+    respiratory_rate?: number | null;
+    heart_rate?: number | null;
+    spo2?: number | null;
+    symptom_flags?: string[];
+    notes?: string;
+  },
+): Promise<import('./nurse').HealthRecordDetail> {
+  const { data } = await apiClient.patch(`/health-records/${recordId}/amend/`, payload);
+  return data.data;
+}
+
 export async function listVaccinationQueue(params?: {
   status?: string;
   page?: number;
