@@ -31,6 +31,22 @@ class VaccinationRecordViewSet(viewsets.ModelViewSet):
     ordering_fields = ['scheduled_date', 'created_at']
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
+    def get_queryset(self):
+        qs = VaccinationRecord.objects.select_related(
+            'child', 'child__zone', 'child__guardian',
+            'vaccine', 'administered_by',
+        ).filter(is_active=True)
+        user = self.request.user
+        if user.role == UserRole.CHW:
+            # CHW sees only vaccinations for children whose guardian is assigned to them
+            qs = qs.filter(child__guardian__assigned_chw=user)
+        elif user.role == UserRole.PARENT:
+            qs = qs.filter(child__guardian__user=user)
+        elif user.role in (UserRole.NURSE, UserRole.SUPERVISOR):
+            if user.camp_id:
+                qs = qs.filter(child__camp_id=user.camp_id)
+        return qs
+
     def perform_update(self, serializer):
         """When marking a dose DONE, record administered_by and date."""
         instance = serializer.save()
