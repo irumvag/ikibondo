@@ -73,28 +73,14 @@ class VaccinationRecordViewSet(viewsets.ModelViewSet):
     def administer(self, request, pk=None):
         """POST /api/v1/vaccinations/<id>/administer/ — mark a dose as administered."""
         user = request.user
-        allowed_roles = (UserRole.CHW, UserRole.NURSE, UserRole.SUPERVISOR, UserRole.ADMIN)
+        allowed_roles = (UserRole.NURSE, UserRole.SUPERVISOR, UserRole.ADMIN)
         if user.role not in allowed_roles:
-            return error_response('Not authorised to administer vaccines.', 'FORBIDDEN', status_code=403)
+            return error_response('Only nurses and above may administer vaccines.', 'FORBIDDEN', status_code=403)
 
         record = self.get_object()
 
         if record.status == DoseStatus.DONE:
             return error_response('This dose has already been administered.', 'ALREADY_DONE', status_code=400)
-
-        # CHW scope check: must be assigned to the child's zone
-        if user.role == UserRole.CHW:
-            child_zone = getattr(record.child, 'zone', None)
-            if child_zone is not None:
-                from apps.camps.models import CHWZoneAssignment
-                assigned = CHWZoneAssignment.objects.filter(
-                    chw_user=user, zone=child_zone, status='active'
-                ).exists()
-                if not assigned:
-                    return error_response(
-                        'You are not assigned to this child\'s zone.',
-                        'FORBIDDEN', status_code=403,
-                    )
 
         s = AdministerSerializer(data=request.data)
         s.is_valid(raise_exception=True)

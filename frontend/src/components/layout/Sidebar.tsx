@@ -117,9 +117,10 @@ const ROLE_NAV: Record<UserRole, NavEntry[]> = {
       kind: 'group', id: 'chw-field', label: 'Field', icon: Stethoscope,
       items: [
         { href: '/chw/visit',     label: 'Caseload & Visit', icon: Stethoscope },
-        { href: '/chw/records',   label: 'Health Records',  icon: Activity },
-        { href: '/chw/requests',  label: 'Visit Requests',  icon: ClipboardCheck },
-        { href: '/chw/vaccines',  label: 'Vaccine Queue',   icon: Syringe },
+        { href: '/chw/parents',   label: 'Parents',          icon: Users },
+        { href: '/chw/records',   label: 'Health Records',   icon: Activity },
+        { href: '/chw/requests',  label: 'Visit Requests',   icon: ClipboardCheck },
+        { href: '/chw/vaccines',  label: 'Vaccine Queue',    icon: Syringe },
       ],
     },
     {

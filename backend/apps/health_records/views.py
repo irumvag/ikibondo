@@ -141,8 +141,14 @@ class HealthRecordViewSet(viewsets.ModelViewSet):
             return error_response('reason is required for amendments.', 'VALIDATION_ERROR')
 
         user = request.user
-        # CHW 24-hour window
+        # CHW: can only amend records they personally recorded, within 24 h
         if user.role == UserRole.CHW:
+            if record.recorded_by_id != user.pk:
+                return error_response(
+                    'You can only amend records you personally recorded.',
+                    'FORBIDDEN',
+                    status_code=403,
+                )
             age = timezone.now() - record.created_at
             if age.total_seconds() > 86400:
                 return error_response(
