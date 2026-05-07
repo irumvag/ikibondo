@@ -118,6 +118,43 @@ export async function syncBatch(operations: SyncOperation[]): Promise<SyncResult
   return data.results ?? [];
 }
 
+// ── CHW Families (caseload) ───────────────────────────────────────────────────
+
+export interface CHWChildSummary {
+  id: string;
+  full_name: string;
+  registration_number: string;
+  sex: 'M' | 'F';
+  date_of_birth: string;
+  age_display: string;
+  age_months: number;
+  zone_name: string | null;
+  camp_name: string | null;
+  risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
+  last_visit_date: string | null;
+  last_visit_days_ago: number | null;
+  overdue_vaccines: number;
+  upcoming_vaccines: number;
+  next_vaccine_name: string | null;
+  next_vaccine_date: string | null;
+  next_vaccine_overdue: boolean;
+}
+
+export interface CHWFamily {
+  id: string;
+  full_name: string;
+  phone_number: string;
+  relationship: string;
+  has_account: boolean;
+  user_email: string | null;
+  children: CHWChildSummary[];
+}
+
+export async function listCHWFamilies(): Promise<CHWFamily[]> {
+  const { data } = await apiClient.get('/chw/families/');
+  return data.data ?? [];
+}
+
 // ── Visit Requests (CHW side) ─────────────────────────────────────────────────
 
 export type VisitRequestStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'COMPLETED';

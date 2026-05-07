@@ -856,3 +856,112 @@ def daily_plan_view(request):
 
     result.sort(key=lambda x: -x['priority_score'])
     return success_response(data=result)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def chw_families_view(request):
+    """
+    GET /api/v1/chw/families/
+    Returns all families (guardians + their children) assigned to the calling CHW.
+    Each child includes: risk_level, last_visit_date, overdue/upcoming vaccine counts.
+    CHW role only.
+    """
+    from django.utils import timezone
+    from apps.accounts.models import UserRole
+    from apps.vaccinations.models import VaccinationRecord, DoseStatus
+    from apps.health_records.models import HealthRecord
+    from django.db.models import Subquery, OuterRef, Count, Q
+
+    user = request.user
+    if user.role != UserRole.CHW:
+        return error_response('Only CHWs can access family caseload.', 'FORBIDDEN', status_code=403)
+
+    today = timezone.now().date()
+
+    guardians = Guardian.objects.filter(
+        assigned_chw=user,
+    ).select_related('user').prefetch_related(
+        'children__zone', 'children__camp',
+    ).order_by('full_name')
+
+    # Latest risk per child via subquery
+    latest_risk_sq = (
+        HealthRecord.objects
+        .filter(child=OuterRef('pk'))
+        .order_by('-measurement_date')
+        .values('risk_level')[:1]
+    )
+    latest_visit_sq = (
+        HealthRecord.objects
+        .filter(child=OuterRef('pk'))
+        .order_by('-measurement_date')
+        .values('measurement_date')[:1]
+    )
+
+    result = []
+    for guardian in guardians:
+        children_qs = Child.objects.filter(
+            guardian=guardian,
+            is_active=True,
+            deletion_requested_at__isnull=True,
+        ).select_related('zone', 'camp').annotate(
+            latest_risk=Subquery(latest_risk_sq),
+            last_visit=Subquery(latest_visit_sq),
+        )
+
+        children_data = []
+        for child in children_qs:
+            risk = (child.latest_risk or 'UNKNOWN').upper()
+            last_visit = child.last_visit
+            last_visit_days = (today - last_visit).days if last_visit else None
+
+            overdue_count = VaccinationRecord.objects.filter(
+                child=child,
+                status=DoseStatus.SCHEDULED,
+                scheduled_date__lt=today,
+            ).count()
+            upcoming_count = VaccinationRecord.objects.filter(
+                child=child,
+                status=DoseStatus.SCHEDULED,
+                scheduled_date__gte=today,
+                scheduled_date__lte=today + timezone.timedelta(days=30),
+            ).count()
+
+            # Next scheduled vaccine
+            next_vax = VaccinationRecord.objects.filter(
+                child=child,
+                status=DoseStatus.SCHEDULED,
+            ).select_related('vaccine').order_by('scheduled_date').first()
+
+            children_data.append({
+                'id': str(child.id),
+                'full_name': child.full_name,
+                'registration_number': child.registration_number,
+                'sex': child.sex,
+                'date_of_birth': str(child.date_of_birth),
+                'age_display': child.age_display,
+                'age_months': child.age_months,
+                'zone_name': child.zone.name if child.zone else None,
+                'camp_name': child.camp.name if child.camp else None,
+                'risk_level': risk,
+                'last_visit_date': str(last_visit) if last_visit else None,
+                'last_visit_days_ago': last_visit_days,
+                'overdue_vaccines': overdue_count,
+                'upcoming_vaccines': upcoming_count,
+                'next_vaccine_name': next_vax.vaccine.name if next_vax else None,
+                'next_vaccine_date': str(next_vax.scheduled_date) if next_vax else None,
+                'next_vaccine_overdue': next_vax.is_overdue if next_vax else False,
+            })
+
+        result.append({
+            'id': str(guardian.id),
+            'full_name': guardian.full_name,
+            'phone_number': guardian.phone_number,
+            'relationship': guardian.relationship,
+            'has_account': guardian.user_id is not None,
+            'user_email': guardian.user.email if guardian.user else None,
+            'children': children_data,
+        })
+
+    return success_response(data=result)
