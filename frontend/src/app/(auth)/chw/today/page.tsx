@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import {
   CalendarDays, AlertTriangle, Clock, Syringe, CheckCircle,
-  Phone, UserCircle, ChevronDown, ChevronUp, MessageSquare,
+  Phone, UserCircle, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { listCHWFamilies, type CHWChildSummary, type CHWFamily } from '@/lib/api/chw';
 import { Badge } from '@/components/ui/Badge';
@@ -44,13 +45,6 @@ function childPriority(c: CHWChildSummary) {
   else if ((c.last_visit_days_ago ?? 0) > 30) score += 10;
   return score;
 }
-
-// ── VisitModal (inline, re-exported from visit page logic) ────────────────────
-// We use an iframe-like approach: navigate to /chw/visit?child=ID
-// Actually: open in same page via modal imported from visit
-// Simpler: just navigate – the visit page handles ?child= param to auto-open modal
-
-import { useRouter } from 'next/navigation';
 
 // ── main page ──────────────────────────────────────────────────────────────────
 
