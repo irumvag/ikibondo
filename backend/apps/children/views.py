@@ -667,7 +667,10 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
         vr = serializer.save(requested_by=request.user, status=VisitRequestStatus.PENDING)
 
         from apps.notifications.tasks import notify_visit_request_created
-        notify_visit_request_created.delay(str(vr.id))
+        try:
+            notify_visit_request_created.delay(str(vr.id))
+        except Exception:
+            notify_visit_request_created(str(vr.id))
 
         return created_response(
             data=VisitRequestSerializer(vr).data,
@@ -691,7 +694,10 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
         vr.save(update_fields=['status', 'assigned_chw', 'accepted_at', 'eta', 'updated_at'])
 
         from apps.notifications.tasks import notify_visit_request_accepted
-        notify_visit_request_accepted.delay(str(vr.id))
+        try:
+            notify_visit_request_accepted.delay(str(vr.id))
+        except Exception:
+            notify_visit_request_accepted(str(vr.id))
 
         return success_response(data=VisitRequestSerializer(vr).data, message='Visit request accepted.')
 
@@ -710,7 +716,10 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
         vr.save(update_fields=['status', 'decline_reason', 'updated_at'])
 
         from apps.notifications.tasks import notify_visit_request_declined
-        notify_visit_request_declined.delay(str(vr.id))
+        try:
+            notify_visit_request_declined.delay(str(vr.id))
+        except Exception:
+            notify_visit_request_declined(str(vr.id))
 
         return success_response(data=VisitRequestSerializer(vr).data, message='Visit request declined.')
 
@@ -729,7 +738,10 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
         vr.save(update_fields=['status', 'completed_at', 'updated_at'])
 
         from apps.notifications.tasks import notify_visit_request_completed
-        notify_visit_request_completed.delay(str(vr.id))
+        try:
+            notify_visit_request_completed.delay(str(vr.id))
+        except Exception:
+            notify_visit_request_completed(str(vr.id))
 
         return success_response(data=VisitRequestSerializer(vr).data, message='Visit marked as complete.')
 

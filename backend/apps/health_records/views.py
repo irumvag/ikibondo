@@ -57,13 +57,16 @@ class HealthRecordViewSet(viewsets.ModelViewSet):
         # Run ML prediction synchronously so the response includes risk_level + risk_factors
         self._run_prediction(record)
 
-        # If HIGH risk — trigger async notifications
+        # If HIGH risk — notify immediately (sync fallback when Celery unavailable)
         if record.risk_level == 'HIGH':
+            from apps.notifications.tasks import notify_high_risk
             try:
-                from apps.notifications.tasks import notify_high_risk
                 notify_high_risk.delay(str(record.id))
-            except Exception as e:
-                logger.warning('Failed to enqueue notify_high_risk for record %s: %s', record.id, e)
+            except Exception:
+                try:
+                    notify_high_risk(str(record.id))
+                except Exception as e:
+                    logger.warning('notify_high_risk failed for record %s: %s', record.id, e)
 
         return created_response(
             data=HealthRecordSerializer(record).data,

@@ -69,6 +69,7 @@ export default function NurseRegisterPage() {
   const [result, setResult] = useState<{ child_name: string; reg_number: string; parent_name: string } | null>(null);
 
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const submitLock = useRef(false); // prevent double-submit on fast clicks
 
   // Duplicate detection: query backend when DOB + guardian phone are filled
   const dupEnabled = Boolean(newbornForm.date_of_birth && newbornForm.guardian_phone.length >= 6);
@@ -131,7 +132,21 @@ export default function NurseRegisterPage() {
     newbornForm.full_name.trim() && newbornForm.date_of_birth && newbornForm.sex &&
     newbornForm.guardian_full_name.trim() && newbornForm.guardian_phone.trim() && newbornForm.guardian_relationship;
 
+  const resetForm = () => {
+    setResult(null);
+    setStep('parent');
+    setParentForm(EMPTY_PARENT);
+    setNewbornForm(EMPTY_NEWBORN);
+    setSelectedParent(null);
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowNewForm(false);
+    setError('');
+  };
+
   const handleSubmit = async () => {
+    if (submitLock.current) return;
+    submitLock.current = true;
     setSubmitting(true);
     setError('');
     try {
@@ -193,6 +208,7 @@ export default function NurseRegisterPage() {
       setError(msg ?? 'Registration failed. Please check the form and try again.');
     } finally {
       setSubmitting(false);
+      submitLock.current = false;
     }
   };
 
@@ -225,16 +241,7 @@ export default function NurseRegisterPage() {
           <Button
             variant="primary"
             className="flex-1"
-            onClick={() => {
-              setResult(null);
-              setStep('parent');
-              setParentForm(EMPTY_PARENT);
-              setNewbornForm(EMPTY_NEWBORN);
-              setSelectedParent(null);
-              setShowNewForm(false);
-              setSearchQuery('');
-              setSearchResults([]);
-            }}
+            onClick={resetForm}
           >
             Register another
           </Button>
