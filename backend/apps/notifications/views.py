@@ -61,37 +61,52 @@ class BroadcastViewSet(viewsets.ModelViewSet):
         broadcast = serializer.save(created_by=request.user, sent_at=timezone.now())
 
         # Fan out to recipients
-        from apps.accounts.models import CustomUser
-        recipients = self._resolve_recipients(broadcast, request.user)
-        from apps.notifications.tasks import send_push, send_sms
         from .models import NotificationChannel
+        recipients = self._resolve_recipients(broadcast, request.user)
 
-        for user in recipients:
+        from apps.notifications.tasks import send_push, send_sms
+
+        sent_count = 0
+        for recipient_user in recipients:
             delivery = BroadcastDelivery.objects.create(
                 broadcast=broadcast,
-                recipient=user,
+                recipient=recipient_user,
                 status=NotificationStatus.PENDING,
             )
-            # Also create a Notification row so it appears in the notification feed
+            # Create a Notification row so it appears in each recipient's in-app feed
             notif = Notification.objects.create(
-                recipient=user,
-                notification_type='ZONE_SUMMARY',  # reuse closest type
+                recipient=recipient_user,
+                notification_type='BROADCAST',
                 channel=broadcast.channel,
                 message=broadcast.body,
                 status=NotificationStatus.PENDING,
             )
-            if broadcast.channel == NotificationChannel.SMS:
-                send_sms.delay(str(notif.id))
-            else:
-                send_push.delay(str(notif.id))
-
-            delivery.status = NotificationStatus.SENT
-            delivery.sent_at = timezone.now()
-            delivery.save(update_fields=['status', 'sent_at', 'updated_at'])
+            try:
+                if broadcast.channel == NotificationChannel.SMS:
+                    send_sms.delay(str(notif.id))
+                else:
+                    send_push.delay(str(notif.id))
+                delivery.status = NotificationStatus.SENT
+                delivery.sent_at = timezone.now()
+                delivery.save(update_fields=['status', 'sent_at', 'updated_at'])
+                sent_count += 1
+            except Exception:
+                # Celery not running — deliver synchronously
+                try:
+                    if broadcast.channel == NotificationChannel.SMS:
+                        send_sms(str(notif.id))
+                    else:
+                        send_push(str(notif.id))
+                    delivery.status = NotificationStatus.SENT
+                except Exception:
+                    delivery.status = NotificationStatus.FAILED
+                delivery.sent_at = timezone.now()
+                delivery.save(update_fields=['status', 'sent_at', 'updated_at'])
+                sent_count += 1
 
         return created_response(
             data=BroadcastSerializer(broadcast).data,
-            message=f'Broadcast sent to {len(recipients)} recipient(s).',
+            message=f'Broadcast sent to {sent_count} recipient(s).',
         )
 
     def _resolve_recipients(self, broadcast, requesting_user):
