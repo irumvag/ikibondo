@@ -15,6 +15,7 @@ class VisitRequestStatus(models.TextChoices):
     ACCEPTED = 'ACCEPTED', 'Accepted'
     DECLINED = 'DECLINED', 'Declined'
     COMPLETED = 'COMPLETED', 'Completed'
+    WITHDRAWN = 'WITHDRAWN', 'Withdrawn'
 
 
 class Guardian(BaseModel):

@@ -46,7 +46,7 @@ export async function markAllRead(): Promise<void> {
 // ── Visit Requests ──────────────────────────────────────────────────────────
 
 export type VisitUrgency = 'ROUTINE' | 'SOON' | 'URGENT';
-export type VisitRequestStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'COMPLETED';
+export type VisitRequestStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'COMPLETED' | 'WITHDRAWN';
 
 export interface VisitRequest {
   id: string;
@@ -83,4 +83,9 @@ export async function listVisitRequests(status?: VisitRequestStatus): Promise<Vi
   const params = status ? { status } : {};
   const { data } = await apiClient.get('/children/visit-requests/', { params });
   return data.data ?? [];
+}
+
+export async function withdrawVisitRequest(id: string): Promise<VisitRequest> {
+  const { data } = await apiClient.post(`/children/visit-requests/${id}/withdraw/`);
+  return data.data;
 }

@@ -751,6 +751,30 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
 
         return success_response(data=VisitRequestSerializer(vr).data, message='Visit marked as complete.')
 
+    @action(detail=True, methods=['post'], url_path='withdraw')
+    def withdraw(self, request, pk=None):
+        """POST /api/v1/visit-requests/<id>/withdraw/ — parent withdraws a PENDING request."""
+        if request.user.role != UserRole.PARENT:
+            return error_response('Only parents can withdraw visit requests.', 'FORBIDDEN', status_code=403)
+
+        vr = self.get_object()
+
+        # Only allow withdrawing own requests
+        if vr.requested_by_id != request.user.id:
+            return error_response('You can only withdraw your own requests.', 'FORBIDDEN', status_code=403)
+
+        if vr.status not in (VisitRequestStatus.PENDING, VisitRequestStatus.ACCEPTED):
+            return error_response(
+                f'Cannot withdraw a request with status {vr.status}.',
+                'INVALID_STATE',
+                status_code=400,
+            )
+
+        vr.status = VisitRequestStatus.WITHDRAWN
+        vr.save(update_fields=['status', 'updated_at'])
+
+        return success_response(data=VisitRequestSerializer(vr).data, message='Visit request withdrawn.')
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
