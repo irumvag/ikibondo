@@ -1,6 +1,9 @@
+import logging
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets, filters
+
+logger = logging.getLogger(__name__)
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
@@ -97,6 +100,15 @@ class VaccinationRecordViewSet(viewsets.ModelViewSet):
             'status', 'administered_by', 'administered_date',
             'batch_number', 'notes', 'updated_at',
         ])
+
+        from apps.notifications.tasks import notify_vaccination_administered
+        try:
+            notify_vaccination_administered.delay(str(record.id))
+        except Exception:
+            try:
+                notify_vaccination_administered(str(record.id))
+            except Exception as _exc:
+                logger.warning('notify_vaccination_administered failed: %s', _exc)
 
         return success_response(
             data=VaccinationRecordSerializer(record).data,
@@ -260,6 +272,16 @@ class ClinicSessionViewSet(viewsets.ModelViewSet):
                 if batch:
                     vax_record.batch_number = batch
                 vax_record.save(update_fields=['status', 'administered_date', 'administered_by', 'batch_number', 'updated_at'])
+
+                # Notify parent
+                from apps.notifications.tasks import notify_vaccination_administered
+                try:
+                    notify_vaccination_administered.delay(str(vax_record.id))
+                except Exception:
+                    try:
+                        notify_vaccination_administered(str(vax_record.id))
+                    except Exception:
+                        pass
 
             created_count += 1
 

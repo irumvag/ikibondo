@@ -1,0 +1,34 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>⚠ Overdue Vaccination — Action Needed</h1>
+<p>Hello <strong>{{ parent_name }}</strong>,</p>
+<p>
+  <strong>{{ child_name }}</strong>'s <strong>{{ vaccine_name }}</strong> vaccination was due
+  on <strong>{{ due_date }}</strong> and has not yet been recorded.
+  That is <strong>{{ days_overdue }} day{{ days_overdue|pluralize }}</strong> overdue.
+</p>
+
+<div class="credential-box" style="border-left-color:#dc2626;">
+  <strong style="color:#dc2626;">Overdue vaccination</strong>
+  <code>{{ vaccine_name }}</code>
+  <strong style="margin-top:10px;">Was due</strong>
+  <code>{{ due_date }}</code>
+  <strong style="margin-top:10px; color:#dc2626;">Days overdue: {{ days_overdue }}</strong>
+</div>
+
+<p>
+  Missing vaccinations can put your child at risk of serious diseases. Please visit your
+  nearest health facility as soon as possible to get this vaccine administered.
+</p>
+
+<p>
+  <a href="{{ frontend_url }}/parent/children/{{ child_id }}" class="cta">View {{ child_name }}'s Vaccination Schedule</a>
+</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  If you have already visited the health facility and received this vaccine, please inform
+  your CHW or nurse so they can update the record. For emergencies, go directly to the
+  nearest health facility.
+</p>
+{% endblock %}

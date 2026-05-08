@@ -172,53 +172,293 @@ def send_push(notification_id: str):
         logger.exception('send_push failed for %s: %s', notification_id, e)
 
 
-@shared_task
-def daily_vaccination_reminder():
-    """Send vaccination reminders for doses due in 3 days."""
-    from datetime import date, timedelta
-    from apps.vaccinations.models import VaccinationRecord
+def _send_vax_reminder_to_parent(vax_record, days_until: int):
+    """
+    Create in-app + SMS + email notifications for one upcoming vaccination.
+    Called by daily_vaccination_reminder for each relevant window.
+    """
     from .models import Notification, NotificationType, NotificationChannel, NotificationStatus
 
-    due_date = date.today() + timedelta(days=3)
-    records = VaccinationRecord.objects.filter(
-        scheduled_date=due_date,
-        status='SCHEDULED',
-    ).select_related('child', 'child__guardian', 'vaccine')
+    guardian = vax_record.child.guardian
+    if not guardian or not guardian.user:
+        return
 
-    count = 0
-    for vax_record in records:
-        guardian = vax_record.child.guardian
-        if not guardian or not guardian.user:
-            continue
-        message = (
-            f'Reminder: {vax_record.child.full_name}\'s {vax_record.vaccine.name} '
-            f'vaccination is due on {due_date}. Please visit your health facility.'
-        )
-        notif = Notification.objects.create(
-            recipient=guardian.user,
-            child=vax_record.child,
-            notification_type=NotificationType.VACCINATION_REMINDER,
-            channel=NotificationChannel.SMS,
-            message=message,
-            status=NotificationStatus.PENDING,
-        )
-        send_sms.delay(str(notif.id))
-        count += 1
+    parent = guardian.user
+    child  = vax_record.child
+    vaccine_name = vax_record.vaccine.name
+    due_date_str = str(vax_record.scheduled_date)
 
-    logger.info('Queued %d vaccination reminders for %s', count, due_date)
+    if days_until == 0:
+        urgency_str = 'TODAY'
+        subject_en  = f'Vaccination due today — {child.full_name}'
+        subject_fr  = f'Vaccination prévue aujourd\'hui — {child.full_name}'
+        subject_rw  = f'Inkingo uyu munsi — {child.full_name}'
+    elif days_until == 1:
+        urgency_str = 'TOMORROW'
+        subject_en  = f'Vaccination due tomorrow — {child.full_name}'
+        subject_fr  = f'Vaccination demain — {child.full_name}'
+        subject_rw  = f'Inkingo ejo — {child.full_name}'
+    else:
+        urgency_str = f'IN {days_until} DAYS'
+        subject_en  = f'Upcoming vaccination in {days_until} days — {child.full_name}'
+        subject_fr  = f'Vaccination dans {days_until} jours — {child.full_name}'
+        subject_rw  = f'Inkingo mu minsi {days_until} — {child.full_name}'
+
+    sms_message = (
+        f'[Ikibondo] Reminder: {child.full_name}\'s {vaccine_name} '
+        f'vaccination is due {urgency_str} ({due_date_str}). '
+        f'Please visit your health facility.'
+    )
+
+    # In-app notification
+    notif = Notification.objects.create(
+        recipient=parent,
+        child=child,
+        notification_type=NotificationType.VACCINATION_REMINDER,
+        channel=NotificationChannel.PUSH,
+        message=sms_message,
+        status=NotificationStatus.PENDING,
+    )
+    send_push.delay(str(notif.id))
+
+    # SMS
+    sms_notif = Notification.objects.create(
+        recipient=parent,
+        child=child,
+        notification_type=NotificationType.VACCINATION_REMINDER,
+        channel=NotificationChannel.SMS,
+        message=sms_message,
+        status=NotificationStatus.PENDING,
+    )
+    send_sms.delay(str(sms_notif.id))
+
+    # Email (if parent has email address)
+    if parent.email:
+        lang = getattr(parent, 'preferred_language', 'en') or 'en'
+        subjects = {'en': subject_en, 'fr': subject_fr, 'rw': subject_rw}
+        subject  = subjects.get(lang, subject_en)
+        ctx = {
+            'parent_name':   parent.full_name,
+            'child_name':    child.full_name,
+            'child_id':      str(child.id),
+            'vaccine_name':  vaccine_name,
+            'due_date':      due_date_str,
+            'days_until':    days_until,
+        }
+        send_email_task.delay(
+            to=parent.email,
+            template='vaccination_reminder',
+            subject=subject,
+            context=ctx,
+            language=lang,
+        )
+
+
+@shared_task
+def daily_vaccination_reminder():
+    """
+    Send vaccination reminders to parents for doses due in:
+      - 7 days  (advance notice)
+      - 3 days  (mid-range reminder)
+      - 1 day   (tomorrow alert)
+      - 0 days  (due today — final push)
+
+    Each window sends: in-app push + SMS + email.
+    Runs daily at 08:00 Kigali time.
+    """
+    from datetime import date, timedelta
+    from apps.vaccinations.models import VaccinationRecord
+
+    today = date.today()
+    reminder_windows = [7, 3, 1, 0]   # days until due date
+    total = 0
+
+    for days_until in reminder_windows:
+        target_date = today + timedelta(days=days_until)
+        records = (
+            VaccinationRecord.objects
+            .filter(scheduled_date=target_date, status='SCHEDULED', is_active=True)
+            .select_related('child', 'child__guardian', 'child__guardian__user', 'vaccine')
+        )
+        for rec in records:
+            try:
+                _send_vax_reminder_to_parent(rec, days_until)
+                total += 1
+            except Exception as exc:
+                logger.exception('Reminder failed for record %s: %s', rec.id, exc)
+
+    logger.info('Queued %d vaccination reminder notifications (windows: %s)', total, reminder_windows)
 
 
 @shared_task
 def compute_overdue_vaccines():
-    """Flip SCHEDULED→MISSED for past-due vaccination records."""
-    from datetime import date
-    from apps.vaccinations.models import VaccinationRecord
+    """
+    Daily task that:
+    1. Marks SCHEDULED records past their due date as MISSED.
+    2. Sends overdue alerts (in-app + SMS + email) to parents for records
+       that became overdue exactly 1 day ago (first overdue alert) and
+       every 7 days after that (repeat nudge).
 
+    Runs at 00:30 Kigali time.
+    """
+    from datetime import date, timedelta
+    from apps.vaccinations.models import VaccinationRecord
+    from .models import Notification, NotificationType, NotificationChannel, NotificationStatus
+
+    today = date.today()
+
+    # --- Step 1: flip SCHEDULED → MISSED ---------------------------------
     updated = VaccinationRecord.objects.filter(
-        scheduled_date__lt=date.today(),
+        scheduled_date__lt=today,
         status='SCHEDULED',
+        is_active=True,
     ).update(status='MISSED')
     logger.info('Marked %d vaccinations as MISSED', updated)
+
+    # --- Step 2: overdue alerts ------------------------------------------
+    # Send on day 1, 7, 14, 21 … after the due date
+    alert_days = [1, 7, 14, 21]
+    total_alerts = 0
+
+    for days_overdue in alert_days:
+        target_date = today - timedelta(days=days_overdue)
+        records = (
+            VaccinationRecord.objects
+            .filter(scheduled_date=target_date, status='MISSED', is_active=True)
+            .select_related('child', 'child__guardian', 'child__guardian__user', 'vaccine')
+        )
+        for rec in records:
+            guardian = rec.child.guardian
+            if not guardian or not guardian.user:
+                continue
+            parent = guardian.user
+            child  = rec.child
+            vaccine_name = rec.vaccine.name
+            due_date_str = str(rec.scheduled_date)
+
+            msg = (
+                f'[Ikibondo] OVERDUE: {child.full_name}\'s {vaccine_name} '
+                f'was due on {due_date_str} ({days_overdue} day(s) ago). '
+                f'Please visit your health facility immediately.'
+            )
+
+            # In-app
+            push_notif = Notification.objects.create(
+                recipient=parent,
+                child=child,
+                notification_type=NotificationType.VACCINATION_OVERDUE,
+                channel=NotificationChannel.PUSH,
+                message=msg,
+                status=NotificationStatus.PENDING,
+            )
+            send_push.delay(str(push_notif.id))
+
+            # SMS
+            sms_notif = Notification.objects.create(
+                recipient=parent,
+                child=child,
+                notification_type=NotificationType.VACCINATION_OVERDUE,
+                channel=NotificationChannel.SMS,
+                message=msg,
+                status=NotificationStatus.PENDING,
+            )
+            send_sms.delay(str(sms_notif.id))
+
+            # Email
+            if parent.email:
+                lang = getattr(parent, 'preferred_language', 'en') or 'en'
+                subjects = {
+                    'en': f'Action needed: overdue vaccination for {child.full_name}',
+                    'fr': f'Action requise : vaccination en retard pour {child.full_name}',
+                    'rw': f'Inkingo yazinze ya {child.full_name}',
+                }
+                send_email_task.delay(
+                    to=parent.email,
+                    template='vaccination_overdue',
+                    subject=subjects.get(lang, subjects['en']),
+                    context={
+                        'parent_name':  parent.full_name,
+                        'child_name':   child.full_name,
+                        'child_id':     str(child.id),
+                        'vaccine_name': vaccine_name,
+                        'due_date':     due_date_str,
+                        'days_overdue': days_overdue,
+                    },
+                    language=lang,
+                )
+            total_alerts += 1
+
+    logger.info('Queued %d overdue vaccination alerts', total_alerts)
+
+
+@shared_task
+def notify_vaccination_administered(vaccination_record_id: str):
+    """
+    Called when a nurse marks a dose as DONE (via administer action or clinic session).
+    Sends: in-app push + email to parent confirming the vaccination.
+    """
+    from apps.vaccinations.models import VaccinationRecord
+    from .models import Notification, NotificationType, NotificationChannel, NotificationStatus
+
+    try:
+        rec = VaccinationRecord.objects.select_related(
+            'child', 'child__guardian', 'child__guardian__user', 'vaccine',
+        ).get(id=vaccination_record_id)
+
+        guardian = rec.child.guardian
+        if not guardian or not guardian.user:
+            return
+
+        parent       = guardian.user
+        child        = rec.child
+        vaccine_name = rec.vaccine.name
+        admin_date   = str(rec.administered_date or rec.updated_at.date())
+        batch        = rec.batch_number or ''
+
+        msg = (
+            f'[Ikibondo] {child.full_name}\'s {vaccine_name} vaccination '
+            f'was successfully administered on {admin_date}. '
+            f'Check the app for the updated schedule.'
+        )
+
+        # In-app push
+        notif = Notification.objects.create(
+            recipient=parent,
+            child=child,
+            notification_type=NotificationType.VACCINATION_DONE,
+            channel=NotificationChannel.PUSH,
+            message=msg,
+            status=NotificationStatus.PENDING,
+        )
+        send_push.delay(str(notif.id))
+
+        # Email
+        if parent.email:
+            lang = getattr(parent, 'preferred_language', 'en') or 'en'
+            subjects = {
+                'en': f'Vaccination recorded — {child.full_name}',
+                'fr': f'Vaccination enregistrée — {child.full_name}',
+                'rw': f'Inkingo yanditswe — {child.full_name}',
+            }
+            send_email_task.delay(
+                to=parent.email,
+                template='vaccination_done',
+                subject=subjects.get(lang, subjects['en']),
+                context={
+                    'parent_name':      parent.full_name,
+                    'child_name':       child.full_name,
+                    'child_id':         str(child.id),
+                    'vaccine_name':     vaccine_name,
+                    'administered_date': admin_date,
+                    'batch_number':     batch,
+                },
+                language=lang,
+            )
+
+        logger.info('Vaccination administered notification sent for record %s', vaccination_record_id)
+
+    except Exception as exc:
+        logger.exception('notify_vaccination_administered failed for %s: %s', vaccination_record_id, exc)
 
 
 @shared_task

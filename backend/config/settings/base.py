@@ -209,21 +209,27 @@ CELERY_TIMEZONE = 'Africa/Kigali'
 # Celery Beat schedule for recurring tasks (all times in Africa/Kigali = UTC+2)
 from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
+    # Vaccination reminders: 7-day, 3-day, 1-day, same-day windows
+    # Runs at 08:00 Kigali — parents read phones in the morning
     'send-vaccination-reminders-daily': {
         'task': 'apps.notifications.tasks.daily_vaccination_reminder',
         'schedule': crontab(hour=8, minute=0),
     },
+    # Overdue alerts: marks MISSED + sends alerts for 1/7/14/21 days overdue
+    # Runs at 00:30 so MISSED status is set before the morning reminder run
     'compute-overdue-vaccines-daily': {
         'task': 'apps.notifications.tasks.compute_overdue_vaccines',
         'schedule': crontab(hour=0, minute=30),
     },
+    # Zone KPI digest to supervisors
     'daily-zone-summary': {
         'task': 'apps.notifications.tasks.daily_zone_summary',
         'schedule': crontab(hour=18, minute=0),
     },
+    # Purge deletion-requested children after grace period
     'purge-scheduled-child-deletions': {
         'task': 'children.purge_scheduled_deletions',
-        'schedule': crontab(hour=2, minute=0),  # 02:00 Kigali time
+        'schedule': crontab(hour=2, minute=0),
     },
 }
 

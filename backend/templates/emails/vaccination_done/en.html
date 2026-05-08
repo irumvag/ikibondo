@@ -1,0 +1,34 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>✅ Vaccination Recorded</h1>
+<p>Hello <strong>{{ parent_name }}</strong>,</p>
+<p>
+  We are pleased to confirm that <strong>{{ child_name }}</strong>'s
+  <strong>{{ vaccine_name }}</strong> vaccination has been successfully administered and recorded.
+</p>
+
+<div class="credential-box" style="border-left-color:#16a34a;">
+  <strong style="color:#16a34a;">Vaccination completed</strong>
+  <code>{{ vaccine_name }}</code>
+  <strong style="margin-top:10px;">Date administered</strong>
+  <code>{{ administered_date }}</code>
+  {% if batch_number %}
+  <strong style="margin-top:10px;">Batch number</strong>
+  <code>{{ batch_number }}</code>
+  {% endif %}
+</div>
+
+<p>
+  Keep this record for your reference. Your child's vaccination schedule has been updated.
+  The next dose reminder will be sent automatically when it is approaching.
+</p>
+
+<p>
+  <a href="{{ frontend_url }}/parent/children/{{ child_id }}" class="cta">View {{ child_name }}'s Full Record</a>
+</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  If you believe this record is incorrect, please contact your health facility or assigned CHW.
+</p>
+{% endblock %}

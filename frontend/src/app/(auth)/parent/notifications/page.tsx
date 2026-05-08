@@ -16,18 +16,19 @@ import { Button } from '@/components/ui/Button';
 
 // ── server notif icons ─────────────────────────────────────────────────────────
 const NOTIF_ICON: Record<string, string> = {
-  SAM_ALERT:            '🚨',
-  HIGH_RISK_ALERT:      '⚠️',
-  VACCINATION_REMINDER: '💉',
-  VACCINATION_OVERDUE:  '📅',
-  GROWTH_RISK:          '📊',
-  MISSED_VISIT:         '🏠',
-  ZONE_SUMMARY:         '📋',
-  CHW_INACTIVE:         '👤',
-  VISIT_REQUEST:        '🏠',
-  VISIT_ACCEPTED:       '✅',
-  VISIT_DECLINED:       '❌',
-  VISIT_COMPLETED:      '🎉',
+  SAM_ALERT:              '🚨',
+  HIGH_RISK_ALERT:        '⚠️',
+  VACCINATION_REMINDER:   '💉',
+  VACCINATION_OVERDUE:    '📅',
+  VACCINATION_DONE:       '✅',
+  GROWTH_RISK:            '📊',
+  MISSED_VISIT:           '🏠',
+  ZONE_SUMMARY:           '📋',
+  CHW_INACTIVE:           '👤',
+  VISIT_REQUEST_CREATED:  '🏠',
+  VISIT_REQUEST_ACCEPTED: '✅',
+  VISIT_REQUEST_DECLINED: '❌',
+  VISIT_REQUEST_COMPLETED:'🎉',
 };
 
 const TYPE_FILTER_OPTIONS = [

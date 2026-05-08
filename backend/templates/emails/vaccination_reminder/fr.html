@@ -1,0 +1,32 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>Rappel de vaccination 💉</h1>
+<p>Bonjour <strong>{{ parent_name }}</strong>,</p>
+<p>Ceci est un rappel que <strong>{{ child_name }}</strong> a une vaccination prévue prochainement.</p>
+
+<div class="credential-box">
+  <strong>Vaccin</strong>
+  <code>{{ vaccine_name }}</code>
+  <strong style="margin-top:10px;">Date prévue</strong>
+  <code>{{ due_date }}</code>
+  {% if days_until == 0 %}
+  <strong style="margin-top:10px; color:#dc2626;">⚠ Prévu aujourd'hui</strong>
+  {% elif days_until == 1 %}
+  <strong style="margin-top:10px;">📅 Prévu demain</strong>
+  {% else %}
+  <strong style="margin-top:10px;">📅 Dans {{ days_until }} jours</strong>
+  {% endif %}
+</div>
+
+<p>Veuillez amener <strong>{{ child_name }}</strong> au centre de santé le plus proche à la date prévue ou avant. La vaccination protège votre enfant contre de graves maladies.</p>
+
+<p>
+  <a href="{{ frontend_url }}/parent/children/{{ child_id }}" class="cta">Voir le dossier de {{ child_name }}</a>
+</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  Si vous avez déjà visité le centre de santé, veuillez ignorer ce message.
+  Pour toute question, contactez votre ASC ou votre centre de santé.
+</p>
+{% endblock %}

@@ -1,0 +1,14 @@
+IKIBONDO — ⚠ Vaccination en retard
+
+Bonjour {{ parent_name }},
+
+La vaccination {{ vaccine_name }} de {{ child_name }} était prévue le {{ due_date }}
+et n'a PAS encore été enregistrée. Elle a {{ days_overdue }} jour(s) de retard.
+
+Veuillez vous rendre au centre de santé dès que possible.
+
+Voir le calendrier : {{ frontend_url }}/parent/children/{{ child_id }}
+
+Si vous avez déjà reçu ce vaccin, informez votre ASC ou infirmier(ère).
+
+— L'équipe Ikibondo

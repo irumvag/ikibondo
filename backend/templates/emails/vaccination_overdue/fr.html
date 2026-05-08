@@ -1,0 +1,32 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>⚠ Vaccination en retard — Action requise</h1>
+<p>Bonjour <strong>{{ parent_name }}</strong>,</p>
+<p>
+  La vaccination <strong>{{ vaccine_name }}</strong> de <strong>{{ child_name }}</strong> était prévue
+  le <strong>{{ due_date }}</strong> et n'a pas encore été enregistrée.
+  Elle a <strong>{{ days_overdue }} jour{{ days_overdue|pluralize }}</strong> de retard.
+</p>
+
+<div class="credential-box" style="border-left-color:#dc2626;">
+  <strong style="color:#dc2626;">Vaccination en retard</strong>
+  <code>{{ vaccine_name }}</code>
+  <strong style="margin-top:10px;">Était prévue le</strong>
+  <code>{{ due_date }}</code>
+  <strong style="margin-top:10px; color:#dc2626;">Jours de retard : {{ days_overdue }}</strong>
+</div>
+
+<p>
+  Manquer des vaccinations peut mettre votre enfant en danger. Veuillez vous rendre au
+  centre de santé le plus proche dès que possible.
+</p>
+
+<p>
+  <a href="{{ frontend_url }}/parent/children/{{ child_id }}" class="cta">Voir le calendrier vaccinal de {{ child_name }}</a>
+</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  Si vous avez déjà reçu ce vaccin, veuillez en informer votre ASC ou infirmier(ère) afin qu'il mette à jour le dossier.
+</p>
+{% endblock %}

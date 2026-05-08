@@ -1,0 +1,34 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>✅ Vaccination enregistrée</h1>
+<p>Bonjour <strong>{{ parent_name }}</strong>,</p>
+<p>
+  Nous confirmons que la vaccination <strong>{{ vaccine_name }}</strong> de
+  <strong>{{ child_name }}</strong> a bien été administrée et enregistrée.
+</p>
+
+<div class="credential-box" style="border-left-color:#16a34a;">
+  <strong style="color:#16a34a;">Vaccination effectuée</strong>
+  <code>{{ vaccine_name }}</code>
+  <strong style="margin-top:10px;">Date d'administration</strong>
+  <code>{{ administered_date }}</code>
+  {% if batch_number %}
+  <strong style="margin-top:10px;">Numéro de lot</strong>
+  <code>{{ batch_number }}</code>
+  {% endif %}
+</div>
+
+<p>
+  Conservez cet enregistrement pour référence. Le calendrier vaccinal de votre enfant a été mis à jour.
+  Le prochain rappel vous sera envoyé automatiquement.
+</p>
+
+<p>
+  <a href="{{ frontend_url }}/parent/children/{{ child_id }}" class="cta">Voir le dossier complet de {{ child_name }}</a>
+</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  Si vous pensez que cet enregistrement est incorrect, contactez votre centre de santé ou votre ASC.
+</p>
+{% endblock %}

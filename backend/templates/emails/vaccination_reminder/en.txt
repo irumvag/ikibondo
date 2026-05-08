@@ -1,0 +1,18 @@
+IKIBONDO — Vaccination Reminder
+
+Hello {{ parent_name }},
+
+This is a reminder that {{ child_name }} has an upcoming vaccination:
+
+  Vaccine : {{ vaccine_name }}
+  Due date: {{ due_date }}
+  {% if days_until == 0 %}Status  : DUE TODAY{% elif days_until == 1 %}Status  : Due tomorrow{% else %}Status  : Due in {{ days_until }} days{% endif %}
+
+Please bring {{ child_name }} to your nearest health facility on or before the due date.
+
+View health record: {{ frontend_url }}/parent/children/{{ child_id }}
+
+If you have already visited, please ignore this message.
+For questions, contact your CHW or health facility.
+
+— The Ikibondo Team

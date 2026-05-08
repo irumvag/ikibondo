@@ -1,0 +1,17 @@
+IKIBONDO — Rappel de vaccination
+
+Bonjour {{ parent_name }},
+
+Ceci est un rappel que {{ child_name }} a une vaccination prévue :
+
+  Vaccin      : {{ vaccine_name }}
+  Date prévue : {{ due_date }}
+  {% if days_until == 0 %}Statut      : PRÉVU AUJOURD'HUI{% elif days_until == 1 %}Statut      : Demain{% else %}Statut      : Dans {{ days_until }} jours{% endif %}
+
+Veuillez amener {{ child_name }} au centre de santé à la date prévue ou avant.
+
+Voir le dossier : {{ frontend_url }}/parent/children/{{ child_id }}
+
+Si vous avez déjà visité, veuillez ignorer ce message.
+
+— L'équipe Ikibondo
