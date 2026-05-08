@@ -132,6 +132,23 @@ export async function linkParentToGuardian(guardianId: string, userId: string): 
   await apiClient.post(`/children/guardians/${guardianId}/link-account/`, { user_id: userId });
 }
 
+export interface GuardianLookupResult {
+  id: string;
+  full_name: string;
+  phone_number: string;
+  relationship: string;
+  national_id: string | null;
+  has_account: boolean;
+  user_email: string | null;
+  children_count: number;
+}
+
+/** Look up an existing Guardian by phone number — used to prevent duplicates. */
+export async function lookupGuardianByPhone(phone: string): Promise<GuardianLookupResult | null> {
+  const { data } = await apiClient.get('/children/guardian-lookup/', { params: { phone } });
+  return data.data ?? null;
+}
+
 export async function getGrowthData(childId: string): Promise<GrowthData> {
   const { data } = await apiClient.get(`/growth-data/${childId}/`);
   return data.data ?? data;

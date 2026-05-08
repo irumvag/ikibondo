@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle, Search, UserPlus, X, AlertTriangle, Copy } from 'lucide-react';
+import { CheckCircle, Search, UserPlus, X, AlertTriangle, Copy, UserCheck } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { useAuthStore } from '@/store/authStore';
@@ -11,7 +11,9 @@ import {
   createParentAccount,
   registerChild,
   linkParentToGuardian,
+  lookupGuardianByPhone,
   type ParentUser,
+  type GuardianLookupResult,
 } from '@/lib/api/nurse';
 import { listZones } from '@/lib/api/admin';
 import type { Zone } from '@/lib/api/admin';
@@ -64,6 +66,11 @@ export default function NurseRegisterPage() {
   const [selectedParent, setSelectedParent] = useState<ParentUser | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
 
+  // Guardian phone lookup — fires when nurse types a phone in the guardian section
+  const [guardianPhoneLookup, setGuardianPhoneLookup] = useState('');
+  const [existingGuardian, setExistingGuardian] = useState<GuardianLookupResult | null>(null);
+  const guardianLookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<{ child_name: string; reg_number: string; parent_name: string } | null>(null);
@@ -114,6 +121,25 @@ export default function NurseRegisterPage() {
   const setP = (k: keyof ParentForm, v: string) => setParentForm((p) => ({ ...p, [k]: v }));
   const setN = (k: keyof NewbornForm, v: string) => setNewbornForm((p) => ({ ...p, [k]: v }));
 
+  // Debounced guardian phone lookup — only fires when no existing parent is selected
+  const handleGuardianPhone = (phone: string) => {
+    setN('guardian_phone', phone);
+    setExistingGuardian(null);
+    if (guardianLookupTimer.current) clearTimeout(guardianLookupTimer.current);
+    if (phone.replace(/\D/g, '').length < 8) return;
+    guardianLookupTimer.current = setTimeout(async () => {
+      setGuardianPhoneLookup(phone);
+      try {
+        const found = await lookupGuardianByPhone(phone);
+        setExistingGuardian(found);
+        if (found) {
+          // Auto-fill guardian name from existing record
+          setNewbornForm((prev) => ({ ...prev, guardian_full_name: found.full_name }));
+        }
+      } catch { /* silent */ }
+    }, 500);
+  };
+
   // When an existing parent is selected, auto-fill guardian details from their account
   useEffect(() => {
     if (selectedParent) {
@@ -142,6 +168,8 @@ export default function NurseRegisterPage() {
     setSearchResults([]);
     setShowNewForm(false);
     setError('');
+    setExistingGuardian(null);
+    setGuardianPhoneLookup('');
   };
 
   const handleSubmit = async () => {
@@ -552,16 +580,43 @@ export default function NurseRegisterPage() {
                 </button>
               )}
               <Input
-                label="Guardian full name"
-                value={newbornForm.guardian_full_name}
-                onChange={(e) => setN('guardian_full_name', e.target.value)}
-                required
-              />
-              <Input
                 label="Guardian phone"
                 type="tel"
                 value={newbornForm.guardian_phone}
-                onChange={(e) => setN('guardian_phone', e.target.value)}
+                onChange={(e) => handleGuardianPhone(e.target.value)}
+                required
+              />
+              {/* Existing guardian found by phone — inform nurse, child will be linked, no duplicate */}
+              {existingGuardian && (
+                <div
+                  className="rounded-xl border px-4 py-3 flex items-start gap-3"
+                  style={{
+                    borderColor: 'var(--success)',
+                    backgroundColor: 'color-mix(in srgb, var(--success) 8%, var(--bg-elev))',
+                  }}
+                >
+                  <UserCheck size={16} style={{ color: 'var(--success)', marginTop: 2 }} className="shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+                      Existing guardian found — no duplicate will be created
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      {existingGuardian.full_name} · {existingGuardian.phone_number}
+                      {existingGuardian.children_count > 0
+                        ? ` · ${existingGuardian.children_count} child${existingGuardian.children_count !== 1 ? 'ren' : ''} already registered`
+                        : ''}
+                      {existingGuardian.has_account ? ' · Has app account' : ''}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                      This new child will be linked to this guardian automatically.
+                    </p>
+                  </div>
+                </div>
+              )}
+              <Input
+                label="Guardian full name"
+                value={newbornForm.guardian_full_name}
+                onChange={(e) => setN('guardian_full_name', e.target.value)}
                 required
               />
             </>

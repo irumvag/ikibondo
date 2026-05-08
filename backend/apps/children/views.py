@@ -621,6 +621,43 @@ def duplicate_check_view(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def guardian_lookup_view(request):
+    """
+    GET /api/v1/children/guardian-lookup/?phone=<phone>
+    Returns the first Guardian matching that phone number (for duplicate prevention).
+    Nurses use this before registration to reuse an existing Guardian record.
+    """
+    phone = request.query_params.get('phone', '').strip()
+    if not phone or len(phone) < 6:
+        return error_response('phone (min 6 chars) is required.', 'VALIDATION_ERROR', status_code=400)
+
+    # Match on last 8 digits to handle prefix variants (+250 vs 0 vs bare)
+    suffix = phone.replace(' ', '').replace('-', '')[-8:]
+    guardian = (
+        Guardian.objects
+        .filter(phone_number__endswith=suffix)
+        .select_related('user')
+        .first()
+    )
+    if not guardian:
+        return success_response(data=None, message='No guardian found with this phone number.')
+
+    from django.db.models import Count
+    children_count = guardian.children.filter(is_active=True).count()
+    return success_response(data={
+        'id': str(guardian.id),
+        'full_name': guardian.full_name,
+        'phone_number': guardian.phone_number,
+        'relationship': guardian.relationship,
+        'national_id': guardian.national_id,
+        'has_account': guardian.user_id is not None,
+        'user_email': guardian.user.email if guardian.user_id else None,
+        'children_count': children_count,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def scan_qr_view(request, qr_code):
     """GET /api/v1/children/scan/<qr_code>/ — look up a child by QR code string."""
     try:
