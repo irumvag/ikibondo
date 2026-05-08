@@ -239,12 +239,18 @@ class ClinicSessionViewSet(viewsets.ModelViewSet):
         from .serializers import ClinicSessionAttendanceSerializer
         created_count = 0
 
+        from apps.children.models import Child as _Child
+
         for item in attendances_data:
             child_id = item.get('child')
             status = item.get('status', 'DONE')
             batch = item.get('batch_number', '')
 
             if not child_id:
+                continue
+
+            # Security: verify child belongs to this session's camp (prevents cross-camp IDOR)
+            if not _Child.objects.filter(id=child_id, camp=session.camp, is_active=True).exists():
                 continue
 
             # Find matching VaccinationRecord for this session's vaccine + child

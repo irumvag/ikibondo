@@ -9,7 +9,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from apps.core.responses import success_response, created_response, error_response
 from apps.core.pagination import StandardPagination
 from apps.accounts.models import UserRole
-from apps.accounts.permissions import IsSupervisorOrAdmin
+from apps.accounts.permissions import IsSupervisorOrAdmin, IsNurseOrSupervisorOrAdmin
 from django.utils import timezone as tz
 from .models import Child, Guardian, VisitRequest, VisitRequestStatus, VisitUrgency, ChildClosure, ChildZoneTransfer
 from .serializers import ChildSerializer, ChildCreateSerializer, GuardianSerializer, VisitRequestSerializer
@@ -491,7 +491,6 @@ class ChildViewSet(viewsets.ModelViewSet):
         Body: {"status": "DECEASED|TRANSFERRED|DEPARTED", "reason": "..."}
         Nurse, Supervisor, Admin. Sets closure_status + creates ChildClosure record.
         """
-        from apps.accounts.permissions import IsNurseOrSupervisorOrAdmin
         if not IsNurseOrSupervisorOrAdmin().has_permission(request, self):
             return error_response('Permission denied.', 'FORBIDDEN', status_code=403)
         child = self.get_object()
@@ -620,12 +619,13 @@ def duplicate_check_view(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsNurseOrSupervisorOrAdmin])
 def guardian_lookup_view(request):
     """
     GET /api/v1/children/guardian-lookup/?phone=<phone>
     Returns the first Guardian matching that phone number (for duplicate prevention).
-    Nurses use this before registration to reuse an existing Guardian record.
+    Restricted to clinical roles (NURSE / SUPERVISOR / ADMIN) — PAARENTs cannot enumerate
+    other families' data via this endpoint.
     """
     phone = request.query_params.get('phone', '').strip()
     if not phone or len(phone) < 6:
@@ -633,25 +633,24 @@ def guardian_lookup_view(request):
 
     # Match on last 8 digits to handle prefix variants (+250 vs 0 vs bare)
     suffix = phone.replace(' ', '').replace('-', '')[-8:]
-    guardian = (
-        Guardian.objects
-        .filter(phone_number__endswith=suffix)
-        .select_related('user')
-        .first()
-    )
+    qs = Guardian.objects.filter(phone_number__endswith=suffix).select_related('user')
+
+    # Scope to the requesting user's camp so cross-camp enumeration is impossible
+    if request.user.camp_id:
+        qs = qs.filter(children__camp_id=request.user.camp_id).distinct()
+
+    guardian = qs.first()
     if not guardian:
         return success_response(data=None, message='No guardian found with this phone number.')
 
-    from django.db.models import Count
     children_count = guardian.children.filter(is_active=True).count()
+    # Return only non-sensitive fields — national_id and user_email are intentionally excluded
     return success_response(data={
         'id': str(guardian.id),
         'full_name': guardian.full_name,
         'phone_number': guardian.phone_number,
         'relationship': guardian.relationship,
-        'national_id': guardian.national_id,
         'has_account': guardian.user_id is not None,
-        'user_email': guardian.user.email if guardian.user_id else None,
         'children_count': children_count,
     })
 

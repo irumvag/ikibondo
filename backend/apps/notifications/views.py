@@ -58,6 +58,11 @@ class BroadcastViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        # Security: only ADMINs may use GLOBAL scope — supervisors are camp-scoped only
+        if serializer.validated_data.get('scope_type') == BroadcastScope.GLOBAL and request.user.role != UserRole.ADMIN:
+            return error_response('Only admins can send global broadcasts.', 'FORBIDDEN', status_code=403)
+
         broadcast = serializer.save(created_by=request.user, sent_at=timezone.now())
 
         # Fan out to recipients

@@ -343,7 +343,11 @@ def pending_approvals_view(request):
     """GET /api/v1/auth/pending-approvals/ — list unapproved users in the requester's camp."""
     qs = CustomUser.objects.filter(is_approved=False, is_active=True)
     # Nurse/Supervisor only see their own camp's pending users
-    if request.user.role in ('NURSE', 'SUPERVISOR') and request.user.camp_id:
+    if request.user.role in ('NURSE', 'SUPERVISOR'):
+        if not request.user.camp_id:
+            # A nurse/supervisor without a camp assignment (e.g. camp deleted via SET_NULL)
+            # must not see any pending users — return 403 to prevent global enumeration.
+            return error_response('Your account has no camp assigned. Contact an admin.', 'FORBIDDEN', status_code=status.HTTP_403_FORBIDDEN)
         qs = qs.filter(camp=request.user.camp)
     serializer = UserProfileSerializer(qs, many=True)
     return success_response(data=serializer.data)
@@ -358,9 +362,12 @@ def approve_user_view(request, user_id):
     except CustomUser.DoesNotExist:
         return error_response('User not found.', 'NOT_FOUND', status_code=status.HTTP_404_NOT_FOUND)
 
-    # Nurse/Supervisor can only approve users in their own camp
-    if request.user.role in ('NURSE', 'SUPERVISOR') and user.camp_id != request.user.camp_id:
-        return error_response('Permission denied.', 'FORBIDDEN', status_code=status.HTTP_403_FORBIDDEN)
+    # Nurse/Supervisor can only approve users in their own camp.
+    # Guard against null camp_id: None != None evaluates False, which would incorrectly
+    # allow a camp-less nurse to approve camp-less users.
+    if request.user.role in ('NURSE', 'SUPERVISOR'):
+        if not request.user.camp_id or user.camp_id != request.user.camp_id:
+            return error_response('Permission denied.', 'FORBIDDEN', status_code=status.HTTP_403_FORBIDDEN)
 
     user.is_approved = True
     user.save(update_fields=['is_approved', 'updated_at'])

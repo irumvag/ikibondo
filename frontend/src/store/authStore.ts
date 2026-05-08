@@ -68,6 +68,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   clearAuth: () => {
     if (typeof window !== 'undefined') {
+      // Notify the service worker to clear its cache so that a subsequent user
+      // on the same shared device cannot access previously cached health data.
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'LOGOUT' });
+      }
       sessionStorage.clear();
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
