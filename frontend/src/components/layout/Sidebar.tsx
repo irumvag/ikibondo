@@ -340,7 +340,29 @@ function SidebarContent({
     .join('')
     .toUpperCase() ?? '?';
 
-  const nav: NavEntry[] = user ? (ROLE_NAV[user.role] ?? []) : [];
+  const roleNav: NavEntry[] = user ? (ROLE_NAV[user.role] ?? []) : [];
+
+  // Any non-PARENT user whose account is linked to a Guardian (has_guardian_record=true)
+  // gets a collapsible "My Family" group appended to their role nav. This lets nurses,
+  // CHWs, and supervisors who have babies in the system view their own children's records
+  // without switching roles.
+  const guardianGroup: NavGroup | null =
+    user && user.role !== 'PARENT' && user.has_guardian_record
+      ? {
+          kind: 'group',
+          id: 'my-family',
+          label: 'My Family',
+          icon: Heart,
+          items: [
+            { href: '/parent',               label: 'My Children',     icon: Baby },
+            { href: '/parent/vaccines',      label: 'Vaccination Card', icon: Syringe },
+            { href: '/parent/request-visit', label: 'Request a Visit',  icon: Calendar },
+            { href: '/parent/notifications', label: 'My Notifications', icon: Bell },
+          ],
+        }
+      : null;
+
+  const nav: NavEntry[] = guardianGroup ? [...roleNav, guardianGroup] : roleNav;
 
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--bg-elev)' }}>

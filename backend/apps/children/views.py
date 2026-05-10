@@ -328,6 +328,30 @@ class ChildViewSet(viewsets.ModelViewSet):
             qs = qs.filter(guardian__user=self.request.user)
         return qs
 
+    @action(detail=False, methods=['get'], url_path='my-children',
+            permission_classes=[IsAuthenticated])
+    def my_children(self, request):
+        """
+        GET /api/v1/children/my-children/
+        Returns the authenticated user's own children via their linked Guardian record.
+        Available to ANY role that has a guardian profile (has_guardian_record=True).
+        This is separate from the clinical caseload — a nurse's clinical caseload is
+        unchanged; this endpoint is exclusively for the parent/family view.
+        """
+        guardian = getattr(request.user, 'guardian_profile', None)
+        if guardian is None:
+            return error_response(
+                'You do not have a guardian profile linked to your account.',
+                'NOT_FOUND',
+                status_code=404,
+            )
+        qs = Child.objects.filter(
+            guardian=guardian,
+            is_active=True,
+            deletion_requested_at__isnull=True,
+        ).select_related('camp', 'zone', 'guardian', 'guardian__user', 'registered_by')
+        return success_response(data=ChildSerializer(qs, many=True).data)
+
     def get_serializer_class(self):
         if self.action == 'create':
             return ChildCreateSerializer
@@ -684,7 +708,9 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
         qs = VisitRequest.objects.select_related(
             'child', 'requested_by', 'assigned_chw'
         )
-        if user.role == UserRole.PARENT:
+        # Any user with a guardian profile (not just PARENT role) sees their own requests
+        has_guardian = getattr(user, 'guardian_profile', None) is not None
+        if user.role == UserRole.PARENT or has_guardian:
             qs = qs.filter(requested_by=user)
         elif user.role == UserRole.CHW:
             qs = qs.filter(child__guardian__assigned_chw=user)
@@ -695,14 +721,19 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
         return qs.order_by('-created_at')
 
     def create(self, request, *args, **kwargs):
-        if request.user.role != UserRole.PARENT:
-            return error_response('Only parents can submit visit requests.', 'FORBIDDEN', status_code=403)
+        # Allow any user with a linked guardian profile (not just PARENT role)
+        guardian = getattr(request.user, 'guardian_profile', None)
+        if request.user.role != UserRole.PARENT and guardian is None:
+            return error_response(
+                'Only users with a guardian profile can submit visit requests.',
+                'FORBIDDEN', status_code=403,
+            )
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         child = serializer.validated_data['child']
 
-        # Verify child belongs to this parent
+        # Verify child belongs to this user's guardian (works for any role)
         if not Child.objects.filter(id=child.id, guardian__user=request.user).exists():
             return error_response('You can only request visits for your own children.', 'FORBIDDEN', status_code=403)
 
@@ -789,9 +820,13 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='withdraw')
     def withdraw(self, request, pk=None):
-        """POST /api/v1/visit-requests/<id>/withdraw/ — parent withdraws a PENDING request."""
-        if request.user.role != UserRole.PARENT:
-            return error_response('Only parents can withdraw visit requests.', 'FORBIDDEN', status_code=403)
+        """POST /api/v1/visit-requests/<id>/withdraw/ — parent/guardian withdraws a PENDING request."""
+        guardian = getattr(request.user, 'guardian_profile', None)
+        if request.user.role != UserRole.PARENT and guardian is None:
+            return error_response(
+                'Only users with a guardian profile can withdraw visit requests.',
+                'FORBIDDEN', status_code=403,
+            )
 
         vr = self.get_object()
 

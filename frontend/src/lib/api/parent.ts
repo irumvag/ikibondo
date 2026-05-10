@@ -17,11 +17,12 @@ export interface ParentNotification {
 }
 
 export async function listMyChildren(): Promise<{ items: SupervisedChild[]; count: number }> {
-  const { data } = await apiClient.get('/children/');
-  return {
-    items: data.data ?? [],
-    count: data.pagination?.count ?? (data.data?.length ?? 0),
-  };
+  // /children/my-children/ scopes by guardian__user=request.user regardless of role,
+  // so nurses/CHWs with a linked guardian profile see only their own children here
+  // (not their full clinical caseload).
+  const { data } = await apiClient.get('/children/my-children/');
+  const items: SupervisedChild[] = data.data ?? [];
+  return { items, count: items.length };
 }
 
 export async function getChildVaccinations(childId: string): Promise<VaccinationRecord[]> {

@@ -109,12 +109,22 @@ class ChildCreateSerializer(serializers.ModelSerializer):
                     {'existing_guardian_id': 'Guardian not found.'}
                 )
         else:
-            # Deduplicate by phone number — if a Guardian with this phone already
-            # exists, reuse it rather than creating a duplicate row.
-            phone = (guardian_data.get('phone_number') or '').strip()
+            from .models import normalize_rwandan_phone
+            raw_phone  = (guardian_data.get('phone_number') or '').strip()
+            national_id = (guardian_data.get('national_id') or '').strip()
+
+            # Normalize phone before dedup so "+250785…" and "0785…" resolve to same Guardian
+            phone = normalize_rwandan_phone(raw_phone) if raw_phone else ''
+            if phone:
+                guardian_data['phone_number'] = phone  # store normalized form
+
             existing = None
             if phone:
                 existing = Guardian.objects.filter(phone_number=phone).first()
+            # Fallback: dedup by national_id when phone is blank or didn't match
+            if existing is None and national_id:
+                existing = Guardian.objects.filter(national_id=national_id).first()
+
             if existing:
                 # Update name/relationship in case they changed
                 update_fields = []
@@ -129,6 +139,7 @@ class ChildCreateSerializer(serializers.ModelSerializer):
                 guardian = existing
             else:
                 guardian = Guardian.objects.create(**guardian_data)
+                # Guardian.save() normalizes phone_number automatically
 
         child = Child.objects.create(guardian=guardian, **validated_data)
         return child

@@ -1,7 +1,32 @@
+import re
 import uuid
 from django.db import models
 from django.utils import timezone
 from apps.core.models import BaseModel
+
+
+def normalize_rwandan_phone(raw: str) -> str:
+    """
+    Normalize a Rwandan phone number to E.164 format (+250XXXXXXXXX).
+
+    Handles the common variants:
+      "07XXXXXXXX"      → "+25078XXXXXXXX"  (10-digit local, leading 0)
+      "7XXXXXXXX"       → "+2507XXXXXXXXX"  (9-digit, no prefix)
+      "2507XXXXXXXXX"   → "+2507XXXXXXXXX"  (missing the +)
+      "+2507XXXXXXXXX"  → "+2507XXXXXXXXX"  (already E.164)
+
+    Returns the raw value unchanged for numbers that don't match any known
+    Rwandan pattern so non-Rwandan numbers are stored as-is.
+    """
+    if not raw:
+        return raw
+    cleaned = re.sub(r'[\s\-\(\)]', '', raw)
+
+    if re.fullmatch(r'\+250[278]\d{8}', cleaned):   return cleaned           # already E.164
+    if re.fullmatch(r'250[278]\d{8}', cleaned):      return '+' + cleaned     # missing +
+    if re.fullmatch(r'0[278]\d{8}', cleaned):        return '+250' + cleaned[1:]  # local 0-prefix
+    if re.fullmatch(r'[278]\d{8}', cleaned):         return '+250' + cleaned  # bare 9-digit
+    return cleaned  # unrecognized — store as-is
 
 
 class VisitUrgency(models.TextChoices):
@@ -30,7 +55,11 @@ class Guardian(BaseModel):
     assigned_chw: set by a Supervisor to assign this family to a CHW for home visits.
     """
     full_name = models.CharField(max_length=200)
-    phone_number = models.CharField(max_length=20)
+    phone_number = models.CharField(
+        max_length=20, blank=True,
+        db_index=True,
+        help_text='Stored in E.164 format (+250XXXXXXXXX) after normalization.',
+    )
     relationship = models.CharField(
         max_length=50,
         help_text='e.g. mother, father, grandmother, uncle'
@@ -58,6 +87,12 @@ class Guardian(BaseModel):
 
     def __str__(self):
         return f'{self.full_name} ({self.relationship})'
+
+    def save(self, *args, **kwargs):
+        # Always normalize the phone number to E.164 before storing
+        if self.phone_number:
+            self.phone_number = normalize_rwandan_phone(self.phone_number)
+        super().save(*args, **kwargs)
 
 
 class Child(BaseModel):
