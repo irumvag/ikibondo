@@ -3,32 +3,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Megaphone, CheckCircle2 } from 'lucide-react';
-import { apiClient } from '@/lib/api/client';
+import { listBroadcasts, sendBroadcast, type Broadcast } from '@/lib/api/notifications';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
-
-interface Broadcast {
-  id: string;
-  scope_type: string;
-  scope_id: string;
-  channel: 'SMS' | 'PUSH';
-  body: string;
-  sent_at: string | null;
-  delivery_count: number;
-  created_at: string;
-}
-
-async function listBroadcasts(): Promise<Broadcast[]> {
-  const { data } = await apiClient.get('/notifications/broadcasts/');
-  return data.data ?? data.results ?? [];
-}
-
-async function sendBroadcast(payload: {
-  scope_type: string; scope_id: string; channel: string; body: string;
-}): Promise<Broadcast> {
-  const { data } = await apiClient.post('/notifications/broadcasts/', payload);
-  return data.data;
-}
 
 const SCOPE_LABELS: Record<string, string> = {
   CAMP: 'Specific camp', ZONE: 'Zone', ROLE: 'By role', GLOBAL: 'All users (global)',
