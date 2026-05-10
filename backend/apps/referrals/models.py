@@ -9,6 +9,12 @@ class ReferralStatus(models.TextChoices):
     CANCELLED = 'CANCELLED', 'Cancelled'
 
 
+class ReferralUrgency(models.TextChoices):
+    ROUTINE = 'ROUTINE', 'Routine'
+    SOON = 'SOON', 'Soon (within a week)'
+    URGENT = 'URGENT', 'Urgent (within 24 h)'
+
+
 class Referral(BaseModel):
     """
     A child referral from a CHW or nurse to another facility.
@@ -26,7 +32,11 @@ class Referral(BaseModel):
         related_name='issued_referrals',
     )
     target_facility = models.CharField(max_length=255, help_text='Name or identifier of receiving facility')
+    urgency = models.CharField(
+        max_length=10, choices=ReferralUrgency.choices, default=ReferralUrgency.ROUTINE
+    )
     reason = models.TextField()
+    clinical_notes = models.TextField(blank=True, help_text='Additional clinical context for the receiving facility')
     status = models.CharField(
         max_length=10, choices=ReferralStatus.choices, default=ReferralStatus.PENDING
     )

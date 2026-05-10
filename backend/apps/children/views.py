@@ -450,6 +450,17 @@ class ChildViewSet(viewsets.ModelViewSet):
         records = VaccinationRecord.objects.filter(child=child).order_by('scheduled_date')
         return success_response(data=VaccinationRecordSerializer(records, many=True).data)
 
+    @action(detail=True, methods=['get'], url_path='referrals')
+    def referral_history(self, request, pk=None):
+        """GET /api/v1/children/<id>/referrals/ — referral history for this child."""
+        child = self.get_object()
+        from apps.referrals.models import Referral
+        from apps.referrals.serializers import ReferralSerializer
+        referrals = Referral.objects.filter(child=child).select_related(
+            'referring_user'
+        ).order_by('-referred_at')
+        return success_response(data=ReferralSerializer(referrals, many=True).data)
+
     @action(detail=True, methods=['get'], url_path='predictions')
     def predictions(self, request, pk=None):
         """GET /api/v1/children/<id>/predictions/ — latest ML predictions."""

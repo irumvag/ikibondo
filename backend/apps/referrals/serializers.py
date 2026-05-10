@@ -11,7 +11,8 @@ class ReferralSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'child', 'child_name',
             'referring_user', 'referring_user_name',
-            'target_facility', 'reason', 'status', 'outcome',
+            'target_facility', 'urgency', 'reason', 'clinical_notes',
+            'status', 'outcome',
             'referred_at', 'completed_at',
         ]
         read_only_fields = ['id', 'child_name', 'referring_user', 'referring_user_name', 'referred_at']
