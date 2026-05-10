@@ -36,7 +36,9 @@ class ChildSerializer(serializers.ModelSerializer):
         model = Child
         fields = [
             'id', 'registration_number', 'full_name', 'date_of_birth',
-            'age_months', 'age_display', 'sex', 'camp', 'camp_name',
+            'age_months', 'age_display', 'sex',
+            'birth_weight', 'gestational_age', 'feeding_type',
+            'camp', 'camp_name',
             'zone', 'zone_name',
             'guardian', 'guardian_name', 'guardian_phone', 'guardian_has_account',
             'registered_by', 'registered_by_name',
@@ -85,8 +87,12 @@ class ChildCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Child
-        fields = ['full_name', 'date_of_birth', 'sex', 'camp', 'zone',
-                  'guardian', 'existing_guardian_id', 'notes', 'photo']
+        fields = [
+            'full_name', 'date_of_birth', 'sex',
+            'birth_weight', 'gestational_age', 'feeding_type',
+            'camp', 'zone',
+            'guardian', 'existing_guardian_id', 'notes', 'photo',
+        ]
 
     def validate(self, attrs):
         has_guardian     = bool(attrs.get('guardian'))

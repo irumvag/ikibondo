@@ -106,6 +106,23 @@ class Child(BaseModel):
     full_name = models.CharField(max_length=200)
     date_of_birth = models.DateField()
     sex = models.CharField(max_length=1, choices=[('M', 'Male'), ('F', 'Female')])
+    birth_weight = models.DecimalField(
+        max_digits=4, decimal_places=2, null=True, blank=True,
+        help_text='Birth weight in kilograms (e.g. 3.25)',
+    )
+    gestational_age = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text='Gestational age in weeks at birth (e.g. 38)',
+    )
+    feeding_type = models.CharField(
+        max_length=10, blank=True,
+        choices=[
+            ('BREAST', 'Exclusive Breastfeeding'),
+            ('FORMULA', 'Formula'),
+            ('MIXED', 'Mixed'),
+        ],
+        help_text='Infant feeding method at time of registration',
+    )
     camp = models.ForeignKey(
         'camps.Camp',
         on_delete=models.PROTECT,
