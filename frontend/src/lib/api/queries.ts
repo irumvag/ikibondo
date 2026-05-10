@@ -10,7 +10,7 @@ import {
 import {
   getGrowthData, getChild, getChildHistory, getChildNotes, listHealthRecords,
 } from './nurse';
-import { listVaccinationQueue } from './chw';
+import { listVaccinationQueue, listDailyPlan, listCHWFamilies } from './chw';
 import { listMyChildren, getChildVaccinations, listNotifications } from './parent';
 import { getModelInfo, listPredictions } from './ml';
 import { getAllNotifications, markNotificationRead, markAllNotificationsRead } from './user';
@@ -41,6 +41,8 @@ export const QK = {
   notifications:      ['notifications'] as const,
   allNotifications:   ['all-notifications'] as const,
   auditLog:           (page?: number) => ['audit-log', page] as const,
+  dailyPlan:          ['daily-plan'] as const,
+  chwFamilies:        ['chw-families'] as const,
 };
 
 // re-export mutation helpers so pages can import from one place
@@ -294,6 +296,26 @@ export function useAuditLog(page = 1) {
     queryKey: QK.auditLog(page),
     queryFn:  () => listAuditLog({ page, page_size: 30 }),
     staleTime: 60_000,
+    retry: 1,
+  });
+}
+
+export function useDailyPlan() {
+  return useQuery({
+    queryKey: QK.dailyPlan,
+    queryFn:  listDailyPlan,
+    staleTime: 5 * 60_000,
+    refetchInterval: 10 * 60_000,
+    retry: 1,
+  });
+}
+
+export function useCHWFamilies() {
+  return useQuery({
+    queryKey: QK.chwFamilies,
+    queryFn:  listCHWFamilies,
+    staleTime: 5 * 60_000,
+    refetchInterval: 10 * 60_000,
     retry: 1,
   });
 }

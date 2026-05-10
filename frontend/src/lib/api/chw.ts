@@ -138,6 +138,26 @@ export async function syncBatch(operations: SyncOperation[]): Promise<SyncResult
   return data.results ?? [];
 }
 
+// ── CHW Daily Plan ────────────────────────────────────────────────────────────
+
+export interface DailyPlanItem {
+  child_id:            string;
+  child_name:          string;
+  registration_number: string;
+  age_display:         string;
+  priority_score:      number;
+  priority_reasons:    string[];
+  risk_level:          'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
+  has_pending_request: boolean;
+  has_overdue_vaccine: boolean;
+  last_visit_days_ago: number | null;
+}
+
+export async function listDailyPlan(): Promise<DailyPlanItem[]> {
+  const { data } = await apiClient.get('/chw/daily-plan/');
+  return data.data ?? [];
+}
+
 // ── CHW Families (caseload) ───────────────────────────────────────────────────
 
 export interface CHWChildSummary {
