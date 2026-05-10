@@ -89,10 +89,13 @@ class TestAdministerVaccination:
         res = client.post(_url(record), {'administered_date': str(date.today())})
         assert res.status_code == 200
 
-    def test_chw_in_same_zone_can_administer(self, client, record, chw):
+    def test_chw_cannot_administer_vaccine(self, client, record, chw):
+        # Per Rwanda EPI protocol, CHWs track doses but only nurses/above administer.
+        # CHW also cannot see the record via get_queryset (scoped to assigned guardians),
+        # so the view returns 403 or 404 depending on whether the record is in scope.
         client.force_authenticate(chw)
         res = client.post(_url(record), {'administered_date': str(date.today())})
-        assert res.status_code == 200
+        assert res.status_code in (403, 404)
 
     def test_chw_wrong_zone_cannot_administer(self, db, client, record, camp):
         from apps.camps.models import CampZone

@@ -231,6 +231,13 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'children.purge_scheduled_deletions',
         'schedule': crontab(hour=2, minute=0),
     },
+    # Vaccination dropout ML scoring — runs after overdue detection so MISSED
+    # counts are up-to-date; scores upcoming doses and flags HIGH-risk children
+    # to their assigned CHW before the 08:00 parent reminder run.
+    'vaccination-dropout-scoring': {
+        'task': 'apps.vaccinations.tasks.send_vaccination_reminders',
+        'schedule': crontab(hour=1, minute=0),
+    },
 }
 
 # External service credentials (populated via environment variables)
