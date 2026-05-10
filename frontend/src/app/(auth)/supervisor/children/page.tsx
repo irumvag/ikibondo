@@ -15,6 +15,13 @@ const STATUS_OPTIONS = [
   { value: 'NORMAL', label: 'Normal' },
 ];
 
+const VAX_STATUS_OPTIONS = [
+  { value: '',            label: 'All vaccination statuses' },
+  { value: 'OVERDUE',     label: 'Overdue'                  },
+  { value: 'UP_TO_DATE',  label: 'Up to date'               },
+  { value: 'NOT_STARTED', label: 'Not started'              },
+];
+
 const SEX_OPTIONS = [
   { value: '',  label: 'All' },
   { value: 'M', label: 'Male'   },
@@ -55,6 +62,7 @@ export default function ChildrenPage() {
   const user = useAuthStore((s) => s.user);
   const campId = user?.camp ?? undefined;
   const [statusFilter, setStatusFilter] = useState('');
+  const [vaxFilter, setVaxFilter] = useState('');
   const [sexFilter, setSexFilter] = useState('');
   const [page, setPage] = useState(1);
 
@@ -62,9 +70,11 @@ export default function ChildrenPage() {
     campId,
     statusFilter || undefined,
     page,
+    undefined,
+    vaxFilter || undefined,
   );
 
-  // Client-side sex filter (ChildFilter handles camp + status server-side; sex is also server-side)
+  // Client-side sex filter (ChildFilter handles camp + status + vaccination_status server-side)
   const displayed = sexFilter
     ? (data?.items ?? []).filter((c: SupervisedChild) => c.sex === sexFilter)
     : (data?.items ?? []);
@@ -95,6 +105,17 @@ export default function ChildrenPage() {
           aria-label="Filter by nutrition status"
         >
           {STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <select
+          value={vaxFilter}
+          onChange={(e) => { setVaxFilter(e.target.value); setPage(1); }}
+          className="text-sm px-3 py-1.5 rounded-lg border outline-none"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
+          aria-label="Filter by vaccination status"
+        >
+          {VAX_STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>

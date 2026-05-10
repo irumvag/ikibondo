@@ -49,6 +49,9 @@ export interface SupervisedChild {
   age_months: number;
   age_display: string;
   sex: 'M' | 'F';
+  birth_weight: number | null;
+  gestational_age: number | null;
+  feeding_type: 'BREAST' | 'FORMULA' | 'MIXED' | null;
   camp: string;
   camp_name: string;
   zone: string | null;
@@ -56,6 +59,7 @@ export interface SupervisedChild {
   guardian: string | null;
   guardian_name: string | null;
   guardian_phone: string | null;
+  guardian_has_account?: boolean;
   risk_level?: 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
   closure_status?: string | null;
   deletion_requested_at?: string | null;
@@ -95,6 +99,7 @@ export async function listHighRiskRecords(params?: {
 export async function listCampChildren(params?: {
   camp?: string;
   status?: string;
+  vaccination_status?: string;
   sex?: string;
   search?: string;
   page?: number;

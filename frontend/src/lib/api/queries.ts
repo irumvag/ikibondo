@@ -169,10 +169,20 @@ export function useHighRiskRecords(zone?: string, page = 1) {
   });
 }
 
-export function useCampChildren(camp?: string, status?: string, page = 1, search?: string) {
+export function useCampChildren(
+  camp?: string,
+  status?: string,
+  page = 1,
+  search?: string,
+  vaccinationStatus?: string,
+) {
   return useQuery({
     queryKey: QK.campChildren(camp, status, page, search),
-    queryFn: () => listCampChildren({ camp, status, page, page_size: 20, search: search || undefined }),
+    queryFn: () => listCampChildren({
+      camp, status, page, page_size: 20,
+      search: search || undefined,
+      vaccination_status: vaccinationStatus || undefined,
+    }),
     // Always enabled — backend scopes results by role even without a camp filter
     staleTime: 30_000,
     retry: 1,

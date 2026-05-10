@@ -1581,6 +1581,44 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
         )}
       </div>
 
+      {/* ── Neonatal clinical details (shown only if any are recorded) ──── */}
+      {(c?.birth_weight != null || c?.gestational_age != null || c?.feeding_type) && (
+        <div
+          className="rounded-2xl border px-5 py-4 no-print"
+          style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+            Neonatal details
+          </p>
+          <div className="flex flex-wrap gap-6">
+            {c?.birth_weight != null && (
+              <div>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Birth weight</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+                  {Number(c.birth_weight).toFixed(2)} kg
+                </p>
+              </div>
+            )}
+            {c?.gestational_age != null && (
+              <div>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Gestational age</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+                  {String(c.gestational_age)} wks
+                </p>
+              </div>
+            )}
+            {!!c?.feeding_type && (
+              <div>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Feeding type</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+                  {{ BREAST: 'Breastfed', FORMULA: 'Formula', MIXED: 'Mixed' }[c.feeding_type as string] ?? String(c.feeding_type)}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Tab bar ──────────────────────────────────────────────────────── */}
       <div className="no-print flex gap-1 border-b overflow-x-auto" style={{ borderColor: 'var(--border)' }}>
         {([

@@ -125,6 +125,9 @@ interface ChildData {
   guardian_name?: string | null;
   guardian_phone?: string | null;
   assigned_chw_name?: string | null;
+  birth_weight?: number | null;
+  gestational_age?: number | null;
+  feeding_type?: 'BREAST' | 'FORMULA' | 'MIXED' | null;
 }
 
 export default function ParentChildDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -212,6 +215,39 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
           </Link>
         </div>
       </div>
+
+      {/* Neonatal details — shown only if any field was recorded at registration */}
+      {(child.birth_weight != null || child.gestational_age != null || child.feeding_type) && (
+        <div
+          className="rounded-2xl border px-4 py-3 flex flex-wrap gap-5"
+          style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}
+        >
+          {child.birth_weight != null && (
+            <div>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Birth weight</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+                {Number(child.birth_weight).toFixed(2)} kg
+              </p>
+            </div>
+          )}
+          {child.gestational_age != null && (
+            <div>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Gestational age</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+                {child.gestational_age} weeks
+              </p>
+            </div>
+          )}
+          {child.feeding_type && (
+            <div>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Feeding method</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+                {{ BREAST: 'Breastfed', FORMULA: 'Formula', MIXED: 'Mixed' }[child.feeding_type]}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Pinned nurse alert */}
       {pinnedNotes.length > 0 && (

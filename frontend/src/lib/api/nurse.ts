@@ -113,6 +113,9 @@ export async function registerChild(payload: {
   camp: string;
   zone?: string;
   notes?: string;
+  birth_weight?: number | null;
+  gestational_age?: number | null;
+  feeding_type?: 'BREAST' | 'FORMULA' | 'MIXED' | null;
   /** Pass this instead of `guardian` when registering a second child for a parent
    *  who already has a Guardian record — skips creating a duplicate Guardian. */
   existing_guardian_id?: string;

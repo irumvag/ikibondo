@@ -35,6 +35,9 @@ interface NewbornForm {
   sex: 'M' | 'F' | '';
   zone: string;
   notes: string;
+  birth_weight: string;
+  gestational_age: string;
+  feeding_type: 'BREAST' | 'FORMULA' | 'MIXED' | '';
   guardian_full_name: string;
   guardian_phone: string;
   guardian_relationship: string;
@@ -43,6 +46,7 @@ interface NewbornForm {
 const EMPTY_PARENT: ParentForm = { full_name: '', email: '', phone_number: '' };
 const EMPTY_NEWBORN: NewbornForm = {
   full_name: '', date_of_birth: '', sex: '', zone: '', notes: '',
+  birth_weight: '', gestational_age: '', feeding_type: '',
   guardian_full_name: '', guardian_phone: '', guardian_relationship: '',
 };
 
@@ -193,6 +197,13 @@ export default function NurseRegisterPage() {
       // don't create a duplicate Guardian and avoid the 409 on link-account.
       const existingGuardianId = parentUser.guardian_id ?? undefined;
 
+      // Parse optional neonatal fields
+      const neonatal = {
+        birth_weight: newbornForm.birth_weight ? parseFloat(newbornForm.birth_weight) : null,
+        gestational_age: newbornForm.gestational_age ? parseInt(newbornForm.gestational_age, 10) : null,
+        feeding_type: (newbornForm.feeding_type || null) as 'BREAST' | 'FORMULA' | 'MIXED' | null,
+      };
+
       const child = await registerChild(
         existingGuardianId
           ? {
@@ -204,6 +215,7 @@ export default function NurseRegisterPage() {
               zone: newbornForm.zone || undefined,
               notes: newbornForm.notes || undefined,
               existing_guardian_id: existingGuardianId,
+              ...neonatal,
             }
           : {
               // First registration for this parent — create a new Guardian
@@ -213,6 +225,7 @@ export default function NurseRegisterPage() {
               camp: campId,
               zone: newbornForm.zone || undefined,
               notes: newbornForm.notes || undefined,
+              ...neonatal,
               guardian: {
                 full_name: newbornForm.guardian_full_name.trim(),
                 phone_number: newbornForm.guardian_phone.trim(),
@@ -521,6 +534,53 @@ export default function NurseRegisterPage() {
             </div>
           </div>
 
+          {/* ── Neonatal clinical details (optional) ─────────────────────── */}
+          <p className="text-xs font-semibold uppercase tracking-wider mt-1" style={{ color: 'var(--text-muted)' }}>
+            Clinical details <span className="font-normal normal-case">(optional)</span>
+          </p>
+          <div className="flex gap-3">
+            <Input
+              label="Birth weight (kg)"
+              type="number"
+              inputMode="decimal"
+              value={newbornForm.birth_weight}
+              onChange={(e) => setN('birth_weight', e.target.value)}
+              placeholder="e.g. 3.25"
+            />
+            <Input
+              label="Gestational age (wks)"
+              type="number"
+              inputMode="numeric"
+              value={newbornForm.gestational_age}
+              onChange={(e) => setN('gestational_age', e.target.value)}
+              placeholder="e.g. 38"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Feeding type</label>
+            <div className="flex gap-2">
+              {([
+                { value: 'BREAST',  label: 'Breastfed'  },
+                { value: 'FORMULA', label: 'Formula'     },
+                { value: 'MIXED',   label: 'Mixed'       },
+              ] as const).map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setN('feeding_type', newbornForm.feeding_type === value ? '' : value)}
+                  className="flex-1 py-2 rounded-lg border text-sm font-medium transition-colors"
+                  style={{
+                    borderColor: newbornForm.feeding_type === value ? 'var(--ink)' : 'var(--border)',
+                    backgroundColor: newbornForm.feeding_type === value ? 'var(--ink)' : 'transparent',
+                    color: newbornForm.feeding_type === value ? 'var(--bg)' : 'var(--text-muted)',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {zones.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Zone (optional)</label>
@@ -675,10 +735,13 @@ export default function NurseRegisterPage() {
 
             <p className="text-xs font-semibold uppercase tracking-wider mt-2" style={{ color: 'var(--text-muted)' }}>Newborn</p>
             {[
-              ['Name',    newbornForm.full_name],
-              ['DOB',     newbornForm.date_of_birth],
-              ['Sex',     newbornForm.sex === 'M' ? 'Male' : 'Female'],
-              ['Camp',    user?.camp_name ?? campId],
+              ['Name',             newbornForm.full_name],
+              ['DOB',              newbornForm.date_of_birth],
+              ['Sex',              newbornForm.sex === 'M' ? 'Male' : 'Female'],
+              ['Camp',             user?.camp_name ?? campId],
+              ...(newbornForm.birth_weight    ? [['Birth weight',    `${newbornForm.birth_weight} kg`]]   : []),
+              ...(newbornForm.gestational_age ? [['Gestational age', `${newbornForm.gestational_age} wks`]] : []),
+              ...(newbornForm.feeding_type    ? [['Feeding type',    { BREAST: 'Breastfed', FORMULA: 'Formula', MIXED: 'Mixed' }[newbornForm.feeding_type]]] : []),
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between text-sm border-b last:border-b-0 pb-2 last:pb-0" style={{ borderColor: 'var(--border)' }}>
                 <span style={{ color: 'var(--text-muted)' }}>{k}</span>
