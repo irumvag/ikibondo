@@ -1281,6 +1281,82 @@ function RecordMeasurementModal({ childId, onClose }: { childId: string; onClose
   );
 }
 
+// ── Referrals tab ─────────────────────────────────────────────────────────────
+
+interface ReferralItem {
+  id: string;
+  target_facility: string;
+  reason: string;
+  urgency: 'ROUTINE' | 'SOON' | 'URGENT';
+  status: 'PENDING' | 'ACCEPTED' | 'COMPLETED' | 'CANCELLED';
+  outcome: string;
+  clinical_notes: string;
+  referred_at: string;
+  completed_at: string | null;
+  referring_user_name: string | null;
+}
+
+const URGENCY_COLOR: Record<string, string> = {
+  URGENT: '#ef4444',
+  SOON: '#f59e0b',
+  ROUTINE: '#10b981',
+};
+
+function ReferralsTab({ childId }: { childId: string }) {
+  const { data: referrals, isLoading } = useQuery<ReferralItem[]>({
+    queryKey: ['child-referrals', childId],
+    queryFn: async () => {
+      const { data } = await apiClient.get(`/children/${childId}/referrals/`);
+      return data.data ?? [];
+    },
+  });
+
+  if (isLoading) return <Skeleton className="h-40 rounded-2xl" />;
+  if (!referrals || referrals.length === 0) {
+    return (
+      <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No referrals on record.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {referrals.map((r) => (
+        <div key={r.id} className="rounded-2xl border p-5 flex flex-col gap-2"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="font-semibold text-sm">{r.target_facility}</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {r.referring_user_name ?? 'Unknown'} · {new Date(r.referred_at).toLocaleDateString()}
+              </p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                style={{ backgroundColor: URGENCY_COLOR[r.urgency] + '20', color: URGENCY_COLOR[r.urgency] }}>
+                {r.urgency}
+              </span>
+              <Badge>{r.status}</Badge>
+            </div>
+          </div>
+          <p className="text-sm">{r.reason}</p>
+          {r.clinical_notes && (
+            <p className="text-xs rounded-lg px-3 py-2" style={{ backgroundColor: 'var(--bg)', color: 'var(--text-muted)' }}>
+              {r.clinical_notes}
+            </p>
+          )}
+          {r.outcome && (
+            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+              Outcome: {r.outcome}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Delete panel ──────────────────────────────────────────────────────────────
 
 function DeletePanel({ childId, childName, deletionRequestedAt }: {
@@ -1404,7 +1480,7 @@ function DeletePanel({ childId, childName, deletionRequestedAt }: {
 
 export default function ChildDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [activeTab, setActiveTab] = useState<'chart' | 'vaccines' | 'history' | 'notes' | 'ml'>('chart');
+  const [activeTab, setActiveTab] = useState<'chart' | 'vaccines' | 'history' | 'notes' | 'ml' | 'referrals'>('chart');
   const [showMeasurementModal, setShowMeasurementModal] = useState(false);
 
   const { data: child, isLoading: childLoading }     = useChild(id);
@@ -1592,7 +1668,8 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
           { key: 'vaccines', label: 'Vaccinations',   icon: Syringe       },
           { key: 'history',  label: 'Visit history',  icon: ClipboardList },
           { key: 'notes',    label: 'Clinical notes', icon: Pin           },
-          { key: 'ml',       label: 'ML Prediction',  icon: Cpu           },
+          { key: 'ml',        label: 'ML Prediction',  icon: Cpu            },
+          { key: 'referrals', label: 'Referrals',      icon: ExternalLink   },
         ] as { key: string; label: string; icon: React.ElementType }[]).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -1661,6 +1738,10 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
           <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
             <MLPredictPanel history={history} childId={id} />
           </div>
+        )}
+
+        {activeTab === 'referrals' && (
+          <ReferralsTab childId={id} />
         )}
       </div>
 
