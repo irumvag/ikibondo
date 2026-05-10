@@ -22,6 +22,7 @@ import type { PredictRiskResult } from '@/lib/api/ml';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { RiskExplainer } from '@/components/ui/RiskExplainer';
 import type { GrowthData, HealthRecordDetail, ClinicalNote } from '@/lib/api/nurse';
 
 // ── WHO growth chart colours ──────────────────────────────────────────────────
@@ -354,13 +355,10 @@ function HistoryRow({ record }: { record: HealthRecordDetail }) {
   const [open, setOpen] = useState(false);
   const factors = record.risk_factors as Record<string, number> | string[] | null;
 
-  const factorEntries: [string, number][] = Array.isArray(factors)
-    ? factors.map((f) => [f, 1])
-    : factors
-      ? Object.entries(factors as Record<string, number>).sort((a, b) => b[1] - a[1]).slice(0, 5)
-      : [];
-
-  const maxFactor = factorEntries[0]?.[1] ?? 1;
+  // Normalise to Record<string, number> for RiskExplainer
+  const factorMap: Record<string, number> | null = Array.isArray(factors)
+    ? Object.fromEntries(factors.map((f) => [f, 1]))
+    : factors ?? null;
 
   return (
     <div className="border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
@@ -409,29 +407,8 @@ function HistoryRow({ record }: { record: HealthRecordDetail }) {
 
       {open && (
         <div className="px-4 pb-4 pt-2" style={{ backgroundColor: 'var(--bg-sand)' }}>
-          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
-            Feature contributions to {record.risk_level} risk
-          </p>
-          {factorEntries.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              {factorEntries.map(([name, val]) => (
-                <div key={name} className="flex items-center gap-3">
-                  <span className="text-xs w-44 truncate" style={{ color: 'var(--ink)' }}>{name.replace(/_/g, ' ')}</span>
-                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border)' }}>
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.min((val / maxFactor) * 100, 100)}%`,
-                        backgroundColor: record.risk_level === 'HIGH' ? 'var(--danger)' : 'var(--ink)',
-                      }}
-                    />
-                  </div>
-                  <span className="text-xs w-12 text-right font-mono" style={{ color: 'var(--text-muted)' }}>
-                    {typeof val === 'number' ? val.toFixed(3) : val}
-                  </span>
-                </div>
-              ))}
-            </div>
+          {factorMap ? (
+            <RiskExplainer factors={factorMap} riskLevel={record.risk_level ?? 'LOW'} limit={5} />
           ) : (
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No feature breakdown available.</p>
           )}
@@ -715,22 +692,11 @@ function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | 
           </div>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Model: {riskResult.model_version}</p>
           {factorEntries.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>SHAP feature contributions</p>
-              <div className="flex flex-col gap-2">
-                {factorEntries.map(([feature, value]) => (
-                  <div key={feature} className="flex items-center gap-3">
-                    <span className="text-xs w-40 truncate" style={{ color: 'var(--text-muted)' }}>{feature.replace(/_/g, ' ')}</span>
-                    <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-sand)' }}>
-                      <div className="h-full rounded-full" style={{ width: `${(Math.abs(value) / maxFactor) * 100}%`, backgroundColor: value > 0 ? barColor(riskResult.risk_level) : 'var(--text-muted)' }} />
-                    </div>
-                    <span className="text-xs font-mono w-14 text-right" style={{ color: 'var(--ink)' }}>
-                      {value > 0 ? '+' : ''}{value.toFixed(3)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <RiskExplainer
+              factors={Object.fromEntries(factorEntries)}
+              riskLevel={riskResult.risk_level}
+              limit={8}
+            />
           )}
         </div>
       )}
@@ -1582,7 +1548,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* ── Neonatal clinical details (shown only if any are recorded) ──── */}
-      {(c?.birth_weight != null || c?.gestational_age != null || c?.feeding_type) && (
+      {(c?.birth_weight != null || c?.gestational_age != null || !!c?.feeding_type) && (
         <div
           className="rounded-2xl border px-5 py-4 no-print"
           style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}

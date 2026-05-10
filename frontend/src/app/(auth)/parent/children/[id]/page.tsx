@@ -10,6 +10,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useChild, useChildHistory, useChildVaccinations, useChildNotes } from '@/lib/api/queries';
 import { listVisitRequests, type VisitRequest } from '@/lib/api/parent';
+import { RiskExplainer } from '@/components/ui/RiskExplainer';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Badge } from '@/components/ui/Badge';
@@ -339,6 +340,24 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
                   Please visit the nearest health facility or request a home visit now.
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Plain-language AI risk explanation */}
+          {latestRecord?.risk_factors && riskLevel !== 'UNKNOWN' && (
+            <div
+              className="rounded-2xl border p-5"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+                Why this assessment?
+              </p>
+              <RiskExplainer
+                factors={latestRecord.risk_factors as Record<string, number>}
+                riskLevel={riskLevel}
+                plain
+                limit={5}
+              />
             </div>
           )}
 
