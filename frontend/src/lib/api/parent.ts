@@ -81,9 +81,12 @@ export async function createVisitRequest(payload: CreateVisitRequestPayload): Pr
 }
 
 export async function listVisitRequests(status?: VisitRequestStatus): Promise<VisitRequest[]> {
-  const params = status ? { status } : {};
+  const params = status ? { status, page_size: 100 } : { page_size: 100 };
   const { data } = await apiClient.get('/children/visit-requests/', { params });
-  return data.data ?? [];
+  const payload = data?.data ?? data;
+  if (Array.isArray(payload)) return payload;
+  if (payload?.results) return payload.results as VisitRequest[];
+  return [];
 }
 
 export async function withdrawVisitRequest(id: string): Promise<VisitRequest> {
