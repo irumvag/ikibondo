@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import Child, Guardian, VisitRequest
 
 
@@ -18,6 +19,7 @@ class GuardianSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'has_account', 'user_email', 'assigned_chw_name', 'children_count']
 
+    @extend_schema_field(serializers.BooleanField())
     def get_has_account(self, obj):
         return obj.user_id is not None
 
@@ -47,6 +49,7 @@ class ChildSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'registration_number', 'created_at', 'registered_by', 'deletion_requested_at']
 
+    @extend_schema_field(serializers.BooleanField())
     def get_guardian_has_account(self, obj):
         return obj.guardian.user_id is not None
 

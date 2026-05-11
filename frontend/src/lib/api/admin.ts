@@ -375,15 +375,18 @@ export async function rollbackMLModelVersion(id: string): Promise<MLModelVersion
 // ── Audit log ─────────────────────────────────────────────────────────────────
 
 export interface AuditLogEntry {
-  id: string;
-  user: string;
-  user_name: string;
-  action: string;
-  model: string;
-  object_id: string;
-  object_repr: string;
+  id: string | number;
+  user: string | null;
+  user_email: string;
+  user_display: string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE';
+  method: string;
+  path: string;
+  status_code: number;
+  ip_address: string | null;
+  user_agent: string;
+  request_body: Record<string, unknown> | null;
   timestamp: string;
-  changes?: Record<string, unknown>;
 }
 
 export async function listAuditLog(params?: {
@@ -391,16 +394,26 @@ export async function listAuditLog(params?: {
   page_size?: number;
   user?: string;
   action?: string;
-}): Promise<{ count: number; results: AuditLogEntry[] }> {
+  path?: string;
+}): Promise<{ count: number; page: number; page_size: number; results: AuditLogEntry[] }> {
   const { data } = await apiClient.get('/audit/log/', { params });
   const payload = data.data ?? data;
   return {
-    count: payload.count ?? 0,
-    results: payload.results ?? [],
+    count:     payload.count     ?? 0,
+    page:      payload.page      ?? 1,
+    page_size: payload.page_size ?? 25,
+    results:   payload.results   ?? [],
   };
 }
 
 // ── FAQ (admin CRUD) ───────────────────────────────────────────────────────────
+
+type FAQPayload = Pick<FAQItem,
+  'question' | 'answer' |
+  'question_rw' | 'answer_rw' |
+  'question_fr' | 'answer_fr' |
+  'order' | 'is_published'
+>;
 
 export async function listAllFaqItems(): Promise<FAQItem[]> {
   const { data } = await apiClient.get('/faq/');
@@ -408,16 +421,14 @@ export async function listAllFaqItems(): Promise<FAQItem[]> {
   return Array.isArray(payload) ? payload : payload?.results ?? [];
 }
 
-export async function createFaqItem(
-  payload: Pick<FAQItem, 'question' | 'answer' | 'order' | 'is_published'>,
-): Promise<FAQItem> {
+export async function createFaqItem(payload: Partial<FAQPayload>): Promise<FAQItem> {
   const { data } = await apiClient.post('/faq/', payload);
   return data?.data ?? data;
 }
 
 export async function updateFaqItem(
   id: string,
-  payload: Partial<Pick<FAQItem, 'question' | 'answer' | 'order' | 'is_published'>>,
+  payload: Partial<FAQPayload>,
 ): Promise<FAQItem> {
   const { data } = await apiClient.patch(`/faq/${id}/`, payload);
   return data?.data ?? data;

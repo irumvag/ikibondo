@@ -11,10 +11,13 @@ from rest_framework.decorators import api_view, permission_classes
 from apps.accounts.permissions import IsAdminUser
 from apps.core.responses import success_response, error_response
 from apps.integrations import dhis2 as dhis2_module
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.openapi import OpenApiTypes
 
 LAST_SYNC_CACHE_KEY = 'dhis2_last_sync_summary'
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def dhis2_status_view(request):
@@ -28,6 +31,7 @@ def dhis2_status_view(request):
     })
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def dhis2_sync_view(request):
@@ -65,6 +69,7 @@ def dhis2_sync_view(request):
     return success_response(data=summary)
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def dhis2_conflicts_view(request):
@@ -72,6 +77,7 @@ def dhis2_conflicts_view(request):
     return success_response(data={'count': 0, 'results': []})
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def dhis2_conflict_retry_view(request, conflict_id):

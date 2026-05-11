@@ -25,6 +25,8 @@ class ConsultationViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Consultation.objects.none()
         user = self.request.user
         qs = Consultation.objects.select_related(
             'child', 'opened_by', 'assigned_nurse'

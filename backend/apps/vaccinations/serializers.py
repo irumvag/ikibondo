@@ -1,5 +1,6 @@
 from django.utils import timezone
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import Vaccine, VaccinationRecord, ClinicSession, ClinicSessionAttendance
 
 
@@ -20,6 +21,7 @@ class VaccinationRecordSerializer(serializers.ModelSerializer):
     guardian_name = serializers.SerializerMethodField()
     guardian_phone = serializers.SerializerMethodField()
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_zone_name(self, obj):
         try:
             zone = obj.child.zone
@@ -27,6 +29,7 @@ class VaccinationRecordSerializer(serializers.ModelSerializer):
         except Exception:
             return None
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_guardian_name(self, obj):
         try:
             # Child has a direct guardian FK
@@ -35,6 +38,7 @@ class VaccinationRecordSerializer(serializers.ModelSerializer):
         except Exception:
             return None
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_guardian_phone(self, obj):
         try:
             g = obj.child.guardian
@@ -92,5 +96,6 @@ class ClinicSessionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'camp', 'camp_name', 'opened_by', 'opened_by_name', 'created_at', 'attendance_count']
 
+    @extend_schema_field(serializers.IntegerField())
     def get_attendance_count(self, obj):
         return obj.attendances.count()

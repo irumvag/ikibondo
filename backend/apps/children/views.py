@@ -14,6 +14,8 @@ from django.utils import timezone as tz
 from .models import Child, Guardian, VisitRequest, VisitRequestStatus, VisitUrgency, ChildClosure, ChildZoneTransfer
 from .serializers import ChildSerializer, ChildCreateSerializer, GuardianSerializer, VisitRequestSerializer
 from .filters import ChildFilter
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.openapi import OpenApiTypes
 
 
 class GuardianViewSet(viewsets.ModelViewSet):
@@ -318,6 +320,8 @@ class ChildViewSet(viewsets.ModelViewSet):
     pagination_class = StandardPagination
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Child.objects.none()
         qs = Child.objects.filter(is_active=True).select_related(
             'camp', 'zone', 'guardian', 'guardian__user', 'registered_by'
         )
@@ -627,6 +631,7 @@ def _notify_transfer(child, from_zone, to_zone):
         pass
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def duplicate_check_view(request):
@@ -653,6 +658,7 @@ def duplicate_check_view(request):
     return success_response(data=ChildSerializer(qs[:10], many=True).data)
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsNurseOrSupervisorOrAdmin])
 def guardian_lookup_view(request):
@@ -690,6 +696,7 @@ def guardian_lookup_view(request):
     })
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def scan_qr_view(request, qr_code):
@@ -715,6 +722,8 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'head', 'options']
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return VisitRequest.objects.none()
         user = self.request.user
         qs = VisitRequest.objects.select_related(
             'child', 'requested_by', 'assigned_chw'
@@ -858,6 +867,7 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
         return success_response(data=VisitRequestSerializer(vr).data, message='Visit request withdrawn.')
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def daily_plan_view(request):
@@ -982,6 +992,7 @@ def daily_plan_view(request):
     return success_response(data=result)
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def chw_families_view(request):

@@ -290,6 +290,13 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'AI-driven child health monitoring for refugee camps in Rwanda.',
     'VERSION': '2.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    # Resolve enum naming collisions — dotted path to TextChoices class
+    'ENUM_NAME_OVERRIDES': {
+        'VaccinationDoseStatusEnum':      'apps.vaccinations.models.DoseStatus',
+        'NotificationDeliveryStatusEnum': 'apps.notifications.models.NotificationStatus',
+    },
+    # Silence "unable to guess serializer" for @api_view FBVs — they use custom envelope responses
+    'COMPONENT_NO_READ_ONLY_REQUIRED': False,
 }
 
 # ---------------------------------------------------------------------------

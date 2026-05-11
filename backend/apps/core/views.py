@@ -7,6 +7,8 @@ from rest_framework.response import Response
 
 from .models import FAQItem, AuditLog
 from .serializers import FAQItemSerializer, AuditLogSerializer
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.openapi import OpenApiTypes
 
 
 class FAQItemViewSet(viewsets.ModelViewSet):
@@ -52,6 +54,7 @@ _LANDING_CACHE_TTL = 60  # seconds
 _TREND_CACHE_TTL = 300  # seconds
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def landing_stats_view(request):
@@ -121,6 +124,7 @@ def landing_stats_view(request):
     return Response(data)
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def stats_trend_view(request):
@@ -173,6 +177,7 @@ def stats_trend_view(request):
     return Response(data)
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def audit_log_view(request):
@@ -222,6 +227,7 @@ def audit_log_view(request):
     })
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def health_check(request):

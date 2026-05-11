@@ -17,6 +17,8 @@ from apps.core.responses import success_response, error_response
 from apps.accounts.permissions import IsAdminUser
 from .loader import ModelLoader
 from .models import MLModelVersion
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.openapi import OpenApiTypes
 from .serializers import (
     MalnutritionPredictSerializer,
     GrowthPredictSerializer,
@@ -96,6 +98,7 @@ def _log_prediction(child_id, model_name, input_data, output_data, label, confid
         logger.warning('MLPredictionLog write failed: %s', e)
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def predict_malnutrition(request):
@@ -165,6 +168,7 @@ def predict_malnutrition(request):
         return error_response('Prediction failed.', 'PREDICTION_ERROR', status_code=500)
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def predict_growth(request):
@@ -260,6 +264,7 @@ def predict_growth(request):
     return success_response(data=output_data)
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def predict_vaccination_dropout(request):

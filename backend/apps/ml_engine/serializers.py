@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import MLPredictionLog, MLModelVersion
 
 
@@ -21,6 +22,7 @@ class MLModelVersionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'deployed', 'uploaded_by', 'created_at']
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_uploaded_by_name(self, obj):
         return obj.uploaded_by.full_name if obj.uploaded_by else None
 

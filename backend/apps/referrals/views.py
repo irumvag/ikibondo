@@ -24,6 +24,8 @@ class ReferralViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Referral.objects.none()
         user = self.request.user
         qs = Referral.objects.select_related('child', 'referring_user')
         if user.role == UserRole.CHW:

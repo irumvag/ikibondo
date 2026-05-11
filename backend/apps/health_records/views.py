@@ -261,8 +261,11 @@ class ClinicalNoteViewSet(
 
 from rest_framework.decorators import api_view, permission_classes
 from apps.children.models import Child
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.openapi import OpenApiTypes
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def growth_data_view(request, child_id):

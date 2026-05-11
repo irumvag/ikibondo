@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import Notification, Broadcast
 
 
@@ -26,5 +27,6 @@ class BroadcastSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_by', 'created_by_name', 'sent_at', 'created_at', 'delivery_count']
 
+    @extend_schema_field(serializers.IntegerField())
     def get_delivery_count(self, obj):
         return obj.deliveries.count()

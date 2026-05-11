@@ -14,6 +14,8 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """Each user only sees their own notifications."""
+        if getattr(self, 'swagger_fake_view', False):
+            return Notification.objects.none()
         return Notification.objects.filter(recipient=self.request.user)
 
     @action(detail=True, methods=['patch'], url_path='read')
@@ -44,6 +46,8 @@ class BroadcastViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'head', 'options']
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Broadcast.objects.none()
         user = self.request.user
         qs = Broadcast.objects.select_related('created_by')
         if user.role == UserRole.SUPERVISOR:

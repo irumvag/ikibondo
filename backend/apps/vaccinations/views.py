@@ -202,6 +202,8 @@ class ClinicSessionViewSet(viewsets.ModelViewSet):
         return success_response(message='Clinic session deleted and vaccination records reverted.')
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return ClinicSession.objects.none()
         user = self.request.user
         qs = ClinicSession.objects.select_related('camp', 'vaccine', 'opened_by').prefetch_related('attendances')
         if user.role in (UserRole.NURSE, UserRole.SUPERVISOR):

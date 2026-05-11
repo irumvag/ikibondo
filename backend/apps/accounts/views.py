@@ -5,6 +5,8 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.openapi import OpenApiTypes
 
 
 class LoginThrottle(AnonRateThrottle):
@@ -53,6 +55,7 @@ class LoginView(TokenObtainPairView):
         return success_response(data=response.data, message='Login successful.')
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
@@ -68,6 +71,7 @@ def logout_view(request):
         return error_response('Invalid or expired token.', 'INVALID_TOKEN')
 
 
+@extend_schema(exclude=True)
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def me_view(request):
@@ -84,6 +88,7 @@ def me_view(request):
     return success_response(data=UserProfileSerializer(request.user).data)
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_view(request):
@@ -172,6 +177,7 @@ def _send_pending_review_emails(user):
         pass
 
 
+@extend_schema(exclude=True)
 @api_view(['GET', 'POST'])
 @permission_classes([IsStaffCreatorOrNurse])
 def create_user_view(request):
@@ -282,6 +288,7 @@ def _send_welcome_staff_email(user, temp_password: str):
         pass
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def change_password_view(request):
@@ -304,6 +311,7 @@ def change_password_view(request):
     return success_response(message='Password changed successfully.')
 
 
+@extend_schema(exclude=True)
 @api_view(['PATCH', 'DELETE'])
 @permission_classes([IsAdminUser])
 def manage_user_view(request, user_id):
@@ -337,6 +345,7 @@ def manage_user_view(request, user_id):
     return error_response(str(serializer.errors), 'VALIDATION_ERROR')
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsNurseOrSupervisorOrAdmin])
 def pending_approvals_view(request):
@@ -353,6 +362,7 @@ def pending_approvals_view(request):
     return success_response(data=serializer.data)
 
 
+@extend_schema(exclude=True)
 @api_view(['PATCH'])
 @permission_classes([IsNurseOrSupervisorOrAdmin])
 def approve_user_view(request, user_id):
@@ -381,6 +391,7 @@ def approve_user_view(request, user_id):
     )
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def suspend_user_view(request, user_id):
@@ -415,6 +426,7 @@ def suspend_user_view(request, user_id):
     )
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bulk_suspend_view(request):
@@ -450,6 +462,7 @@ def bulk_suspend_view(request):
     return success_response(data={'affected': count}, message=f'{count} user(s) updated.')
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def complete_onboarding_view(request):
@@ -463,6 +476,7 @@ def complete_onboarding_view(request):
     return success_response(data=UserProfileSerializer(user).data, message='Onboarding complete.')
 
 
+@extend_schema(exclude=True)
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def consent_view(request):
@@ -502,6 +516,7 @@ def consent_view(request):
     return success_response(data=data)
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def consent_withdraw_view(request, consent_id):

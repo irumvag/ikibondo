@@ -16,6 +16,8 @@ from rest_framework.response import Response
 
 from apps.accounts.models import UserRole
 from .models import SyncOperation
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.openapi import OpenApiTypes
 
 
 def _json_safe(data):
@@ -125,6 +127,7 @@ def _process_one(op_item, user):
         return {'id': str(client_id), 'status': status, 'error': err_msg}
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def batch_sync_view(request):

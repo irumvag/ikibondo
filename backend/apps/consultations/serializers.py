@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import Consultation, ConsultationMessage
 
 
@@ -33,5 +34,6 @@ class ConsultationSerializer(serializers.ModelSerializer):
             'assigned_nurse_name', 'resolved_at', 'created_at', 'message_count',
         ]
 
+    @extend_schema_field(serializers.IntegerField())
     def get_message_count(self, obj):
         return obj.messages.count()

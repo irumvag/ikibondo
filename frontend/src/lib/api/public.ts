@@ -25,11 +25,24 @@ export interface FAQItem {
   id: string;
   question: string;
   answer: string;
+  question_rw?: string;
+  answer_rw?: string;
+  question_fr?: string;
+  answer_fr?: string;
   order: number;
   is_published: boolean;
   created_at?: string;
   updated_at?: string;
 }
+
+export interface TrendPoint {
+  date: string;
+  high_risk: number;
+  medium_risk: number;
+  low_risk: number;
+}
+
+export type TrendPeriod = '7d' | '30d' | '90d';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -49,6 +62,19 @@ function unwrap<T>(raw: unknown): T {
 export async function getLandingStats(): Promise<LandingStats> {
   const { data } = await apiClient.get('/stats/landing/');
   return unwrap<LandingStats>(data);
+}
+
+export async function getStatsTrend(period: TrendPeriod = '30d'): Promise<TrendPoint[]> {
+  const { data } = await apiClient.get('/stats/trend/', { params: { period } });
+  return unwrap<TrendPoint[]>(data) ?? [];
+}
+
+export async function listFaqByLang(lang: 'en' | 'rw' | 'fr' = 'en'): Promise<FAQItem[]> {
+  const { data } = await apiClient.get('/faq/', { params: lang !== 'en' ? { lang } : {} });
+  const payload = unwrap<FAQItem[] | { results: FAQItem[] }>(data);
+  if (Array.isArray(payload)) return payload;
+  if (payload && 'results' in payload) return payload.results;
+  return [];
 }
 
 export async function getPublicCamps(): Promise<Camp[]> {
