@@ -7,9 +7,14 @@ import {
   XCircle, Clock, SkipForward, AlertTriangle, Home,
   MessageSquare, Phone, MapPin, Pin, TrendingUp,
 } from 'lucide-react';
+import {
+  ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  Legend, ResponsiveContainer,
+} from 'recharts';
 import { useQuery } from '@tanstack/react-query';
-import { useChild, useChildHistory, useChildVaccinations, useChildNotes } from '@/lib/api/queries';
+import { useChild, useChildHistory, useChildVaccinations, useChildNotes, useGrowthData } from '@/lib/api/queries';
 import { listVisitRequests, type VisitRequest } from '@/lib/api/parent';
+import type { GrowthData } from '@/lib/api/nurse';
 import { RiskExplainer } from '@/components/ui/RiskExplainer';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -50,7 +55,146 @@ const VR_STATUS_LABEL: Record<string, string> = {
   PENDING: 'Pending', ACCEPTED: 'Accepted', DECLINED: 'Declined', COMPLETED: 'Completed',
 };
 
-type Tab = 'status' | 'vaccines' | 'visits' | 'notes' | 'requests';
+type Tab = 'status' | 'vaccines' | 'visits' | 'notes' | 'requests' | 'growth';
+type ChartMode = 'weight' | 'height';
+
+// ── WHO growth chart helpers ───────────────────────────────────────────────────
+
+function buildChartData(growth: GrowthData, mode: ChartMode) {
+  const who = mode === 'weight'
+    ? growth.who_percentiles.weight_for_age
+    : growth.who_percentiles.height_for_age;
+  const allAges = new Map<number, Record<string, number | null>>();
+
+  (['p3', 'p50', 'p97'] as const).forEach((band) => {
+    (who[band] ?? []).forEach((p) => {
+      const entry = allAges.get(p.age_months) ?? { age: p.age_months };
+      entry[band] = p.value;
+      allAges.set(p.age_months, entry);
+    });
+  });
+
+  growth.measurements.forEach((m) => {
+    const val = mode === 'weight' ? m.weight_kg : m.height_cm;
+    if (val == null) return;
+    const entry = allAges.get(m.age_months) ?? { age: m.age_months };
+    entry.actual = val;
+    allAges.set(m.age_months, entry);
+  });
+
+  return Array.from(allAges.values()).sort((a, b) => (a.age as number) - (b.age as number));
+}
+
+function ParentGrowthChart({ growth }: { growth: GrowthData }) {
+  const [mode, setMode] = useState<ChartMode>('weight');
+  const data = buildChartData(growth, mode);
+  const yLabel = mode === 'weight' ? 'Weight (kg)' : 'Height (cm)';
+
+  // Check if latest actual measurement is within normal WHO range
+  const actuals = data.filter((d) => d.actual != null);
+  const latest  = actuals[actuals.length - 1];
+  const latestP3  = latest?.p3  as number | undefined;
+  const latestP97 = latest?.p97 as number | undefined;
+  const latestAct = latest?.actual as number | undefined;
+
+  let rangeMsg: { text: string; color: string } | null = null;
+  if (latestAct != null && latestP3 != null && latestP97 != null) {
+    if (latestAct < latestP3)
+      rangeMsg = { text: 'Below the normal range — please speak to your nurse.', color: 'var(--danger)' };
+    else if (latestAct > latestP97)
+      rangeMsg = { text: 'Above the normal range — please speak to your nurse.', color: 'var(--warn)' };
+    else
+      rangeMsg = { text: 'Within the normal range.', color: 'var(--success)' };
+  }
+
+  if (data.length === 0) {
+    return (
+      <p className="text-sm text-center py-8" style={{ color: 'var(--text-muted)' }}>
+        No growth data available yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Mode toggle */}
+      <div className="flex gap-2">
+        {(['weight', 'height'] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            className="px-4 py-1.5 rounded-full text-xs font-semibold transition-colors"
+            style={{
+              background: mode === m ? 'var(--ink)' : 'var(--bg-elev)',
+              color: mode === m ? 'var(--bg)' : 'var(--text-muted)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            {m === 'weight' ? 'Weight' : 'Height'}
+          </button>
+        ))}
+      </div>
+
+      {/* Status message */}
+      {rangeMsg && (
+        <p className="text-xs font-medium px-3 py-2 rounded-xl"
+          style={{ background: `color-mix(in srgb, ${rangeMsg.color} 10%, var(--bg-elev))`, color: rangeMsg.color }}>
+          {rangeMsg.text}
+        </p>
+      )}
+
+      {/* Recharts chart */}
+      <div style={{ height: 260, width: '100%' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 20, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis
+              dataKey="age"
+              type="number"
+              domain={['dataMin', 'dataMax']}
+              label={{ value: 'Age (months)', position: 'insideBottom', offset: -10, fontSize: 11, fill: 'var(--text-muted)' }}
+              tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+            />
+            <YAxis
+              label={{ value: yLabel, angle: -90, position: 'insideLeft', offset: 12, fontSize: 11, fill: 'var(--text-muted)' }}
+              tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+              width={40}
+            />
+            <Tooltip
+              contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)', background: 'var(--bg-elev)' }}
+              labelFormatter={(v) => `Age: ${v} months`}
+              formatter={(v: unknown, name: string | number | undefined) => {
+                const key = String(name ?? '');
+                const labels: Record<string, string> = { actual: "Your child", p50: "Average (p50)", p3: "Low limit (p3)", p97: "High limit (p97)" };
+                return [v != null ? Number(v).toFixed(1) : '—', labels[key] ?? key];
+              }}
+            />
+            <Legend
+              iconType="line"
+              formatter={(v: string) => {
+                const labels: Record<string, string> = { actual: "Your child", p50: "Average", p3: "Low (p3)", p97: "High (p97)" };
+                return <span style={{ fontSize: 11, color: 'var(--ink)' }}>{labels[v] ?? v}</span>;
+              }}
+            />
+            <Line dataKey="p3"     stroke="#dc2626" strokeWidth={1.5} strokeDasharray="5 3" dot={false} connectNulls />
+            <Line dataKey="p50"    stroke="#16a34a" strokeWidth={1.5} strokeDasharray="8 3" dot={false} connectNulls />
+            <Line dataKey="p97"    stroke="#dc2626" strokeWidth={1.5} strokeDasharray="5 3" dot={false} connectNulls />
+            <Line dataKey="actual" stroke="#1d4ed8" strokeWidth={2.5} dot={{ r: 4, fill: '#1d4ed8' }} connectNulls activeDot={{ r: 6 }} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Legend explanation */}
+      <div className="rounded-xl p-3 text-xs flex flex-col gap-1" style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
+        <p style={{ color: 'var(--text-muted)' }}>
+          <span className="font-semibold" style={{ color: '#16a34a' }}>Green line</span> = Average for children this age.
+          {' '}<span className="font-semibold" style={{ color: '#dc2626' }}>Red lines</span> = Normal range boundaries (p3–p97).
+          {' '}<span className="font-semibold" style={{ color: '#1d4ed8' }}>Blue line</span> = Your child&apos;s measurements.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function fmtDate(s: string | null | undefined) {
   if (!s) return '—';
@@ -139,6 +283,7 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
   const { data: history,   isLoading: histLoading   } = useChildHistory(id);
   const { data: vaccines,  isLoading: vaxLoading    } = useChildVaccinations(id);
   const { data: notes,     isLoading: notesLoading  } = useChildNotes(id);
+  const { data: growth,    isLoading: growthLoading } = useGrowthData(id);
   const { data: visitReqs, isLoading: vrLoading     } = useQuery<VisitRequest[]>({
     queryKey: ['parent', 'visit-requests'],
     queryFn:  () => listVisitRequests(),
@@ -151,11 +296,12 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
   const pinnedNotes   = (notes ?? []).filter((n) => n.is_pinned);
 
   const TABS: { key: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { key: 'status',   label: 'Health',        icon: <Heart     size={14} /> },
-    { key: 'vaccines', label: 'Vaccines',       icon: <Syringe   size={14} /> },
-    { key: 'visits',   label: 'Visits',         icon: <Calendar  size={14} />, badge: history?.length },
+    { key: 'status',   label: 'Health',        icon: <Heart         size={14} /> },
+    { key: 'vaccines', label: 'Vaccines',       icon: <Syringe       size={14} /> },
+    { key: 'growth',   label: 'Growth',         icon: <TrendingUp    size={14} /> },
+    { key: 'visits',   label: 'Visits',         icon: <Calendar      size={14} />, badge: history?.length },
     { key: 'notes',    label: 'Nurse advice',   icon: <MessageSquare size={14} />, badge: pinnedNotes.length || undefined },
-    { key: 'requests', label: 'My requests',    icon: <Home      size={14} />, badge: childVRs.filter((r: VisitRequest) => r.status === 'PENDING').length || undefined },
+    { key: 'requests', label: 'My requests',    icon: <Home          size={14} />, badge: childVRs.filter((r: VisitRequest) => r.status === 'PENDING').length || undefined },
   ];
 
   if (childLoading) {
@@ -534,6 +680,35 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
                 })}
               </div>
             </>
+          )}
+        </div>
+      )}
+
+      {/* ── Growth chart tab ──────────────────────────────────────────────────── */}
+      {tab === 'growth' && (
+        <div
+          className="rounded-2xl border p-5 flex flex-col gap-4"
+          style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              WHO Growth Chart
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              Compare your child&apos;s growth to WHO standards for their age and sex.
+            </p>
+          </div>
+          {growthLoading ? (
+            <div className="flex flex-col gap-2">
+              <div className="h-4 rounded" style={{ background: 'var(--bg-sand)', width: '40%' }} />
+              <div className="h-56 rounded-xl" style={{ background: 'var(--bg-sand)' }} />
+            </div>
+          ) : growth ? (
+            <ParentGrowthChart growth={growth as GrowthData} />
+          ) : (
+            <p className="text-sm py-6 text-center" style={{ color: 'var(--text-muted)' }}>
+              Growth data not available yet. It will appear after your child&apos;s first check-up.
+            </p>
           )}
         </div>
       )}
