@@ -409,6 +409,191 @@ export async function listAuditLog(params?: {
   };
 }
 
+// ── Children (admin) ──────────────────────────────────────────────────────────
+
+export interface AdminChild {
+  id: string;
+  full_name: string;
+  registration_number: string;
+  date_of_birth: string;
+  sex: 'M' | 'F';
+  camp: string;
+  camp_name: string;
+  zone: string | null;
+  zone_name: string | null;
+  risk_level: string | null;
+  nutrition_status: string | null;
+  is_active: boolean;
+  guardian_name?: string;
+  created_at: string;
+}
+
+export async function listAllChildren(params?: {
+  search?: string;
+  camp?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<{ results: AdminChild[]; count: number }> {
+  const { data } = await apiClient.get('/children/', { params });
+  const payload = data.data ?? data;
+  return {
+    results: payload?.results ?? (Array.isArray(payload) ? payload : []),
+    count: payload?.count ?? 0,
+  };
+}
+
+export async function closeChild(
+  id: string,
+  payload: { closure_status: 'DECEASED' | 'TRANSFERRED' | 'DEPARTED'; reason: string },
+): Promise<void> {
+  await apiClient.post(`/children/${id}/close/`, payload);
+}
+
+export async function transferChildZone(
+  id: string,
+  payload: { zone: string },
+): Promise<AdminChild> {
+  const { data } = await apiClient.post(`/children/${id}/transfer-zone/`, payload);
+  return data.data ?? data;
+}
+
+// ── Consultations (admin) ─────────────────────────────────────────────────────
+
+export interface Consultation {
+  id: string;
+  child: string;
+  child_name: string;
+  opened_by: string | null;
+  opened_by_name: string | null;
+  assigned_nurse: string | null;
+  assigned_nurse_name: string | null;
+  status: 'OPEN' | 'ESCALATED' | 'RESOLVED';
+  disputed_ai: boolean;
+  helpful_rating: number | null;
+  opened_at: string;
+  resolved_at: string | null;
+  messages?: ConsultationMessage[];
+}
+
+export interface ConsultationMessage {
+  id: string;
+  author: string | null;
+  author_name: string | null;
+  body: string;
+  created_at: string;
+}
+
+export async function listConsultations(params?: {
+  status?: string;
+  camp?: string;
+  page?: number;
+}): Promise<{ results: Consultation[]; count: number }> {
+  const { data } = await apiClient.get('/consultations/', { params });
+  const payload = data.data ?? data;
+  return {
+    results: payload?.results ?? (Array.isArray(payload) ? payload : []),
+    count: payload?.count ?? 0,
+  };
+}
+
+export async function replyConsultation(id: string, body: string): Promise<ConsultationMessage> {
+  const { data } = await apiClient.post(`/consultations/${id}/reply/`, { body });
+  return data.data ?? data;
+}
+
+export async function resolveConsultation(id: string, rating?: number): Promise<Consultation> {
+  const { data } = await apiClient.post(`/consultations/${id}/resolve/`, rating ? { rating } : {});
+  return data.data ?? data;
+}
+
+export async function disputeConsultation(id: string): Promise<Consultation> {
+  const { data } = await apiClient.post(`/consultations/${id}/dispute/`);
+  return data.data ?? data;
+}
+
+// ── Referrals (admin) ─────────────────────────────────────────────────────────
+
+export interface AdminReferral {
+  id: string;
+  child: string;
+  child_name: string;
+  referred_by: string | null;
+  referred_by_name: string | null;
+  target_facility: string;
+  reason: string;
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  outcome: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export async function listAllReferrals(params?: {
+  status?: string;
+  camp?: string;
+  page?: number;
+}): Promise<{ results: AdminReferral[]; count: number }> {
+  const { data } = await apiClient.get('/referrals/', { params });
+  const payload = data.data ?? data;
+  return {
+    results: payload?.results ?? (Array.isArray(payload) ? payload : []),
+    count: payload?.count ?? 0,
+  };
+}
+
+export async function completeReferral(id: string, outcome: string): Promise<AdminReferral> {
+  const { data } = await apiClient.post(`/referrals/${id}/complete/`, { outcome });
+  return data.data ?? data;
+}
+
+// ── Visit Requests (admin) ────────────────────────────────────────────────────
+
+export interface AdminVisitRequest {
+  id: string;
+  child: string;
+  child_name: string;
+  requested_by: string | null;
+  requested_by_name: string | null;
+  assigned_chw: string | null;
+  assigned_chw_name: string | null;
+  urgency: 'ROUTINE' | 'SOON' | 'URGENT';
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'COMPLETED';
+  concern_text: string;
+  symptom_flags: string[];
+  created_at: string;
+  eta: string | null;
+}
+
+export async function listAllVisitRequests(params?: {
+  status?: string;
+  camp?: string;
+  page?: number;
+}): Promise<{ results: AdminVisitRequest[]; count: number }> {
+  const { data } = await apiClient.get('/children/visit-requests/', {
+    params: { page_size: 50, ...params },
+  });
+  const payload = data.data ?? data;
+  return {
+    results: payload?.results ?? (Array.isArray(payload) ? payload : []),
+    count: payload?.count ?? 0,
+  };
+}
+
+// ── Health record amend (admin) ───────────────────────────────────────────────
+
+export async function adminAmendRecord(
+  id: string,
+  payload: {
+    weight_kg?: number;
+    height_cm?: number;
+    muac_cm?: number;
+    notes?: string;
+    amendment_reason: string;
+  },
+): Promise<void> {
+  await apiClient.patch(`/health-records/${id}/amend/`, payload);
+}
+
 // ── FAQ (admin CRUD) ───────────────────────────────────────────────────────────
 
 type FAQPayload = Pick<FAQItem,

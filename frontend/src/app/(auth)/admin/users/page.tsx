@@ -7,7 +7,7 @@ import {
   ShieldOff, ShieldCheck, AlertTriangle,
 } from 'lucide-react';
 import { useAdminUsers, useAdminCamps, usePendingApprovals, QK } from '@/lib/api/queries';
-import { approveUser, createStaffUser, updateUser, deactivateUser, suspendUser } from '@/lib/api/admin';
+import { approveUser, createStaffUser, updateUser, deactivateUser, suspendUser, bulkSuspendUsers } from '@/lib/api/admin';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -70,7 +70,33 @@ const USER_COLUMNS = (
   deactivating: string | null,
   onSuspend: (user: AuthUser) => void,
   suspending: string | null,
+  selected: Set<string>,
+  onToggle: (id: string) => void,
+  onToggleAll: () => void,
+  allActiveUsers: AuthUser[],
 ) => [
+  {
+    key: 'id' as const, header: (
+      <input
+        type="checkbox"
+        checked={allActiveUsers.length > 0 && selected.size === allActiveUsers.length}
+        onChange={onToggleAll}
+        title="Select all active"
+      />
+    ) as unknown as string, width: '40px',
+    render: (_: unknown, row: unknown) => {
+      const user = row as AuthUser;
+      if (user.suspended_at) return null;
+      return (
+        <input
+          type="checkbox"
+          checked={selected.has(user.id)}
+          onChange={() => onToggle(user.id)}
+          onClick={e => e.stopPropagation()}
+        />
+      );
+    },
+  },
   { key: 'full_name', header: 'Name',  width: '170px' },
   { key: 'email',     header: 'Email', width: '210px' },
   {
@@ -201,6 +227,12 @@ export default function UsersPage() {
   const [suspendTarget, setSuspendTarget] = useState<AuthUser | null>(null);
   const [suspendReason, setSuspendReason] = useState('');
 
+  // Bulk suspend
+  const [selected, setSelected]         = useState<Set<string>>(new Set());
+  const [bulkSuspending, setBulkSuspending] = useState(false);
+  const [showBulkModal, setShowBulkModal]   = useState(false);
+  const [bulkReason, setBulkReason]         = useState('');
+
   const { data: users, isLoading: usersLoading } = useAdminUsers(roleFilter || undefined, showSuspended);
   const { data: pending, isLoading: pendingLoading } = usePendingApprovals();
   const { data: camps } = useAdminCamps();
@@ -283,6 +315,34 @@ export default function UsersPage() {
       setSuspending(null);
       setSuspendTarget(null);
       setSuspendReason('');
+    }
+  };
+
+  const handleBulkSuspend = async () => {
+    setBulkSuspending(true);
+    try {
+      await bulkSuspendUsers(Array.from(selected), true, bulkReason);
+      invalidateUsers();
+      setSelected(new Set());
+      setShowBulkModal(false);
+      setBulkReason('');
+    } finally { setBulkSuspending(false); }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const activeUsers = (users ?? []).filter(u => !u.suspended_at);
+    if (selected.size === activeUsers.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(activeUsers.map(u => u.id)));
     }
   };
 
@@ -397,6 +457,18 @@ export default function UsersPage() {
                 <option key={r} value={r}>{r ? ROLE_LABELS[r] : 'All roles'}</option>
               ))}
             </select>
+
+            {selected.size > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowBulkModal(true)}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium"
+                style={{ background: 'var(--danger)', color: '#fff', border: 'none' }}
+              >
+                <ShieldOff size={12} />
+                Suspend selected ({selected.size})
+              </button>
+            )}
           </div>
         </div>
 
@@ -428,6 +500,10 @@ export default function UsersPage() {
             deactivating,
             handleSuspendClick,
             suspending,
+            selected,
+            toggleSelect,
+            toggleSelectAll,
+            (users ?? []).filter(u => !u.suspended_at),
           ) as Parameters<typeof DataTable>[0]['columns']}
           data={users ?? []}
           keyField="id"
@@ -478,6 +554,53 @@ export default function UsersPage() {
                   ? <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                   : <ShieldOff size={14} />}
                 Suspend account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bulk suspend modal ────────────────────────────────────────────────── */}
+      {showBulkModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowBulkModal(false); }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border p-6 flex flex-col gap-4 shadow-xl"
+            style={{ backgroundColor: 'var(--bg-elev)', borderColor: 'var(--border)' }}
+          >
+            <div>
+              <h3 className="font-bold text-lg" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
+                Bulk Suspend — {selected.size} account{selected.size !== 1 ? 's' : ''}
+              </h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                All selected users will be locked out immediately.
+              </p>
+            </div>
+            <textarea
+              value={bulkReason}
+              onChange={(e) => setBulkReason(e.target.value)}
+              rows={3}
+              placeholder="Reason for suspension (optional)…"
+              className="w-full rounded-xl border px-3 py-2 text-sm resize-none outline-none"
+              style={{ borderColor: 'var(--border)', background: 'var(--bg)', color: 'var(--ink)' }}
+            />
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1" onClick={() => setShowBulkModal(false)}>
+                Cancel
+              </Button>
+              <button
+                onClick={handleBulkSuspend}
+                disabled={bulkSuspending}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl text-sm font-medium px-3 py-2 transition-opacity disabled:opacity-50"
+                style={{ background: 'var(--danger)', color: '#fff' }}
+              >
+                {bulkSuspending
+                  ? <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  : <ShieldOff size={14} />}
+                Suspend {selected.size} account{selected.size !== 1 ? 's' : ''}
               </button>
             </div>
           </div>

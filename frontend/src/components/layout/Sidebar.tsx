@@ -43,10 +43,15 @@ const ROLE_NAV: Record<UserRole, NavEntry[]> = {
     {
       kind: 'group', id: 'admin-mgmt', label: 'Management', icon: Users,
       items: [
-        { href: '/admin/users',        label: 'Users',        icon: Users },
-        { href: '/admin/camps',        label: 'Camps & Zones', icon: MapPin },
-        { href: '/admin/vaccinations', label: 'Vaccines',     icon: Syringe },
-        { href: '/admin/guardians',    label: 'Guardians',    icon: Heart },
+        { href: '/admin/users',          label: 'Users',          icon: Users },
+        { href: '/admin/camps',          label: 'Camps & Zones',  icon: MapPin },
+        { href: '/admin/children',       label: 'Children',       icon: Baby },
+        { href: '/admin/vaccinations',   label: 'Vaccines',       icon: Syringe },
+        { href: '/admin/guardians',      label: 'Guardians',      icon: Heart },
+        { href: '/admin/health-records', label: 'Health Records', icon: ClipboardList },
+        { href: '/admin/consultations',  label: 'Consultations',  icon: Inbox },
+        { href: '/admin/referrals',      label: 'Referrals',      icon: GitBranch },
+        { href: '/admin/visit-requests', label: 'Visit Requests', icon: ClipboardCheck },
       ],
     },
     {

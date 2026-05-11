@@ -3,6 +3,8 @@ import { getLandingStats, getPublicCamps, listFaq, getStatsTrend, type TrendPeri
 import {
   listUsers, getPendingApprovals, listCamps, listZones,
   listAllFaqItems, listAuditLog,
+  listAllChildren, listConsultations, listAllReferrals,
+  listAllVisitRequests,
 } from './admin';
 import {
   getZoneStats, getCHWActivity, listHighRiskRecords, listCampChildren,
@@ -44,6 +46,10 @@ export const QK = {
   statsTrend:         (period: TrendPeriod) => ['stats-trend', period] as const,
   dailyPlan:          ['daily-plan'] as const,
   chwFamilies:        ['chw-families'] as const,
+  adminChildren:      (params?: Record<string, unknown>) => ['admin-children', params] as const,
+  adminConsultations: (params?: Record<string, unknown>) => ['admin-consultations', params] as const,
+  adminReferrals:     (params?: Record<string, unknown>) => ['admin-referrals', params] as const,
+  adminVisitRequests: (params?: Record<string, unknown>) => ['admin-visit-requests', params] as const,
 };
 
 // re-export mutation helpers so pages can import from one place
@@ -318,6 +324,42 @@ export function useDailyPlan() {
     queryFn:  listDailyPlan,
     staleTime: 5 * 60_000,
     refetchInterval: 10 * 60_000,
+    retry: 1,
+  });
+}
+
+export function useAdminChildren(params?: { search?: string; camp?: string; page?: number }) {
+  return useQuery({
+    queryKey: QK.adminChildren(params as Record<string, unknown>),
+    queryFn: () => listAllChildren({ ...params, page_size: 20 }),
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useAdminConsultations(params?: { status?: string; camp?: string; page?: number }) {
+  return useQuery({
+    queryKey: QK.adminConsultations(params as Record<string, unknown>),
+    queryFn: () => listConsultations(params),
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useAdminReferrals(params?: { status?: string; camp?: string; page?: number }) {
+  return useQuery({
+    queryKey: QK.adminReferrals(params as Record<string, unknown>),
+    queryFn: () => listAllReferrals(params),
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useAdminVisitRequests(params?: { status?: string; camp?: string; page?: number }) {
+  return useQuery({
+    queryKey: QK.adminVisitRequests(params as Record<string, unknown>),
+    queryFn: () => listAllVisitRequests(params),
+    staleTime: 30_000,
     retry: 1,
   });
 }
