@@ -5,14 +5,17 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .models import FAQItem
-from .serializers import FAQItemSerializer
+from .models import FAQItem, AuditLog
+from .serializers import FAQItemSerializer, AuditLogSerializer
 
 
 class FAQItemViewSet(viewsets.ModelViewSet):
     """
     Public list/retrieve: returns only published items (no auth required).
     Admin create/update/delete: requires ADMIN role.
+
+    Query params:
+      lang=en|rw|fr  — adds `localised_question` + `localised_answer` to each item
     """
     serializer_class = FAQItemSerializer
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
@@ -29,6 +32,20 @@ class FAQItemViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         from apps.accounts.permissions import IsAdminUser
         return [IsAdminUser()]
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        lang = request.query_params.get('lang', 'en')
+        if lang in ('rw', 'fr'):
+            items = response.data.get('results', response.data)
+            for item in (items if isinstance(items, list) else []):
+                item['localised_question'] = (
+                    item.get(f'question_{lang}') or item.get('question', '')
+                )
+                item['localised_answer'] = (
+                    item.get(f'answer_{lang}') or item.get('answer', '')
+                )
+        return response
 
 _LANDING_CACHE_KEY = 'landing_stats_v2'
 _LANDING_CACHE_TTL = 60  # seconds
@@ -161,70 +178,48 @@ def stats_trend_view(request):
 def audit_log_view(request):
     """
     GET /api/v1/audit/log/
-    Returns paginated auditlog entries. Admin only.
-    Supports ?page=&page_size=&user=&action=
+    Returns paginated AuditLog entries (request-level mutations). Admin only.
+
+    Query params:
+      page=1          page number (default 1)
+      page_size=25    results per page (max 100)
+      user=<uuid>     filter by user id
+      action=CREATE|UPDATE|DELETE
+      path=<str>      substring match on path
     """
     from apps.accounts.permissions import IsAdminUser
-    perm_check = IsAdminUser()
-    if not (request.user and request.user.is_authenticated and perm_check.has_permission(request, None)):
-        from rest_framework.response import Response
-        from rest_framework import status as st
+    from rest_framework import status as st
+
+    if not (request.user and request.user.is_authenticated
+            and IsAdminUser().has_permission(request, None)):
         return Response({'detail': 'Admin only.'}, status=st.HTTP_403_FORBIDDEN)
 
-    try:
-        from auditlog.models import LogEntry
-    except ImportError:
-        from apps.core.responses import error_response
-        return error_response('django-auditlog not installed.', 'NOT_AVAILABLE')
-
     page_size = min(int(request.query_params.get('page_size', 25)), 100)
-    page = max(int(request.query_params.get('page', 1)), 1)
-    user_filter = request.query_params.get('user')
+    page      = max(int(request.query_params.get('page', 1)), 1)
+    user_filter   = request.query_params.get('user')
     action_filter = request.query_params.get('action')
+    path_filter   = request.query_params.get('path')
 
-    qs = LogEntry.objects.all().order_by('-timestamp')
+    qs = AuditLog.objects.all()
     if user_filter:
-        qs = qs.filter(actor_id=user_filter)
-    if action_filter is not None and action_filter != '':
-        qs = qs.filter(action=int(action_filter))
+        qs = qs.filter(user_id=user_filter)
+    if action_filter:
+        qs = qs.filter(action=action_filter.upper())
+    if path_filter:
+        qs = qs.filter(path__icontains=path_filter)
 
-    total = qs.count()
+    total  = qs.count()
     offset = (page - 1) * page_size
-    entries = qs[offset:offset + page_size]
+    page_qs = qs.select_related('user')[offset:offset + page_size]
 
-    from django.contrib.contenttypes.models import ContentType
-    from apps.accounts.models import CustomUser
-
-    results = []
-    for e in entries:
-        try:
-            ct = ContentType.objects.get_for_id(e.content_type_id)
-            model_label = f'{ct.app_label}.{ct.model}'
-        except Exception:
-            model_label = str(e.content_type_id)
-
-        actor_name = ''
-        if e.actor_id:
-            try:
-                u = CustomUser.objects.get(pk=e.actor_id)
-                actor_name = u.full_name
-            except Exception:
-                actor_name = str(e.actor_id)
-
-        results.append({
-            'id': e.pk,
-            'user': str(e.actor_id) if e.actor_id else None,
-            'user_name': actor_name,
-            'action': str(e.action),
-            'model': model_label,
-            'object_id': str(e.object_id),
-            'object_repr': e.object_repr,
-            'timestamp': e.timestamp.isoformat(),
-            'changes': e.changes,
-        })
-
-    from rest_framework.response import Response
-    return Response({'data': {'count': total, 'results': results}})
+    return Response({
+        'data': {
+            'count': total,
+            'page': page,
+            'page_size': page_size,
+            'results': AuditLogSerializer(page_qs, many=True).data,
+        }
+    })
 
 
 @api_view(['GET'])

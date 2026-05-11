@@ -66,6 +66,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.core.middleware.ZoneScopeMiddleware',
+    'apps.core.middleware.AuditLogMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
