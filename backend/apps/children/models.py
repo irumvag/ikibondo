@@ -156,6 +156,12 @@ class Child(BaseModel):
         db_index=True,
         help_text='ACTIVE (default), TRANSFERRED, DECEASED, or DEPARTED',
     )
+    # DHIS2 e-Tracker integration
+    dhis2_uid = models.CharField(
+        max_length=100, blank=True, null=True, db_index=True,
+        help_text='DHIS2 TrackedEntityInstance UID assigned after successful push.',
+    )
+
     # Soft-delete with 3-day grace period
     deletion_requested_at = models.DateTimeField(
         null=True, blank=True,

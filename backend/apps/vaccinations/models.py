@@ -73,6 +73,16 @@ class VaccinationRecord(BaseModel):
 
     notes = models.TextField(blank=True)
 
+    # DHIS2 integration
+    dhis2_event_uid = models.CharField(
+        max_length=100, blank=True, null=True, db_index=True,
+        help_text='DHIS2 tracker Event UID assigned after successful push.',
+    )
+    source = models.CharField(
+        max_length=20, default='LOCAL',
+        help_text='LOCAL (recorded in Ikibondo) or DHIS2 (pulled from registry).',
+    )
+
     class Meta:
         ordering = ['scheduled_date']
         verbose_name = 'Vaccination Record'

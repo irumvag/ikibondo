@@ -238,10 +238,33 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.vaccinations.tasks.send_vaccination_reminders',
         'schedule': crontab(hour=1, minute=0),
     },
+    # DHIS2 bidirectional sync — runs at 02:00 Kigali, after overdue detection
+    # and before the 08:00 vaccination reminder run.  No-op when credentials absent.
+    'dhis2-daily-sync': {
+        'task': 'apps.integrations.tasks.dhis2_daily_sync',
+        'schedule': crontab(hour=2, minute=0),
+    },
 }
 
 # External service credentials (populated via environment variables)
 AFRICASTALKING_USERNAME = config('AFRICASTALKING_USERNAME', default='')
+
+# DHIS2 e-Tracker credentials (Rwanda HMIS / DHIS2 instance)
+DHIS2_URL      = config('DHIS2_URL',      default='')
+DHIS2_USERNAME = config('DHIS2_USERNAME', default='')
+DHIS2_PASSWORD = config('DHIS2_PASSWORD', default='')
+# DHIS2 metadata UIDs — override per deployment (defaults are placeholders)
+DHIS2_PROGRAM_UID    = config('DHIS2_PROGRAM_UID',    default='ikibondoEPI01')
+DHIS2_TE_TYPE_UID    = config('DHIS2_TE_TYPE_UID',    default='ikibondoChild')
+DHIS2_ORG_UNIT_UID   = config('DHIS2_ORG_UNIT_UID',   default='ikibondoOU01')
+DHIS2_ATTR_REG_NUMBER = config('DHIS2_ATTR_REG_NUMBER', default='ikibondoRegNr')
+DHIS2_ATTR_FULL_NAME  = config('DHIS2_ATTR_FULL_NAME',  default='ikibondoName')
+DHIS2_ATTR_DOB        = config('DHIS2_ATTR_DOB',        default='ikibondoDOB')
+DHIS2_ATTR_SEX        = config('DHIS2_ATTR_SEX',        default='ikibondoSex')
+DHIS2_ATTR_CAMP       = config('DHIS2_ATTR_CAMP',       default='ikibondoCamp')
+DHIS2_DE_VACCINE      = config('DHIS2_DE_VACCINE',      default='ikibondoVaccine')
+DHIS2_DE_VAX_STATUS   = config('DHIS2_DE_VAX_STATUS',   default='ikibondoVaxStat')
+DHIS2_DE_BATCH        = config('DHIS2_DE_BATCH',        default='ikibondoBatch')
 AFRICASTALKING_API_KEY = config('AFRICASTALKING_API_KEY', default='')
 FCM_SERVER_KEY = config('FCM_SERVER_KEY', default='')
 
