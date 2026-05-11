@@ -249,8 +249,14 @@ function RecordDetailDrawer({ rec, onClose, onAmend }: {
 
   const factorsRaw = rec.risk_factors;
   const factorEntries: [string, number][] = Array.isArray(factorsRaw)
-    ? (factorsRaw as string[]).map((f) => [f, 1])
-    : Object.entries(factorsRaw as Record<string, number>).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    ? (factorsRaw as Array<{ feature: string; value: number } | string>).map((f) =>
+        typeof f === 'object' && f !== null && 'feature' in f
+          ? [String(f.feature), Number(f.value)]
+          : [String(f), 1]
+      )
+    : factorsRaw && typeof factorsRaw === 'object'
+      ? Object.entries(factorsRaw as Record<string, number>).sort((a, b) => b[1] - a[1]).slice(0, 6)
+      : [];
   const maxFactor = factorEntries[0]?.[1] ?? 1;
 
   const barColor =
