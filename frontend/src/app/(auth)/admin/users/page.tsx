@@ -76,7 +76,7 @@ const USER_COLUMNS = (
   allActiveUsers: AuthUser[],
 ) => [
   {
-    key: 'id' as const, header: (
+    key: 'select' as const, header: (
       <input
         type="checkbox"
         checked={allActiveUsers.length > 0 && selected.size === allActiveUsers.length}
@@ -129,7 +129,7 @@ const USER_COLUMNS = (
     render: (v: unknown) => new Date(v as string).toLocaleDateString(),
   },
   {
-    key: 'id', header: '', width: '210px',
+    key: 'actions', header: '', width: '210px',
     render: (_: unknown, row: unknown) => {
       const user = row as AuthUser;
       const isSuspended = !!user.suspended_at;
