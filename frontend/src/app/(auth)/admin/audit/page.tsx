@@ -88,20 +88,40 @@ function PredictionsTab() {
 
 const AUDIT_COLUMNS = [
   {
-    key: 'timestamp', header: 'Time', width: '160px',
+    key: 'timestamp', header: 'Time', width: '150px',
     render: (v: unknown) => new Date(v as string).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }),
   },
-  { key: 'user_name', header: 'User',   width: '150px' },
   {
-    key: 'action', header: 'Action', width: '80px',
+    key: 'user_display', header: 'User', width: '140px',
+    render: (v: unknown) => <span className="truncate max-w-[130px] inline-block" title={v as string}>{(v as string) || '—'}</span>,
+  },
+  {
+    key: 'action', header: 'Action', width: '90px',
     render: (v: unknown) => {
-      const action = (v as string).toLowerCase();
-      const variant = action === 'delete' ? 'danger' : action === 'create' ? 'success' : 'default';
-      return <Badge variant={variant} className="capitalize">{v as string}</Badge>;
+      const a = (v as string);
+      const variant = a === 'DELETE' ? 'danger' : a === 'CREATE' ? 'success' : 'default';
+      return <Badge variant={variant}>{a}</Badge>;
     },
   },
-  { key: 'model',       header: 'Resource',    width: '120px' },
-  { key: 'object_repr', header: 'Object',      width: '200px' },
+  {
+    key: 'status_code', header: 'Status', width: '75px',
+    render: (v: unknown) => {
+      const code = v as number;
+      const variant = code < 300 ? 'success' : code >= 400 ? 'danger' : 'warn';
+      return <Badge variant={variant}>{code}</Badge>;
+    },
+  },
+  { key: 'method', header: 'Method', width: '75px' },
+  {
+    key: 'path', header: 'Path', width: '240px',
+    render: (v: unknown) => (
+      <span className="font-mono text-xs truncate max-w-[230px] inline-block" title={v as string}>{v as string}</span>
+    ),
+  },
+  {
+    key: 'ip_address', header: 'IP', width: '110px',
+    render: (v: unknown) => <span className="font-mono text-xs">{(v as string) ?? '—'}</span>,
+  },
 ];
 
 function AuditLogTab() {

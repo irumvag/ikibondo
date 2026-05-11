@@ -608,7 +608,7 @@ export default function MLModelPage() {
   const { data: info, isLoading, isError } = useModelInfo();
 
   return (
-    <div className="flex flex-col gap-8 max-w-4xl">
+    <div className="flex flex-col gap-8 max-w-4xl mx-auto w-full">
       {/* Header */}
       <div>
         <h2
