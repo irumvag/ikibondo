@@ -8,6 +8,7 @@ import {
 } from './admin';
 import {
   getZoneStats, getCHWActivity, listHighRiskRecords, listCampChildren,
+  listClinicSessions,
 } from './supervisor';
 import {
   getGrowthData, getChild, getChildHistory, getChildNotes, listHealthRecords,
@@ -46,6 +47,7 @@ export const QK = {
   statsTrend:         (period: TrendPeriod) => ['stats-trend', period] as const,
   dailyPlan:          ['daily-plan'] as const,
   chwFamilies:        ['chw-families'] as const,
+  supervisorClinicSessions: (params?: Record<string, unknown>) => ['supervisor-clinic-sessions', params] as const,
   adminChildren:      (params?: Record<string, unknown>) => ['admin-children', params] as const,
   adminConsultations: (params?: Record<string, unknown>) => ['admin-consultations', params] as const,
   adminReferrals:     (params?: Record<string, unknown>) => ['admin-referrals', params] as const,
@@ -324,6 +326,15 @@ export function useDailyPlan() {
     queryFn:  listDailyPlan,
     staleTime: 5 * 60_000,
     refetchInterval: 10 * 60_000,
+    retry: 1,
+  });
+}
+
+export function useSupervisorClinicSessions(params?: { page?: number; status?: string }) {
+  return useQuery({
+    queryKey: QK.supervisorClinicSessions(params as Record<string, unknown>),
+    queryFn: () => listClinicSessions({ ...params, page_size: 20 }),
+    staleTime: 30_000,
     retry: 1,
   });
 }

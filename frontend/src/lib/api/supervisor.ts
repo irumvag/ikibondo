@@ -111,3 +111,59 @@ export async function listCampChildren(params?: {
   const count = data.pagination?.count ?? data.count ?? items.length;
   return { items, count };
 }
+
+// ── Clinic Sessions ───────────────────────────────────────────────────────────
+
+export interface ClinicSession {
+  id: string;
+  camp: string;
+  camp_name: string;
+  vaccine: string;
+  vaccine_name: string;
+  date: string;
+  status: 'OPEN' | 'CLOSED';
+  opened_by: string | null;
+  opened_by_name: string | null;
+  attendee_count: number;
+  created_at: string;
+}
+
+export interface ClinicAttendee {
+  id: string;
+  child: string;
+  child_name: string;
+  status: string;
+  recorded_at: string;
+}
+
+export async function listClinicSessions(params?: {
+  page?: number;
+  page_size?: number;
+  status?: string;
+}): Promise<{ results: ClinicSession[]; count: number }> {
+  const { data } = await apiClient.get('/vaccinations/clinic-sessions/', { params });
+  const payload = data.data ?? data;
+  return {
+    results: payload?.results ?? (Array.isArray(payload) ? payload : []),
+    count: payload?.count ?? 0,
+  };
+}
+
+export async function createClinicSession(payload: {
+  vaccine: string;
+  date: string;
+}): Promise<ClinicSession> {
+  const { data } = await apiClient.post('/vaccinations/clinic-sessions/', payload);
+  return data.data ?? data;
+}
+
+export async function closeClinicSession(id: string): Promise<ClinicSession> {
+  const { data } = await apiClient.post(`/vaccinations/clinic-sessions/${id}/close/`);
+  return data.data ?? data;
+}
+
+export async function getSessionAttendees(id: string): Promise<ClinicAttendee[]> {
+  const { data } = await apiClient.get(`/vaccinations/clinic-sessions/${id}/attendees/`);
+  const payload = data.data ?? data;
+  return Array.isArray(payload) ? payload : payload?.results ?? [];
+}
