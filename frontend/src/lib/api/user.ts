@@ -32,4 +32,5 @@ export {
   getAllNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  deleteNotification,
 } from './notifications';

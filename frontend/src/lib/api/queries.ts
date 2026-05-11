@@ -47,7 +47,7 @@ export const QK = {
 };
 
 // re-export mutation helpers so pages can import from one place
-export { markNotificationRead, markAllNotificationsRead };
+export { markNotificationRead, markAllNotificationsRead, deleteNotification } from './user';
 
 export function useLandingStats() {
   return useQuery({

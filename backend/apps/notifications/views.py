@@ -32,6 +32,13 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         self.get_queryset().filter(is_read=False).update(is_read=True)
         return success_response(message='All notifications marked as read.')
 
+    @action(detail=True, methods=['delete'], url_path='dismiss')
+    def dismiss(self, request, pk=None):
+        """DELETE /api/v1/notifications/<id>/dismiss/ — delete a notification."""
+        notification = self.get_object()
+        notification.delete()
+        return success_response(message='Notification dismissed.')
+
 
 class BroadcastViewSet(viewsets.ModelViewSet):
     """

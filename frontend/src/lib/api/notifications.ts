@@ -14,6 +14,7 @@ export interface AppNotification {
   is_read:      boolean;
   created_at:   string;
   child_name:   string | null;
+  child_id:     string | null;
 }
 
 interface BackendNotification {
@@ -24,6 +25,7 @@ interface BackendNotification {
   is_read:                   boolean;
   created_at:                string;
   sent_at:                   string | null;
+  child:                     string | null;
   child_name:                string | null;
 }
 
@@ -56,6 +58,7 @@ function adapt(n: BackendNotification): AppNotification {
     is_read:      n.is_read,
     created_at:   n.created_at ?? n.sent_at ?? new Date().toISOString(),
     child_name:   n.child_name,
+    child_id:     n.child ?? null,
   };
 }
 
@@ -83,6 +86,10 @@ export async function markNotificationRead(id: string): Promise<void> {
 
 export async function markAllNotificationsRead(): Promise<void> {
   await apiClient.patch('/notifications/read-all/');
+}
+
+export async function deleteNotification(id: string): Promise<void> {
+  await apiClient.delete(`/notifications/${id}/dismiss/`);
 }
 
 // ── Broadcasts ────────────────────────────────────────────────────────────────
