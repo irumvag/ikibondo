@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ClipboardList, Plus, X } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useHealthRecords, QK } from '@/lib/api/queries';
+import { adminAmendRecord } from '@/lib/api/admin';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -312,9 +313,85 @@ function AddHealthRecordModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ── Amend modal ───────────────────────────────────────────────────────────────
+
+function AmendModal({ record, onDone, onCancel }: {
+  record: HealthRecordDetail; onDone: () => void; onCancel: () => void;
+}) {
+  const [weightKg, setWeightKg] = useState('');
+  const [heightCm, setHeightCm] = useState('');
+  const [muacCm,   setMuacCm]   = useState('');
+  const [notes,    setNotes]    = useState('');
+  const [reason,   setReason]   = useState('');
+
+  const mut = useMutation({
+    mutationFn: () => adminAmendRecord(record.id, {
+      ...(weightKg ? { weight_kg: parseFloat(weightKg) } : {}),
+      ...(heightCm ? { height_cm: parseFloat(heightCm) } : {}),
+      ...(muacCm   ? { muac_cm:   parseFloat(muacCm)   } : {}),
+      ...(notes    ? { notes }                           : {}),
+      amendment_reason: reason,
+    }),
+    onSuccess: onDone,
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" onClick={onCancel}>
+      <div
+        className="w-full max-w-sm rounded-2xl border shadow-xl flex flex-col gap-4 p-6"
+        style={{ backgroundColor: 'var(--bg-elev)', borderColor: 'var(--border)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <p className="font-bold text-base" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
+            Amend — {record.child_name}
+          </p>
+          <button onClick={onCancel} type="button"><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
+        </div>
+        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Leave fields blank to keep current values.</p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="Weight (kg)" type="number" step="0.01" value={weightKg} onChange={e => setWeightKg(e.target.value)} placeholder="e.g. 7.5" />
+          <Input label="Height (cm)" type="number" step="0.1"  value={heightCm} onChange={e => setHeightCm(e.target.value)} placeholder="e.g. 72.0" />
+        </div>
+        <Input label="MUAC (cm)" type="number" step="0.1" value={muacCm} onChange={e => setMuacCm(e.target.value)} placeholder="e.g. 12.5" />
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Notes</label>
+          <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Optional update…"
+            className="rounded-lg border px-3 py-2 text-sm outline-none resize-none"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }} />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
+            Amendment reason <span style={{ color: 'var(--danger)' }}>*</span>
+          </label>
+          <textarea value={reason} onChange={e => setReason(e.target.value)} rows={2} placeholder="Why is this record being corrected?"
+            className="rounded-lg border px-3 py-2 text-sm outline-none resize-none"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }} />
+        </div>
+
+        {mut.isError && <p className="text-sm" style={{ color: 'var(--danger)' }}>Amendment failed. Please try again.</p>}
+
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" className="flex-1" onClick={onCancel}>Cancel</Button>
+          <Button type="button" variant="primary" className="flex-1" loading={mut.isPending}
+            onClick={() => mut.mutate()} disabled={!reason.trim() || mut.isPending}>
+            Save
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Table columns ─────────────────────────────────────────────────────────────
 
-const buildColumns = (onSelect: (r: HealthRecordDetail) => void) => [
+const buildColumns = (
+  onSelect: (r: HealthRecordDetail) => void,
+  onAmend: (r: HealthRecordDetail) => void,
+) => [
   {
     key: 'child_name', header: 'Child', width: '160px',
     render: (_: unknown, row: unknown) => {
@@ -357,28 +434,35 @@ const buildColumns = (onSelect: (r: HealthRecordDetail) => void) => [
     render: (v: unknown) => v ? `${parseFloat(v as string).toFixed(1)} cm` : '—',
   },
   {
-    key: 'id', header: '', width: '80px',
-    render: (_: unknown, row: unknown) => (
-      <button
-        type="button"
-        className="text-xs font-medium hover:underline"
-        style={{ color: 'var(--text-muted)' }}
-        onClick={() => onSelect(row as HealthRecordDetail)}
-      >
-        SHAP
-      </button>
-    ),
+    key: 'id', header: '', width: '130px',
+    render: (_: unknown, row: unknown) => {
+      const r = row as HealthRecordDetail;
+      return (
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button type="button" className="text-xs font-medium hover:underline"
+            style={{ color: 'var(--text-muted)' }} onClick={() => onSelect(r)}>
+            SHAP
+          </button>
+          <button type="button" className="text-xs font-medium hover:underline"
+            style={{ color: 'var(--primary)' }} onClick={() => onAmend(r)}>
+            Amend
+          </button>
+        </div>
+      );
+    },
   },
 ];
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function RecordsPage() {
+  const qc = useQueryClient();
   const [riskFilter, setRiskFilter]     = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage]                 = useState(1);
   const [selected, setSelected]         = useState<HealthRecordDetail | null>(null);
   const [showAdd, setShowAdd]           = useState(false);
+  const [amendTarget, setAmendTarget]   = useState<HealthRecordDetail | null>(null);
 
   const { data, isLoading } = useHealthRecords({
     risk_level:        riskFilter   || undefined,
@@ -430,7 +514,7 @@ export default function RecordsPage() {
       </div>
 
       <DataTable
-        columns={buildColumns(setSelected) as Parameters<typeof DataTable>[0]['columns']}
+        columns={buildColumns(setSelected, setAmendTarget) as Parameters<typeof DataTable>[0]['columns']}
         data={(data?.items ?? []) }
         keyField="id"
         isLoading={isLoading}
@@ -445,6 +529,18 @@ export default function RecordsPage() {
 
       {/* Add record modal */}
       {showAdd && <AddHealthRecordModal onClose={() => setShowAdd(false)} />}
+
+      {/* Amend modal */}
+      {amendTarget && (
+        <AmendModal
+          record={amendTarget}
+          onDone={() => {
+            qc.invalidateQueries({ queryKey: QK.healthRecords({}) });
+            setAmendTarget(null);
+          }}
+          onCancel={() => setAmendTarget(null)}
+        />
+      )}
 
       {/* SHAP drawer + backdrop */}
       {selected && (

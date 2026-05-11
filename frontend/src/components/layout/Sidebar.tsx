@@ -104,9 +104,10 @@ const ROLE_NAV: Record<UserRole, NavEntry[]> = {
       kind: 'group', id: 'nurse-clinical', label: 'Clinical', icon: Stethoscope,
       items: [
         { href: '/nurse/children',         label: 'Children',        icon: Baby },
-        { href: '/nurse/records',          label: 'Health Records',   icon: ClipboardList },
-        { href: '/nurse/register',         label: 'Register Child',   icon: UserPlus },
-        { href: '/nurse/vaccines',         label: 'Vaccinations',     icon: Syringe },
+        { href: '/nurse/records',          label: 'Health Records',  icon: ClipboardList },
+        { href: '/nurse/register',         label: 'Register Child',  icon: UserPlus },
+        { href: '/nurse/vaccines',         label: 'Vaccinations',    icon: Syringe },
+        { href: '/nurse/visit-requests',   label: 'Visit Requests',  icon: ClipboardCheck },
       ],
     },
     {
