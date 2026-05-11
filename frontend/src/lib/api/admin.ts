@@ -4,8 +4,11 @@ import type { FAQItem } from './public';
 
 // ── Users ─────────────────────────────────────────────────────────────────────
 
-export async function listUsers(role?: string): Promise<AuthUser[]> {
-  const { data } = await apiClient.get('/auth/users/', { params: role ? { role } : {} });
+export async function listUsers(role?: string, includeSuspended?: boolean): Promise<AuthUser[]> {
+  const params: Record<string, string> = {};
+  if (role) params.role = role;
+  if (includeSuspended) params.include_suspended = 'true';
+  const { data } = await apiClient.get('/auth/users/', { params });
   return data.data ?? [];
 }
 

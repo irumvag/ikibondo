@@ -88,10 +88,10 @@ export function useAdminFaq() {
   });
 }
 
-export function useAdminUsers(role?: string) {
+export function useAdminUsers(role?: string, includeSuspended?: boolean) {
   return useQuery({
-    queryKey: [...QK.adminUsers, role ?? 'all'],
-    queryFn: () => listUsers(role),
+    queryKey: [...QK.adminUsers, role ?? 'all', includeSuspended ? 'suspended' : 'active'],
+    queryFn: () => listUsers(role, includeSuspended),
     staleTime: 30_000,
     retry: 1,
   });

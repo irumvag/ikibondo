@@ -64,8 +64,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = [
             'id', 'email', 'full_name', 'role', 'phone_number', 'national_id', 'camp', 'camp_name',
-            'is_approved', 'must_change_password', 'preferred_language', 'theme_preference',
+            'is_approved', 'is_active', 'must_change_password', 'preferred_language', 'theme_preference',
             'notification_prefs', 'onboarded_at', 'has_guardian_record', 'guardian_id', 'date_joined',
+            'suspended_at', 'suspension_reason',
         ]
         read_only_fields = ['id', 'email', 'date_joined', 'is_approved', 'must_change_password', 'role', 'camp']
 

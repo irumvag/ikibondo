@@ -190,7 +190,12 @@ def create_user_view(request):
                                 Nurse: PARENT only, auto-approved, scoped to nurse's camp.
     """
     if request.method == 'GET':
-        qs = CustomUser.objects.filter(is_active=True).order_by('-date_joined')
+        include_suspended = request.query_params.get('include_suspended') == 'true'
+        # Admins can view suspended accounts; others always see active only
+        if request.user.role == UserRole.ADMIN and include_suspended:
+            qs = CustomUser.objects.all().order_by('-date_joined')
+        else:
+            qs = CustomUser.objects.filter(is_active=True).order_by('-date_joined')
         if request.user.role == UserRole.NURSE:
             # Nurses see PARENT accounts in their camp
             qs = qs.filter(role=UserRole.PARENT, camp=request.user.camp)

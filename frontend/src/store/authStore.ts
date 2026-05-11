@@ -18,6 +18,9 @@ export interface AuthUser {
   onboarded_at: string | null;
   notification_prefs?: Record<string, unknown>;
   has_guardian_record?: boolean;
+  suspended_at?: string | null;
+  suspension_reason?: string | null;
+  is_active?: boolean;
 }
 
 interface AuthState {
