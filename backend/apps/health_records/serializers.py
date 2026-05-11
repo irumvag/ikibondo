@@ -7,6 +7,12 @@ class HealthRecordSerializer(serializers.ModelSerializer):
     recorded_by_name = serializers.CharField(source='recorded_by.full_name', read_only=True, allow_null=True)
     nutrition_status_display = serializers.CharField(source='get_nutrition_status_display', read_only=True)
     zone_name = serializers.CharField(source='zone.name', read_only=True, allow_null=True)
+    # data_source has a model default of 'manual'; make it optional on input
+    data_source = serializers.ChoiceField(
+        choices=[('manual', 'Manual'), ('iot', 'IoT/BLE Device')],
+        default='manual',
+        required=False,
+    )
 
     class Meta:
         model = HealthRecord
@@ -33,7 +39,7 @@ class HealthRecordSerializer(serializers.ModelSerializer):
             'data_source', 'notes', 'created_at',
         ]
         read_only_fields = [
-            'id', 'zone',
+            'id', 'recorded_by', 'zone',
             'weight_for_height_z', 'height_for_age_z', 'weight_for_age_z', 'bmi_z',
             'nutrition_status', 'risk_level', 'risk_factors', 'model_version',
             'ml_predicted_status', 'ml_confidence', 'ml_risk_flags',
