@@ -11,16 +11,33 @@ import type { FAQItem } from '@/lib/api/public';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 
+type Lang = 'en' | 'rw' | 'fr';
+
+const LANG_LABELS: Record<Lang, string> = { en: 'English', rw: 'Kinyarwanda', fr: 'Français' };
+
 // ── Inline editor ──────────────────────────────────────────────────────────────
+type FAQPayload = Pick<FAQItem,
+  'question' | 'answer' |
+  'question_rw' | 'answer_rw' |
+  'question_fr' | 'answer_fr' |
+  'order' | 'is_published'
+>;
+
 interface EditorProps {
   initial?: Partial<FAQItem>;
-  onSave: (payload: Pick<FAQItem, 'question' | 'answer' | 'order' | 'is_published'>) => Promise<void>;
+  onSave: (payload: FAQPayload) => Promise<void>;
   onCancel: () => void;
 }
 
 function FAQEditor({ initial, onSave, onCancel }: EditorProps) {
+  const [lang, setLang] = useState<Lang>('en');
+
   const [question,    setQuestion]    = useState(initial?.question    ?? '');
   const [answer,      setAnswer]      = useState(initial?.answer      ?? '');
+  const [questionRw,  setQuestionRw]  = useState(initial?.question_rw ?? '');
+  const [answerRw,    setAnswerRw]    = useState(initial?.answer_rw   ?? '');
+  const [questionFr,  setQuestionFr]  = useState(initial?.question_fr ?? '');
+  const [answerFr,    setAnswerFr]    = useState(initial?.answer_fr   ?? '');
   const [order,       setOrder]       = useState(initial?.order       ?? 0);
   const [isPublished, setIsPublished] = useState(initial?.is_published ?? true);
   const [saving,      setSaving]      = useState(false);
@@ -28,13 +45,22 @@ function FAQEditor({ initial, onSave, onCancel }: EditorProps) {
 
   const handleSave = async () => {
     if (!question.trim() || !answer.trim()) {
-      setError('Question and answer are required.');
+      setError('English question and answer are required.');
       return;
     }
     setSaving(true);
     setError('');
     try {
-      await onSave({ question: question.trim(), answer: answer.trim(), order, is_published: isPublished });
+      await onSave({
+        question: question.trim(),
+        answer: answer.trim(),
+        question_rw: questionRw.trim(),
+        answer_rw: answerRw.trim(),
+        question_fr: questionFr.trim(),
+        answer_fr: answerFr.trim(),
+        order,
+        is_published: isPublished,
+      });
     } catch {
       setError('Failed to save. Please try again.');
     } finally {
@@ -53,26 +79,65 @@ function FAQEditor({ initial, onSave, onCancel }: EditorProps) {
     outline: 'none',
   };
 
+  const currentQuestion = lang === 'en' ? question   : lang === 'rw' ? questionRw : questionFr;
+  const currentAnswer   = lang === 'en' ? answer     : lang === 'rw' ? answerRw   : answerFr;
+  const setCurrentQ = lang === 'en' ? setQuestion   : lang === 'rw' ? setQuestionRw : setQuestionFr;
+  const setCurrentA = lang === 'en' ? setAnswer     : lang === 'rw' ? setAnswerRw   : setAnswerFr;
+
   return (
     <div
       className="rounded-2xl border p-5 flex flex-col gap-4"
       style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
     >
+      {/* Lang tabs */}
+      <div className="flex gap-1 p-1 rounded-xl" style={{ backgroundColor: 'var(--bg-sand)' }}>
+        {(['en', 'rw', 'fr'] as Lang[]).map((l) => (
+          <button
+            key={l}
+            type="button"
+            onClick={() => setLang(l)}
+            className="flex-1 text-xs font-semibold py-1.5 rounded-lg transition-colors"
+            style={{
+              backgroundColor: lang === l ? 'var(--bg-elev)' : 'transparent',
+              color: lang === l ? 'var(--ink)' : 'var(--text-muted)',
+            }}
+          >
+            {LANG_LABELS[l]}
+            {l !== 'en' && (
+              <span
+                className="ml-1 text-[10px] px-1 rounded-full"
+                style={{
+                  backgroundColor: (l === 'rw' ? questionRw : questionFr).trim() ? '#f0fdf4' : 'var(--bg-sand)',
+                  color: (l === 'rw' ? questionRw : questionFr).trim() ? 'var(--success)' : 'var(--text-muted)',
+                }}
+              >
+                {(l === 'rw' ? questionRw : questionFr).trim() ? '✓' : '—'}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Question</label>
+        <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+          Question {lang !== 'en' && <span className="font-normal opacity-70">({LANG_LABELS[lang]})</span>}
+          {lang !== 'en' && <span className="ml-1 font-normal opacity-50">optional</span>}
+        </label>
         <input
-          value={question}
-          onChange={e => setQuestion(e.target.value)}
-          placeholder="Enter question…"
+          value={currentQuestion}
+          onChange={(e) => setCurrentQ(e.target.value)}
+          placeholder={lang === 'en' ? 'Enter question…' : `${LANG_LABELS[lang]} translation…`}
           style={inputStyle}
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Answer</label>
+        <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+          Answer {lang !== 'en' && <span className="font-normal opacity-70">({LANG_LABELS[lang]})</span>}
+        </label>
         <textarea
-          value={answer}
-          onChange={e => setAnswer(e.target.value)}
-          placeholder="Enter answer…"
+          value={currentAnswer}
+          onChange={(e) => setCurrentA(e.target.value)}
+          placeholder={lang === 'en' ? 'Enter answer…' : `${LANG_LABELS[lang]} translation…`}
           rows={4}
           style={{ ...inputStyle, resize: 'vertical' }}
         />
@@ -84,14 +149,14 @@ function FAQEditor({ initial, onSave, onCancel }: EditorProps) {
             type="number"
             min={0}
             value={order}
-            onChange={e => setOrder(Number(e.target.value))}
+            onChange={(e) => setOrder(Number(e.target.value))}
             style={{ ...inputStyle, width: '5rem' }}
           />
         </div>
         <div className="flex items-center gap-2 mt-5">
           <button
             type="button"
-            onClick={() => setIsPublished(v => !v)}
+            onClick={() => setIsPublished((v) => !v)}
             className="flex items-center gap-2 text-sm font-medium"
             style={{ color: isPublished ? 'var(--success)' : 'var(--text-muted)' }}
           >
@@ -127,6 +192,9 @@ function FAQRow({
   onDelete: () => void;
   onTogglePublish: () => void;
 }) {
+  const hasRw = !!(item.question_rw?.trim());
+  const hasFr = !!(item.question_fr?.trim());
+
   return (
     <div
       className="flex items-start gap-3 px-4 py-4 border-b last:border-b-0"
@@ -134,7 +202,7 @@ function FAQRow({
     >
       <GripVertical size={16} className="mt-0.5 shrink-0" style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
+        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
           <span
             className="text-xs font-bold px-2 py-0.5 rounded-full"
             style={{
@@ -145,6 +213,12 @@ function FAQRow({
             {item.is_published ? 'Published' : 'Draft'}
           </span>
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>#{item.order}</span>
+          {/* i18n coverage dots */}
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#f0fdf4', color: 'var(--success)' }}>EN</span>
+          {hasRw && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#f0fdf4', color: 'var(--success)' }}>RW</span>}
+          {hasFr && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: '#f0fdf4', color: 'var(--success)' }}>FR</span>}
+          {!hasRw && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' }}>RW</span>}
+          {!hasFr && <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' }}>FR</span>}
         </div>
         <p className="text-sm font-semibold truncate" style={{ color: 'var(--ink)' }}>
           {item.question}
@@ -200,13 +274,13 @@ export default function AdminFAQPage() {
 
   const refresh = () => qc.invalidateQueries({ queryKey: QK.adminFaq });
 
-  const handleCreate = async (payload: Pick<FAQItem, 'question' | 'answer' | 'order' | 'is_published'>) => {
+  const handleCreate = async (payload: FAQPayload) => {
     await createFaqItem(payload);
     await refresh();
     setCreating(false);
   };
 
-  const handleUpdate = async (id: string, payload: Pick<FAQItem, 'question' | 'answer' | 'order' | 'is_published'>) => {
+  const handleUpdate = async (id: string, payload: FAQPayload) => {
     await updateFaqItem(id, payload);
     await refresh();
     setEditingId(null);
@@ -239,7 +313,9 @@ export default function AdminFAQPage() {
             FAQ Management
           </h2>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {isLoading ? '—' : `${allItems.length} item${allItems.length !== 1 ? 's' : ''} · ${allItems.filter(i => i.is_published).length} published`}
+            {isLoading
+              ? '—'
+              : `${allItems.length} item${allItems.length !== 1 ? 's' : ''} · ${allItems.filter((i) => i.is_published).length} published`}
           </p>
         </div>
         {!creating && (
@@ -261,7 +337,7 @@ export default function AdminFAQPage() {
       {/* List */}
       {isLoading ? (
         <div className="flex flex-col gap-3">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
         </div>
       ) : sorted.length === 0 ? (
         <div
@@ -278,7 +354,7 @@ export default function AdminFAQPage() {
           className="rounded-2xl border overflow-hidden"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
         >
-          {sorted.map(item => (
+          {sorted.map((item) =>
             editingId === item.id ? (
               <div key={item.id} className="border-b last:border-b-0 p-4" style={{ borderColor: 'var(--border)' }}>
                 <FAQEditor
@@ -296,7 +372,7 @@ export default function AdminFAQPage() {
                 onTogglePublish={() => handleTogglePublish(item)}
               />
             )
-          ))}
+          )}
         </div>
       )}
     </div>

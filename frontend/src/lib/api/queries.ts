@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getLandingStats, getPublicCamps, listFaq } from './public';
+import { getLandingStats, getPublicCamps, listFaq, getStatsTrend, type TrendPeriod } from './public';
 import {
   listUsers, getPendingApprovals, listCamps, listZones,
   listAllFaqItems, listAuditLog,
@@ -40,7 +40,8 @@ export const QK = {
   childVaccinations:  (childId: string) => ['child-vaccinations', childId] as const,
   notifications:      ['notifications'] as const,
   allNotifications:   ['all-notifications'] as const,
-  auditLog:           (page?: number) => ['audit-log', page] as const,
+  auditLog:           (params?: Record<string, unknown>) => ['audit-log', params] as const,
+  statsTrend:         (period: TrendPeriod) => ['stats-trend', period] as const,
   dailyPlan:          ['daily-plan'] as const,
   chwFamilies:        ['chw-families'] as const,
 };
@@ -291,12 +292,23 @@ export function useAllNotifications() {
   });
 }
 
-export function useAuditLog(page = 1) {
+export function useAuditLog(params?: { page?: number; user?: string; action?: string; path?: string }) {
+  const page = params?.page ?? 1;
   return useQuery({
-    queryKey: QK.auditLog(page),
-    queryFn:  () => listAuditLog({ page, page_size: 30 }),
+    queryKey: QK.auditLog(params as Record<string, unknown>),
+    queryFn:  () => listAuditLog({ page, page_size: 30, ...params }),
     staleTime: 60_000,
     retry: 1,
+  });
+}
+
+export function useStatsTrend(period: TrendPeriod = '30d') {
+  return useQuery({
+    queryKey: QK.statsTrend(period),
+    queryFn:  () => getStatsTrend(period),
+    staleTime: 5 * 60_000,
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 }
 

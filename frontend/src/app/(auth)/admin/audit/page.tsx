@@ -106,7 +106,7 @@ const AUDIT_COLUMNS = [
 
 function AuditLogTab() {
   const [page, setPage] = useState(1);
-  const { data, isLoading } = useAuditLog(page);
+  const { data, isLoading } = useAuditLog({ page });
   const totalPages = Math.ceil((data?.count ?? 0) / 30);
 
   return (
