@@ -34,3 +34,47 @@ class BaseModel(models.Model):
         """Restore a soft-deleted record."""
         self.is_active = True
         self.save(update_fields=['is_active', 'updated_at'])
+
+
+class FAQItem(BaseModel):
+    """Frequently-asked question shown on the public landing page and About page."""
+
+    question     = models.CharField(max_length=500)
+    answer       = models.TextField()
+    order        = models.PositiveIntegerField(default=0)
+    is_published = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['order', 'created_at']
+        verbose_name = 'FAQ Item'
+
+    def __str__(self):
+        return self.question[:80]
+
+
+class SyncOperation(models.Model):
+    """
+    Idempotency log for offline batch sync operations submitted by CHWs.
+
+    Each operation carries a client-generated UUID. If the same UUID is
+    submitted again (e.g. due to network retry), the stored result is
+    returned without re-processing.
+    """
+    OP_CREATE_VISIT = 'create_visit'
+    OP_REGISTER_CHILD = 'register_child'
+    OP_ADMINISTER_VACCINE = 'administer_vaccine'
+
+    client_id = models.UUIDField(unique=True, db_index=True)
+    user = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.CASCADE,
+        related_name='sync_operations',
+    )
+    op = models.CharField(max_length=30)
+    status = models.CharField(max_length=10)  # ok | conflict | error
+    response_data = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Sync Operation'

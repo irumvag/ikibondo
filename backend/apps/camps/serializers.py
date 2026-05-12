@@ -23,6 +23,8 @@ class CampStatsSerializer(serializers.Serializer):
     mam_count = serializers.IntegerField()
     normal_count = serializers.IntegerField()
     vaccination_coverage_percent = serializers.FloatField()
+    high_risk_count = serializers.IntegerField()
+    active_chw_count = serializers.IntegerField()
 
 
 class CampZoneSerializer(serializers.ModelSerializer):
@@ -35,7 +37,7 @@ class CampZoneSerializer(serializers.ModelSerializer):
             'estimated_households', 'estimated_population', 'status',
             'is_active', 'created_at',
         ]
-        read_only_fields = ['id', 'created_at', 'camp_name']
+        read_only_fields = ['id', 'created_at', 'camp', 'camp_name']
 
 
 class ZoneCoordinatorAssignmentSerializer(serializers.ModelSerializer):

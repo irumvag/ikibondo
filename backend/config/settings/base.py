@@ -216,6 +216,14 @@ AFRICASTALKING_API_KEY = config('AFRICASTALKING_API_KEY', default='')
 FCM_SERVER_KEY = config('FCM_SERVER_KEY', default='')
 
 # ---------------------------------------------------------------------------
+# Email
+# ---------------------------------------------------------------------------
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Ikibondo <noreply@ikibondo.rw>')
+SERVER_EMAIL = config('SERVER_EMAIL', default='noreply@ikibondo.rw')
+EMAIL_TIMEOUT = 10
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+
+# ---------------------------------------------------------------------------
 # ML Models directory
 # ---------------------------------------------------------------------------
 ML_MODELS_DIR = BASE_DIR.parent / 'ml' / 'models'

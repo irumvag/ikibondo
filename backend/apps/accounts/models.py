@@ -62,10 +62,19 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_approved = models.BooleanField(default=False, help_text='Must be approved by a manager before logging in')
+    must_change_password = models.BooleanField(
+        default=False,
+        help_text='Force the user to change their password on next login (set when admin/supervisor creates the account)',
+    )
     preferred_language = models.CharField(
         max_length=5,
         choices=[('rw', 'Kinyarwanda'), ('fr', 'French'), ('en', 'English')],
         default='rw',
+    )
+    theme_preference = models.CharField(
+        max_length=10,
+        choices=[('system', 'System'), ('light', 'Light'), ('dark', 'Dark')],
+        default='system',
     )
     date_joined = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

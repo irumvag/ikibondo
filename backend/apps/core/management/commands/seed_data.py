@@ -45,14 +45,14 @@ class Command(BaseCommand):
         self._create_health_records(children, users)
 
         self.stdout.write(self.style.SUCCESS('\nSeed data created successfully!'))
-        self.stdout.write(self.style.SUCCESS('─' * 50))
+        self.stdout.write(self.style.SUCCESS('-' * 50))
         self.stdout.write(self.style.SUCCESS('Login credentials:'))
-        self.stdout.write(f'  Admin:      admin@ikibondo.rw / admin123')
-        self.stdout.write(f'  Supervisor: supervisor@ikibondo.rw / super123')
-        self.stdout.write(f'  CHW 1:      chw1@ikibondo.rw / chw123')
-        self.stdout.write(f'  CHW 2:      chw2@ikibondo.rw / chw123')
-        self.stdout.write(f'  Nurse:      nurse@ikibondo.rw / nurse123')
-        self.stdout.write(self.style.SUCCESS('─' * 50))
+        self.stdout.write('  Admin:      admin@ikibondo.rw / admin123')
+        self.stdout.write('  Supervisor: supervisor@ikibondo.rw / super123')
+        self.stdout.write('  CHW 1:      chw1@ikibondo.rw / chw123')
+        self.stdout.write('  CHW 2:      chw2@ikibondo.rw / chw123')
+        self.stdout.write('  Nurse:      nurse@ikibondo.rw / nurse123')
+        self.stdout.write(self.style.SUCCESS('-' * 50))
 
     def _reset(self):
         from apps.health_records.models import HealthRecord

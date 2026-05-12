@@ -41,6 +41,7 @@ def predict_risk(request):
 def model_info(request):
     """GET /api/v1/ml/model-info/"""
     from apps.ml_engine.prediction_service import PredictionService
+    from apps.ml_engine.loader import ModelLoader
     meta_path = _SAVED_MODELS_DIR / 'model_metadata.json'
     metadata = {}
     if meta_path.exists():
@@ -50,10 +51,57 @@ def model_info(request):
         except Exception:
             pass
     return success_response(data={
+        # Primary risk model (PredictionService)
         'model_loaded': PredictionService.is_loaded,
         'version': metadata.get('version', 'unknown'),
         'trained_at': metadata.get('trained_at'),
         'macro_f1': metadata.get('macro_f1'),
         'high_recall': metadata.get('high_recall'),
         'n_features': 25,
+        # All three secondary models (ModelLoader)
+        'models': {
+            'malnutrition': ModelLoader.is_loaded('malnutrition'),
+            'growth': ModelLoader.is_loaded('growth'),
+            'vaccination': ModelLoader.is_loaded('vaccination'),
+        },
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_predictions(request):
+    """
+    GET /api/v1/ml/predictions/
+    Returns recent MLPredictionLog entries for admin audit view.
+    Query params: limit (default 50), model (malnutrition|growth|vaccination)
+    """
+    from .models import MLPredictionLog
+    from apps.accounts.permissions import IsAdminUser
+
+    if not (request.user.role in ('ADMIN', 'SUPERVISOR')):
+        from rest_framework.response import Response
+        from rest_framework import status as http_status
+        from apps.core.responses import error_response
+        return error_response('Forbidden', 'FORBIDDEN', status_code=http_status.HTTP_403_FORBIDDEN)
+
+    qs = MLPredictionLog.objects.select_related('child').order_by('-created_at')
+    model_filter = request.query_params.get('model')
+    if model_filter:
+        qs = qs.filter(model_name=model_filter)
+    limit = min(int(request.query_params.get('limit', 50)), 200)
+    qs = qs[:limit]
+
+    data = [
+        {
+            'id': str(p.id),
+            'child_id': str(p.child_id),
+            'child_name': p.child.full_name,
+            'model_name': p.model_name,
+            'model_version': p.model_version,
+            'predicted_label': p.predicted_label,
+            'confidence': float(p.confidence),
+            'created_at': p.created_at.isoformat(),
+        }
+        for p in qs
+    ]
+    return success_response(data=data)

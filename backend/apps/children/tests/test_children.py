@@ -2,7 +2,7 @@ import pytest
 from datetime import date, timedelta
 from django.urls import reverse
 from rest_framework.test import APIClient
-from apps.accounts.tests.factories import UserFactory
+from apps.accounts.tests.factories import UserFactory, NurseFactory
 from apps.camps.tests.factories import CampFactory
 from .factories import ChildFactory, GuardianFactory
 
@@ -18,19 +18,26 @@ def chw(db):
 
 
 @pytest.fixture
+def nurse(db):
+    return NurseFactory(email='nurse@test.rw', password='testpass')
+
+
+@pytest.fixture
 def camp(db):
     return CampFactory(name='TestCamp')
 
 
 @pytest.fixture
 def child(db, camp, chw):
-    return ChildFactory(camp=camp, registered_by=chw)
+    # CHW is assigned to the guardian so they can see the child
+    guardian = GuardianFactory(assigned_chw=chw)
+    return ChildFactory(camp=camp, registered_by=chw, guardian=guardian)
 
 
 @pytest.mark.django_db
 class TestChildRegistration:
-    def test_register_child_creates_vaccination_schedule(self, client, chw, camp):
-        client.force_authenticate(user=chw)
+    def test_register_child_creates_vaccination_schedule(self, client, nurse, camp):
+        client.force_authenticate(user=nurse)
         resp = client.post(reverse('child-list'), {
             'full_name': 'Test Child',
             'date_of_birth': str(date.today() - timedelta(days=60)),
@@ -50,8 +57,8 @@ class TestChildRegistration:
         child = Child.objects.get(full_name='Test Child')
         assert child.vaccinations.count() > 0
 
-    def test_registration_number_auto_generated(self, client, chw, camp):
-        client.force_authenticate(user=chw)
+    def test_registration_number_auto_generated(self, client, nurse, camp):
+        client.force_authenticate(user=nurse)
         resp = client.post(reverse('child-list'), {
             'full_name': 'Auto Reg Child',
             'date_of_birth': str(date.today() - timedelta(days=90)),
@@ -66,6 +73,21 @@ class TestChildRegistration:
         assert resp.status_code == 201
         assert resp.data['data']['registration_number'] is not None
 
+    def test_chw_cannot_register_child(self, client, chw, camp):
+        client.force_authenticate(user=chw)
+        resp = client.post(reverse('child-list'), {
+            'full_name': 'Blocked Child',
+            'date_of_birth': str(date.today() - timedelta(days=30)),
+            'sex': 'M',
+            'camp': str(camp.id),
+            'guardian': {
+                'full_name': 'Guardian',
+                'phone_number': '+250789999997',
+                'relationship': 'father',
+            }
+        }, format='json')
+        assert resp.status_code == 403
+
 
 @pytest.mark.django_db
 class TestChildList:
@@ -73,6 +95,7 @@ class TestChildList:
         client.force_authenticate(user=chw)
         resp = client.get(reverse('child-list'))
         assert resp.status_code == 200
+        # CHW sees only children of their assigned guardians
         assert len(resp.data['results']) >= 1
 
     def test_filter_by_camp(self, client, chw, child, camp):

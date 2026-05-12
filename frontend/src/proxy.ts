@@ -1,0 +1,104 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+// Routes anyone can visit without a session
+const PUBLIC_PATHS = ['/', '/about', '/login', '/register'];
+
+// Routes available to any authenticated user regardless of role
+const SHARED_AUTH_PATHS = ['/profile', '/notifications'];
+
+function isSharedAuth(pathname: string) {
+  return SHARED_AUTH_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + '/'),
+  );
+}
+
+// Where each role lands after login
+const ROLE_HOME: Record<string, string> = {
+  ADMIN:      '/admin',
+  SUPERVISOR: '/supervisor',
+  NURSE:      '/nurse',
+  CHW:        '/chw',
+  PARENT:     '/parent',
+};
+
+// Prefixes a role is allowed to visit (their own + public)
+const ROLE_PREFIX: Record<string, string> = {
+  ADMIN:      '/admin',
+  SUPERVISOR: '/supervisor',
+  NURSE:      '/nurse',
+  CHW:        '/chw',
+  PARENT:     '/parent',
+};
+
+function isPublic(pathname: string) {
+  return PUBLIC_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + '/'),
+  );
+}
+
+// Paths exempt from the force-password-change redirect
+const FORCE_PW_EXEMPT = ['/profile', '/notifications', '/login', '/logout'];
+
+function isForcePwExempt(pathname: string) {
+  return FORCE_PW_EXEMPT.some(
+    (p) => pathname === p || pathname.startsWith(p + '/'),
+  );
+}
+
+export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Skip Next internals + static files
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.includes('.')
+  ) {
+    return NextResponse.next();
+  }
+
+  // Role stored as a plain (non-sensitive) cookie set on login
+  const role = request.cookies.get('_ikibondo_role')?.value;
+
+  // Unauthenticated user hitting a protected route → login
+  if (!role && !isPublic(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    url.searchParams.set('next', pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // Force-password-change hard block: redirect every protected page to /profile?force=1
+  if (role) {
+    const mustChangePw = request.cookies.get('_ikibondo_must_change_pw')?.value;
+    if (mustChangePw === '1' && !isPublic(pathname) && !isForcePwExempt(pathname)) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/profile';
+      url.searchParams.set('force', '1');
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Authenticated user hitting login/register → their home dashboard
+  if (role && (pathname === '/login' || pathname === '/register')) {
+    const url = request.nextUrl.clone();
+    url.pathname = ROLE_HOME[role] ?? '/';
+    return NextResponse.redirect(url);
+  }
+
+  // Authenticated user trying to access another role's routes → their home
+  if (role && !isPublic(pathname) && !isSharedAuth(pathname)) {
+    const allowed = ROLE_PREFIX[role];
+    if (allowed && !pathname.startsWith(allowed)) {
+      const url = request.nextUrl.clone();
+      url.pathname = ROLE_HOME[role] ?? '/';
+      return NextResponse.redirect(url);
+    }
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+};

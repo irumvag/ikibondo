@@ -1,0 +1,17 @@
+Inscription recue - Ikibondo
+============================
+
+Bonjour {{ full_name }},
+
+Merci de vous etre inscrit sur Ikibondo.
+
+Votre compte est EN ATTENTE D'APPROBATION par un superviseur.
+Vous recevrez un email une fois approuve.
+
+Email enregistre : {{ email }}
+
+---
+Questions ? Ecrivez a support@ikibondo.rw.
+
+Ikibondo - Systeme de surveillance de la sante des enfants
+{{ frontend_url }}

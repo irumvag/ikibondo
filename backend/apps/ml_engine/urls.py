@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views_risk import predict_risk, model_info
+from .views_risk import predict_risk, model_info, list_predictions
 
 urlpatterns = [
     # Legacy endpoints (kept for backward-compat)
@@ -10,4 +10,5 @@ urlpatterns = [
     # New unified risk endpoint
     path('predict/', predict_risk, name='ml-predict-risk'),
     path('model-info/', model_info, name='ml-model-info'),
+    path('predictions/', list_predictions, name='ml-prediction-list'),
 ]

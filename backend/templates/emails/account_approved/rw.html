@@ -1,0 +1,16 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>Konti yawe yemejwe</h1>
+<p>Muraho <strong>{{ full_name }}</strong>,</p>
+<p>Inkuru nziza! Konti yawe ya <strong>Ikibondo</strong> <strong>yemejwe</strong>. Ubu ushoboye kwinjira no kureba amakuru y'ubuzima bw'abana bawe.</p>
+
+<p>
+  <a href="{{ login_url }}" class="cta">Injira kuri Ikibondo</a>
+</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  Ufite ibibazo? Andikira
+  <a href="mailto:support@ikibondo.rw">support@ikibondo.rw</a>.
+</p>
+{% endblock %}

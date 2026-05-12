@@ -5,6 +5,7 @@ from .models import Child
 
 class ChildFilter(django_filters.FilterSet):
     camp = django_filters.UUIDFilter(field_name='camp__id')
+    zone = django_filters.UUIDFilter(field_name='zone__id')
     sex = django_filters.CharFilter(field_name='sex')
     age_min = django_filters.NumberFilter(method='filter_age_min')
     age_max = django_filters.NumberFilter(method='filter_age_max')
@@ -12,7 +13,7 @@ class ChildFilter(django_filters.FilterSet):
 
     class Meta:
         model = Child
-        fields = ['camp', 'sex']
+        fields = ['camp', 'zone', 'sex']
 
     def filter_age_min(self, queryset, name, value):
         """Filter children whose age_months >= value."""

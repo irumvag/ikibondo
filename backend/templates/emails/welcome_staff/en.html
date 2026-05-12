@@ -1,0 +1,27 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>Welcome to Ikibondo</h1>
+<p>Hello <strong>{{ full_name }}</strong>,</p>
+<p>Your account has been created on the <strong>Ikibondo</strong> child health monitoring platform. You can log in using the credentials below.</p>
+
+<div class="credential-box">
+  <strong>Email</strong>
+  <code>{{ email }}</code>
+</div>
+<div class="credential-box">
+  <strong>Temporary Password</strong>
+  <code>{{ temp_password }}</code>
+</div>
+
+<p>
+  <a href="{{ login_url }}" class="cta">Log In Now</a>
+</p>
+
+<p><strong>Important:</strong> You will be asked to change your password the first time you log in. Please choose a strong, unique password.</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  If you did not expect this account, please contact your supervisor or email
+  <a href="mailto:support@ikibondo.rw">support@ikibondo.rw</a>.
+</p>
+{% endblock %}

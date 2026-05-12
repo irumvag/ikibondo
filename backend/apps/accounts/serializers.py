@@ -62,9 +62,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = [
             'id', 'email', 'full_name', 'role', 'phone_number', 'camp', 'camp_name',
-            'is_approved', 'preferred_language', 'date_joined',
+            'is_approved', 'must_change_password', 'preferred_language', 'theme_preference', 'date_joined',
         ]
-        read_only_fields = ['id', 'date_joined']
+        read_only_fields = ['id', 'date_joined', 'is_approved', 'must_change_password', 'role', 'camp']
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -90,8 +90,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
-    """Admin-created user (auto-approved)."""
-    password = serializers.CharField(write_only=True, min_length=8)
+    """Admin / supervisor-created user — auto-approved, password optional (auto-generated if blank)."""
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True, min_length=8, default='')
     guardian_id = serializers.UUIDField(required=False, allow_null=True, write_only=True)
 
     class Meta:
@@ -99,15 +99,21 @@ class UserCreateSerializer(serializers.ModelSerializer):
         fields = ['email', 'full_name', 'role', 'phone_number', 'camp', 'password', 'guardian_id', 'preferred_language']
 
     def create(self, validated_data):
+        import secrets
         guardian_id = validated_data.pop('guardian_id', None)
-        password = validated_data.pop('password')
+        raw_password = validated_data.pop('password', '') or ''
+        if not raw_password:
+            raw_password = secrets.token_urlsafe(10)
         validated_data['is_approved'] = True
+        validated_data['must_change_password'] = True
         user = CustomUser(**validated_data)
-        user.set_password(password)
+        user.set_password(raw_password)
         user.save()
         if guardian_id and validated_data.get('role') == 'PARENT':
             from apps.children.models import Guardian
             Guardian.objects.filter(id=guardian_id).update(user=user)
+        # Stash generated password so the view can include it in the welcome email
+        user._generated_password = raw_password
         return user
 
 
@@ -115,6 +121,13 @@ class ApproveUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ['is_approved']
+
+
+class UserAdminUpdateSerializer(serializers.ModelSerializer):
+    """Admin PATCH on any user — can edit role, camp, approval status."""
+    class Meta:
+        model = CustomUser
+        fields = ['full_name', 'email', 'phone_number', 'role', 'camp', 'is_approved']
 
 
 class ChangePasswordSerializer(serializers.Serializer):
