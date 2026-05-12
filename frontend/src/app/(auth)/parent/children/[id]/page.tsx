@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Heart, Syringe, Calendar, CheckCircle,
@@ -282,9 +283,24 @@ interface ChildData {
   feeding_type?: 'BREAST' | 'FORMULA' | 'MIXED' | null;
 }
 
+const VALID_TABS: Tab[] = ['status', 'vaccines', 'visits', 'notes', 'requests', 'growth', 'qr'];
+
 export default function ParentChildDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { id }   = use(params);
-  const [tab, setTab] = useState<Tab>('status');
+  const { id }        = use(params);
+  const router        = useRouter();
+  const searchParams  = useSearchParams();
+
+  const rawTab = searchParams.get('tab') as Tab | null;
+  const initialTab: Tab = rawTab && VALID_TABS.includes(rawTab) ? rawTab : 'status';
+  const [tab, setTab] = useState<Tab>(initialTab);
+
+  // Keep URL in sync when tab changes
+  function handleTabChange(next: Tab) {
+    setTab(next);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', next);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }
 
   const { data: rawChild,  isLoading: childLoading  } = useChild(id);
   const { data: history,   isLoading: histLoading   } = useChildHistory(id);
@@ -410,7 +426,7 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
         <div
           className="flex items-start gap-3 px-4 py-3.5 rounded-2xl border text-sm cursor-pointer"
           style={{ background: 'color-mix(in srgb, var(--warn) 8%, var(--bg-elev))', borderColor: 'var(--warn)' }}
-          onClick={() => setTab('notes')}
+          onClick={() => handleTabChange('notes')}
         >
           <Pin size={15} style={{ color: 'var(--warn)', flexShrink: 0, marginTop: 2 }} />
           <div className="flex-1">
@@ -428,7 +444,7 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
       {/* Tabs */}
       <Tabs
         active={tab}
-        onChange={(k) => setTab(k as Tab)}
+        onChange={(k) => handleTabChange(k as Tab)}
         tabs={TABS}
       />
 
