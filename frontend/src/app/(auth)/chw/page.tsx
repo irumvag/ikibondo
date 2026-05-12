@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import {
   Baby, Syringe, RefreshCw, Stethoscope, AlertTriangle,
-  CalendarDays, Activity, MessageSquare, ClipboardCheck,
+  CalendarDays, Activity, MessageSquare, ClipboardCheck, QrCode,
 } from 'lucide-react';
+import { Alert } from '@/components/ui/Alert';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import { KPICard } from '@/components/ui/KPICard';
@@ -20,6 +21,7 @@ const QUICK_ACTIONS = [
   { href: '/chw/vaccines',     icon: Syringe,         label: 'Vaccine queue',     desc: 'Administer scheduled doses.' },
   { href: '/chw/consultations',icon: MessageSquare,   label: 'Ask a nurse',       desc: 'Open or continue a consultation.' },
   { href: '/chw/requests',     icon: ClipboardCheck,  label: 'Visit requests',    desc: 'Requests from parents in your caseload.' },
+  { href: '/chw/scan',         icon: QrCode,          label: 'Scan QR',           desc: 'Scan a child\'s QR card for instant lookup.' },
 ];
 
 export default function CHWDashboard() {
@@ -59,6 +61,24 @@ export default function CHWDashboard() {
         </p>
       </div>
 
+      {/* ── Scan QR shortcut ── */}
+      <Link
+        href="/chw/scan"
+        className="flex items-center gap-4 rounded-2xl p-4 transition-all hover:opacity-90 active:scale-[0.98]"
+        style={{ backgroundColor: 'var(--ink)', color: 'var(--bg)' }}
+      >
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}>
+          <QrCode size={20} />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-semibold">Scan child QR card</p>
+          <p className="text-xs mt-0.5" style={{ opacity: 0.7 }}>Open camera to look up a child instantly</p>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.6 }}>
+          <path d="M6 12l4-4-4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </Link>
+
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KPICard
@@ -95,22 +115,11 @@ export default function CHWDashboard() {
 
       {/* Alert banner — high risk children */}
       {highRiskCount > 0 && (
-        <Link
-          href="/chw/today"
-          className="flex items-center gap-3 rounded-xl px-4 py-3.5 transition-opacity hover:opacity-80"
-          style={{ background: '#fef2f2', border: '1px solid var(--danger)' }}
-        >
-          <AlertTriangle size={18} style={{ color: 'var(--danger)', flexShrink: 0 }} />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold" style={{ color: 'var(--danger)' }}>
-              {highRiskCount} high-risk child{highRiskCount !== 1 ? 'ren' : ''} need attention today
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--danger)', opacity: 0.75 }}>
-              Tap to view today's priority visit plan
-            </p>
-          </div>
-          <span className="text-xs font-medium shrink-0" style={{ color: 'var(--danger)' }}>View →</span>
-        </Link>
+        <Alert variant="danger" title={`${highRiskCount} high-risk child${highRiskCount !== 1 ? 'ren' : ''} need attention today`}>
+          <Link href="/chw/today" className="underline font-medium">
+            View today's priority visit plan →
+          </Link>
+        </Alert>
       )}
 
       {/* Quick actions */}
@@ -123,12 +132,12 @@ export default function CHWDashboard() {
             <Link
               key={href}
               href={href}
-              className="flex items-start gap-3.5 p-4 rounded-xl border transition-colors hover:bg-[var(--bg-sand)]"
-              style={{ borderColor: 'var(--border)', background: 'var(--card)' }}
+              className="flex items-start gap-3.5 p-4 rounded-xl border transition-all hover:bg-[var(--bg-sand)] hover:shadow-[var(--shadow-sm)]"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
             >
               <div
                 className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
-                style={{ backgroundColor: 'var(--bg-elev)', color: 'var(--primary)' }}
+                style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}
               >
                 <Icon size={18} />
               </div>
@@ -143,17 +152,11 @@ export default function CHWDashboard() {
 
       {/* Sync prompt */}
       {pending.length > 0 && (
-        <Link
-          href="/chw/sync"
-          className="flex items-center gap-3 rounded-xl px-4 py-3.5 transition-opacity hover:opacity-80"
-          style={{ background: 'color-mix(in srgb, var(--warn) 10%, transparent)', border: '1px solid var(--warn)' }}
-        >
-          <RefreshCw size={16} style={{ color: 'var(--warn)', flexShrink: 0 }} />
-          <p className="text-sm font-medium flex-1" style={{ color: 'var(--ink)' }}>
-            {pending.length} record{pending.length !== 1 ? 's' : ''} waiting to sync — tap to upload
-          </p>
-          <span className="text-xs font-medium shrink-0" style={{ color: 'var(--warn)' }}>Sync →</span>
-        </Link>
+        <Alert variant="warn" title={`${pending.length} record${pending.length !== 1 ? 's' : ''} waiting to sync`}>
+          <Link href="/chw/sync" className="underline font-medium">
+            Tap to upload now →
+          </Link>
+        </Alert>
       )}
     </div>
   );
