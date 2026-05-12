@@ -49,6 +49,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     full_name = models.CharField(max_length=200)
     role = models.CharField(max_length=20, choices=UserRole.choices, default=UserRole.CHW)
     phone_number = models.CharField(max_length=20, blank=True, unique=True, null=True, db_index=True)
+    national_id = models.CharField(max_length=50, blank=True, null=True, unique=True, db_index=True)
 
     # Camp assignment — null for ADMIN users who oversee multiple camps
     camp = models.ForeignKey(
@@ -75,6 +76,19 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         max_length=10,
         choices=[('system', 'System'), ('light', 'Light'), ('dark', 'Dark')],
         default='system',
+    )
+    # Notification preferences: {"sms": {"HIGH_RISK": true, "VAX_REMINDER": true}, "push": {...}}
+    notification_prefs = models.JSONField(default=dict, blank=True)
+    # Set when a user completes the onboarding wizard for their role
+    onboarded_at = models.DateTimeField(null=True, blank=True)
+    # Account suspension
+    suspended_at = models.DateTimeField(null=True, blank=True)
+    suspension_reason = models.TextField(blank=True)
+    suspended_by = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='suspended_users',
     )
     date_joined = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -111,3 +125,33 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     @property
     def is_parent(self):
         return self.role == UserRole.PARENT
+
+
+class ConsentRecord(models.Model):
+    """
+    Consent v1: single-scope "data collection & use under UNHCR policy".
+    Granular consent (research, DHIS2 sharing) deferred to backlog.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='consent_records',
+    )
+    scope = models.CharField(
+        max_length=50,
+        default='data_collection',
+        help_text='Consent scope identifier',
+    )
+    version = models.CharField(max_length=10, default='1.0')
+    granted = models.BooleanField(default=True)
+    granted_at = models.DateTimeField(auto_now_add=True)
+    withdrawn_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-granted_at']
+        verbose_name = 'Consent Record'
+
+    def __str__(self):
+        state = 'granted' if self.granted and not self.withdrawn_at else 'withdrawn'
+        return f'{self.user.full_name} — {self.scope} — {state}'

@@ -49,6 +49,8 @@ LOCAL_APPS = [
     'apps.vaccinations',
     'apps.ml_engine',
     'apps.notifications',
+    'apps.consultations',
+    'apps.referrals',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -64,6 +66,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.core.middleware.ZoneScopeMiddleware',
+    'apps.core.middleware.AuditLogMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -161,6 +164,17 @@ REST_FRAMEWORK = {
     ),
     # Required for drf-spectacular to generate the OpenAPI schema
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # Rate limiting — auth endpoints use stricter limits
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '60/minute',
+        'user': '300/minute',
+        'auth_login': '10/minute',
+        'auth_otp': '3/hour',
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -196,22 +210,62 @@ CELERY_TIMEZONE = 'Africa/Kigali'
 # Celery Beat schedule for recurring tasks (all times in Africa/Kigali = UTC+2)
 from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
+    # Vaccination reminders: 7-day, 3-day, 1-day, same-day windows
+    # Runs at 08:00 Kigali — parents read phones in the morning
     'send-vaccination-reminders-daily': {
         'task': 'apps.notifications.tasks.daily_vaccination_reminder',
         'schedule': crontab(hour=8, minute=0),
     },
+    # Overdue alerts: marks MISSED + sends alerts for 1/7/14/21 days overdue
+    # Runs at 00:30 so MISSED status is set before the morning reminder run
     'compute-overdue-vaccines-daily': {
         'task': 'apps.notifications.tasks.compute_overdue_vaccines',
         'schedule': crontab(hour=0, minute=30),
     },
+    # Zone KPI digest to supervisors
     'daily-zone-summary': {
         'task': 'apps.notifications.tasks.daily_zone_summary',
         'schedule': crontab(hour=18, minute=0),
+    },
+    # Purge deletion-requested children after grace period
+    'purge-scheduled-child-deletions': {
+        'task': 'children.purge_scheduled_deletions',
+        'schedule': crontab(hour=2, minute=0),
+    },
+    # Vaccination dropout ML scoring — runs after overdue detection so MISSED
+    # counts are up-to-date; scores upcoming doses and flags HIGH-risk children
+    # to their assigned CHW before the 08:00 parent reminder run.
+    'vaccination-dropout-scoring': {
+        'task': 'apps.vaccinations.tasks.send_vaccination_reminders',
+        'schedule': crontab(hour=1, minute=0),
+    },
+    # DHIS2 bidirectional sync — runs at 02:00 Kigali, after overdue detection
+    # and before the 08:00 vaccination reminder run.  No-op when credentials absent.
+    'dhis2-daily-sync': {
+        'task': 'apps.integrations.tasks.dhis2_daily_sync',
+        'schedule': crontab(hour=2, minute=0),
     },
 }
 
 # External service credentials (populated via environment variables)
 AFRICASTALKING_USERNAME = config('AFRICASTALKING_USERNAME', default='')
+
+# DHIS2 e-Tracker credentials (Rwanda HMIS / DHIS2 instance)
+DHIS2_URL      = config('DHIS2_URL',      default='')
+DHIS2_USERNAME = config('DHIS2_USERNAME', default='')
+DHIS2_PASSWORD = config('DHIS2_PASSWORD', default='')
+# DHIS2 metadata UIDs — override per deployment (defaults are placeholders)
+DHIS2_PROGRAM_UID    = config('DHIS2_PROGRAM_UID',    default='ikibondoEPI01')
+DHIS2_TE_TYPE_UID    = config('DHIS2_TE_TYPE_UID',    default='ikibondoChild')
+DHIS2_ORG_UNIT_UID   = config('DHIS2_ORG_UNIT_UID',   default='ikibondoOU01')
+DHIS2_ATTR_REG_NUMBER = config('DHIS2_ATTR_REG_NUMBER', default='ikibondoRegNr')
+DHIS2_ATTR_FULL_NAME  = config('DHIS2_ATTR_FULL_NAME',  default='ikibondoName')
+DHIS2_ATTR_DOB        = config('DHIS2_ATTR_DOB',        default='ikibondoDOB')
+DHIS2_ATTR_SEX        = config('DHIS2_ATTR_SEX',        default='ikibondoSex')
+DHIS2_ATTR_CAMP       = config('DHIS2_ATTR_CAMP',       default='ikibondoCamp')
+DHIS2_DE_VACCINE      = config('DHIS2_DE_VACCINE',      default='ikibondoVaccine')
+DHIS2_DE_VAX_STATUS   = config('DHIS2_DE_VAX_STATUS',   default='ikibondoVaxStat')
+DHIS2_DE_BATCH        = config('DHIS2_DE_BATCH',        default='ikibondoBatch')
 AFRICASTALKING_API_KEY = config('AFRICASTALKING_API_KEY', default='')
 FCM_SERVER_KEY = config('FCM_SERVER_KEY', default='')
 
@@ -236,6 +290,13 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'AI-driven child health monitoring for refugee camps in Rwanda.',
     'VERSION': '2.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    # Resolve enum naming collisions — dotted path to TextChoices class
+    'ENUM_NAME_OVERRIDES': {
+        'VaccinationDoseStatusEnum':      'apps.vaccinations.models.DoseStatus',
+        'NotificationDeliveryStatusEnum': 'apps.notifications.models.NotificationStatus',
+    },
+    # Silence "unable to guess serializer" for @api_view FBVs — they use custom envelope responses
+    'COMPONENT_NO_READ_ONLY_REQUIRED': False,
 }
 
 # ---------------------------------------------------------------------------

@@ -114,3 +114,19 @@ body {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* ── Print: growth chart only ───────────────────────────────────────────── */
+@media print {
+  /* Hide everything except the chart print region */
+  body > * { display: none !important; }
+  .print-region {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    padding: 24px;
+    background: #fff;
+    color: #000;
+  }
+  .print-region * { color: #000 !important; }
+  .no-print { display: none !important; }
+}

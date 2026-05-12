@@ -1,0 +1,15 @@
+IKIBONDO — ⚠ Overdue Vaccination
+
+Hello {{ parent_name }},
+
+{{ child_name }}'s {{ vaccine_name }} vaccination was due on {{ due_date }}
+and has NOT yet been recorded. It is now {{ days_overdue }} day(s) overdue.
+
+Please visit your nearest health facility as soon as possible.
+
+View vaccination schedule: {{ frontend_url }}/parent/children/{{ child_id }}
+
+If you have already received this vaccine, please inform your CHW or nurse
+so they can update the record.
+
+— The Ikibondo Team

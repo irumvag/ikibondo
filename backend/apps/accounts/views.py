@@ -1,9 +1,17 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.openapi import OpenApiTypes
+
+
+class LoginThrottle(AnonRateThrottle):
+    """Stricter rate limit for login attempts — 10/minute per IP."""
+    scope = 'auth_login'
 
 from apps.core.responses import success_response, created_response, error_response
 from .serializers import (
@@ -17,12 +25,13 @@ from .serializers import (
     ChangePasswordSerializer,
 )
 from .permissions import IsAdminUser, IsSupervisorOrAdmin, IsStaffCreator, IsStaffCreatorOrNurse, IsNurseOrSupervisorOrAdmin
-from .models import CustomUser, UserRole
+from .models import CustomUser, UserRole, ConsentRecord
 
 
 class LoginView(TokenObtainPairView):
     """POST /api/v1/auth/login/ — returns JWT access + refresh + user profile."""
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [LoginThrottle]
 
     def post(self, request, *args, **kwargs):
         # Support both the standard email/password and identifier/password flows.
@@ -46,6 +55,7 @@ class LoginView(TokenObtainPairView):
         return success_response(data=response.data, message='Login successful.')
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
@@ -61,6 +71,7 @@ def logout_view(request):
         return error_response('Invalid or expired token.', 'INVALID_TOKEN')
 
 
+@extend_schema(exclude=True)
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def me_view(request):
@@ -77,6 +88,7 @@ def me_view(request):
     return success_response(data=UserProfileSerializer(request.user).data)
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_view(request):
@@ -165,6 +177,7 @@ def _send_pending_review_emails(user):
         pass
 
 
+@extend_schema(exclude=True)
 @api_view(['GET', 'POST'])
 @permission_classes([IsStaffCreatorOrNurse])
 def create_user_view(request):
@@ -177,7 +190,12 @@ def create_user_view(request):
                                 Nurse: PARENT only, auto-approved, scoped to nurse's camp.
     """
     if request.method == 'GET':
-        qs = CustomUser.objects.filter(is_active=True).order_by('-date_joined')
+        include_suspended = request.query_params.get('include_suspended') == 'true'
+        # Admins can view suspended accounts; others always see active only
+        if request.user.role == UserRole.ADMIN and include_suspended:
+            qs = CustomUser.objects.all().order_by('-date_joined')
+        else:
+            qs = CustomUser.objects.filter(is_active=True).order_by('-date_joined')
         if request.user.role == UserRole.NURSE:
             # Nurses see PARENT accounts in their camp
             qs = qs.filter(role=UserRole.PARENT, camp=request.user.camp)
@@ -186,6 +204,14 @@ def create_user_view(request):
         role = request.query_params.get('role')
         if role:
             qs = qs.filter(role=role)
+        search = request.query_params.get('search', '').strip()
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(full_name__icontains=search) |
+                Q(phone_number__icontains=search) |
+                Q(email__icontains=search)
+            )
         return success_response(data=UserProfileSerializer(qs, many=True).data)
 
     # --- POST: create user ---
@@ -267,6 +293,7 @@ def _send_welcome_staff_email(user, temp_password: str):
         pass
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def change_password_view(request):
@@ -289,6 +316,7 @@ def change_password_view(request):
     return success_response(message='Password changed successfully.')
 
 
+@extend_schema(exclude=True)
 @api_view(['PATCH', 'DELETE'])
 @permission_classes([IsAdminUser])
 def manage_user_view(request, user_id):
@@ -322,18 +350,24 @@ def manage_user_view(request, user_id):
     return error_response(str(serializer.errors), 'VALIDATION_ERROR')
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsNurseOrSupervisorOrAdmin])
 def pending_approvals_view(request):
     """GET /api/v1/auth/pending-approvals/ — list unapproved users in the requester's camp."""
     qs = CustomUser.objects.filter(is_approved=False, is_active=True)
     # Nurse/Supervisor only see their own camp's pending users
-    if request.user.role in ('NURSE', 'SUPERVISOR') and request.user.camp_id:
+    if request.user.role in ('NURSE', 'SUPERVISOR'):
+        if not request.user.camp_id:
+            # A nurse/supervisor without a camp assignment (e.g. camp deleted via SET_NULL)
+            # must not see any pending users — return 403 to prevent global enumeration.
+            return error_response('Your account has no camp assigned. Contact an admin.', 'FORBIDDEN', status_code=status.HTTP_403_FORBIDDEN)
         qs = qs.filter(camp=request.user.camp)
     serializer = UserProfileSerializer(qs, many=True)
     return success_response(data=serializer.data)
 
 
+@extend_schema(exclude=True)
 @api_view(['PATCH'])
 @permission_classes([IsNurseOrSupervisorOrAdmin])
 def approve_user_view(request, user_id):
@@ -343,9 +377,12 @@ def approve_user_view(request, user_id):
     except CustomUser.DoesNotExist:
         return error_response('User not found.', 'NOT_FOUND', status_code=status.HTTP_404_NOT_FOUND)
 
-    # Nurse/Supervisor can only approve users in their own camp
-    if request.user.role in ('NURSE', 'SUPERVISOR') and user.camp_id != request.user.camp_id:
-        return error_response('Permission denied.', 'FORBIDDEN', status_code=status.HTTP_403_FORBIDDEN)
+    # Nurse/Supervisor can only approve users in their own camp.
+    # Guard against null camp_id: None != None evaluates False, which would incorrectly
+    # allow a camp-less nurse to approve camp-less users.
+    if request.user.role in ('NURSE', 'SUPERVISOR'):
+        if not request.user.camp_id or user.camp_id != request.user.camp_id:
+            return error_response('Permission denied.', 'FORBIDDEN', status_code=status.HTTP_403_FORBIDDEN)
 
     user.is_approved = True
     user.save(update_fields=['is_approved', 'updated_at'])
@@ -357,6 +394,149 @@ def approve_user_view(request, user_id):
         data=UserProfileSerializer(user).data,
         message=f'{user.full_name} approved successfully.',
     )
+
+
+@extend_schema(exclude=True)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def suspend_user_view(request, user_id):
+    """
+    POST /api/v1/auth/users/<user_id>/suspend/
+    Body: {"reason": "...", "suspended": true|false}
+    Admin only. Toggles account suspension.
+    """
+    if request.user.role != UserRole.ADMIN:
+        return error_response('Admin only.', 'FORBIDDEN', status_code=403)
+    try:
+        target = CustomUser.objects.get(id=user_id)
+    except CustomUser.DoesNotExist:
+        return error_response('User not found.', 'NOT_FOUND', status_code=404)
+
+    suspended = request.data.get('suspended', True)
+    from django.utils import timezone
+    if suspended:
+        target.suspended_at = timezone.now()
+        target.suspension_reason = request.data.get('reason', '')
+        target.suspended_by = request.user
+        target.is_active = False
+    else:
+        target.suspended_at = None
+        target.suspension_reason = ''
+        target.suspended_by = None
+        target.is_active = True
+    target.save(update_fields=['suspended_at', 'suspension_reason', 'suspended_by', 'is_active', 'updated_at'])
+    return success_response(
+        data=UserProfileSerializer(target).data,
+        message='User suspension status updated.',
+    )
+
+
+@extend_schema(exclude=True)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def bulk_suspend_view(request):
+    """
+    POST /api/v1/auth/users/bulk-suspend/
+    Body: {"user_ids": ["<uuid>", ...], "reason": "...", "suspended": true}
+    Admin only.
+    """
+    if request.user.role != UserRole.ADMIN:
+        return error_response('Admin only.', 'FORBIDDEN', status_code=403)
+    user_ids = request.data.get('user_ids', [])
+    reason = request.data.get('reason', '')
+    suspended = request.data.get('suspended', True)
+    from django.utils import timezone
+    count = 0
+    for uid in user_ids[:100]:
+        try:
+            target = CustomUser.objects.get(id=uid)
+            if suspended:
+                target.suspended_at = timezone.now()
+                target.suspension_reason = reason
+                target.suspended_by = request.user
+                target.is_active = False
+            else:
+                target.suspended_at = None
+                target.suspension_reason = ''
+                target.suspended_by = None
+                target.is_active = True
+            target.save(update_fields=['suspended_at', 'suspension_reason', 'suspended_by', 'is_active', 'updated_at'])
+            count += 1
+        except CustomUser.DoesNotExist:
+            pass
+    return success_response(data={'affected': count}, message=f'{count} user(s) updated.')
+
+
+@extend_schema(exclude=True)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def complete_onboarding_view(request):
+    """POST /api/v1/auth/onboarding/complete/ — mark onboarding done for the current user."""
+    from django.utils import timezone
+    user = request.user
+    if user.onboarded_at:
+        return success_response(message='Already onboarded.', data=UserProfileSerializer(user).data)
+    user.onboarded_at = timezone.now()
+    user.save(update_fields=['onboarded_at', 'updated_at'])
+    return success_response(data=UserProfileSerializer(user).data, message='Onboarding complete.')
+
+
+@extend_schema(exclude=True)
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def consent_view(request):
+    """
+    GET  /api/v1/auth/consent/ — list current user's consent records.
+    POST /api/v1/auth/consent/ — grant consent (body: {scope, version}).
+    """
+    if request.method == 'POST':
+        scope = request.data.get('scope', 'data_collection')
+        version = request.data.get('version', '1.0')
+        record = ConsentRecord.objects.create(
+            user=request.user, scope=scope, version=version, granted=True
+        )
+        return created_response(
+            data={
+                'id': str(record.id),
+                'scope': record.scope,
+                'version': record.version,
+                'granted': record.granted,
+                'granted_at': record.granted_at.isoformat(),
+                'withdrawn_at': None,
+            },
+            message='Consent recorded.',
+        )
+    records = ConsentRecord.objects.filter(user=request.user)
+    data = [
+        {
+            'id': str(r.id),
+            'scope': r.scope,
+            'version': r.version,
+            'granted': r.granted,
+            'granted_at': r.granted_at.isoformat(),
+            'withdrawn_at': r.withdrawn_at.isoformat() if r.withdrawn_at else None,
+        }
+        for r in records
+    ]
+    return success_response(data=data)
+
+
+@extend_schema(exclude=True)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def consent_withdraw_view(request, consent_id):
+    """POST /api/v1/auth/consent/<consent_id>/withdraw/ — withdraw a consent record."""
+    from django.utils import timezone
+    try:
+        record = ConsentRecord.objects.get(id=consent_id, user=request.user)
+    except ConsentRecord.DoesNotExist:
+        return error_response('Consent record not found.', 'NOT_FOUND', status_code=404)
+    if record.withdrawn_at:
+        return error_response('Already withdrawn.', 'ALREADY_WITHDRAWN')
+    record.withdrawn_at = timezone.now()
+    record.granted = False
+    record.save(update_fields=['withdrawn_at', 'granted'])
+    return success_response(message='Consent withdrawn.')
 
 
 def _send_account_approved_email(user):

@@ -8,7 +8,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.core.responses import success_response, created_response, error_response
 from apps.accounts.models import UserRole
-from .models import HealthRecord, ClinicalNote
+from .models import HealthRecord, ClinicalNote, AmendmentLog
 from .serializers import HealthRecordSerializer, ClinicalNoteSerializer
 
 logger = logging.getLogger(__name__)
@@ -17,10 +17,37 @@ logger = logging.getLogger(__name__)
 class HealthRecordViewSet(viewsets.ModelViewSet):
     queryset = HealthRecord.objects.select_related('child', 'recorded_by', 'zone').all()
     serializer_class = HealthRecordSerializer
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['child', 'nutrition_status', 'measurement_date', 'risk_level', 'zone']
+    search_fields = ['child__full_name', 'child__registration_number']
     ordering_fields = ['measurement_date', 'created_at']
-    http_method_names = ['get', 'post', 'head', 'options']  # Records are immutable once saved
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']  # patch only via /amend/ action
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = HealthRecord.objects.select_related('child', 'recorded_by', 'zone').filter(is_active=True)
+        # Scope by camp for nurses and supervisors
+        if user.role in (UserRole.NURSE, UserRole.SUPERVISOR) and user.camp_id:
+            qs = qs.filter(child__camp_id=user.camp_id)
+        elif user.role == UserRole.CHW:
+            qs = qs.filter(child__guardian__assigned_chw=user)
+        elif user.role == UserRole.PARENT:
+            qs = qs.filter(child__guardian__user=user)
+        return qs.order_by('-measurement_date')
+
+    def list(self, request, *args, **kwargs):
+        """Override list to return the standard {data, pagination} envelope."""
+        from rest_framework.response import Response
+        qs = self.filter_queryset(self.get_queryset())
+        total = qs.count()
+        page = self.paginate_queryset(qs)
+        items = self.get_serializer(page if page is not None else qs, many=True).data
+        return Response({
+            'success': True,
+            'data': items,
+            'pagination': {'count': total},
+            'message': '',
+        })
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -30,13 +57,16 @@ class HealthRecordViewSet(viewsets.ModelViewSet):
         # Run ML prediction synchronously so the response includes risk_level + risk_factors
         self._run_prediction(record)
 
-        # If HIGH risk — trigger async notifications
+        # If HIGH risk — notify immediately (sync fallback when Celery unavailable)
         if record.risk_level == 'HIGH':
+            from apps.notifications.tasks import notify_high_risk
             try:
-                from apps.notifications.tasks import notify_high_risk
                 notify_high_risk.delay(str(record.id))
-            except Exception as e:
-                logger.warning('Failed to enqueue notify_high_risk for record %s: %s', record.id, e)
+            except Exception:
+                try:
+                    notify_high_risk(str(record.id))
+                except Exception as e:
+                    logger.warning('notify_high_risk failed for record %s: %s', record.id, e)
 
         return created_response(
             data=HealthRecordSerializer(record).data,
@@ -98,6 +128,66 @@ class HealthRecordViewSet(viewsets.ModelViewSet):
         return created_response(
             data=ClinicalNoteSerializer(note).data,
             message='Clinical note added.',
+        )
+
+    @action(detail=True, methods=['patch'], url_path='amend')
+    def amend(self, request, pk=None):
+        """
+        PATCH /api/v1/health-records/<id>/amend/
+        Body: {<fields to amend>, reason: "..."}
+        CHW: 24 h window from record creation. Nurse/Admin: any time.
+        Creates AmendmentLog + updates the record.
+        """
+        record = self.get_object()
+        reason = request.data.get('reason', '').strip()
+        if not reason:
+            return error_response('reason is required for amendments.', 'VALIDATION_ERROR')
+
+        user = request.user
+        # CHW: can only amend records they personally recorded, within 24 h
+        if user.role == UserRole.CHW:
+            if record.recorded_by_id != user.pk:
+                return error_response(
+                    'You can only amend records you personally recorded.',
+                    'FORBIDDEN',
+                    status_code=403,
+                )
+            age = timezone.now() - record.created_at
+            if age.total_seconds() > 86400:
+                return error_response(
+                    'CHW amendment window has expired (24 h from record creation).',
+                    'AMENDMENT_WINDOW_EXPIRED',
+                    status_code=403,
+                )
+
+        # Snapshot before
+        allowed_fields = ['weight_kg', 'height_cm', 'muac_cm', 'oedema', 'notes',
+                          'temperature_c', 'respiratory_rate', 'heart_rate', 'spo2']
+        update_data = {k: v for k, v in request.data.items() if k in allowed_fields}
+        if not update_data:
+            return error_response('No amendable fields provided.', 'VALIDATION_ERROR')
+
+        before_data = {k: str(getattr(record, k, '')) for k in update_data}
+
+        serializer = self.get_serializer(record, data=update_data, partial=True)
+        if not serializer.is_valid():
+            return error_response(str(serializer.errors), 'VALIDATION_ERROR')
+        serializer.save()
+
+        after_data = {k: str(getattr(record, k, '')) for k in update_data}
+
+        from django.contrib.contenttypes.models import ContentType
+        AmendmentLog.objects.create(
+            content_type=ContentType.objects.get_for_model(HealthRecord),
+            object_id=record.id,
+            amended_by=user,
+            reason=reason,
+            before_data=before_data,
+            after_data=after_data,
+        )
+        return success_response(
+            data=HealthRecordSerializer(record).data,
+            message='Record amended and logged.',
         )
 
     @action(detail=False, methods=['get'], url_path='zone-summary')
@@ -171,8 +261,11 @@ class ClinicalNoteViewSet(
 
 from rest_framework.decorators import api_view, permission_classes
 from apps.children.models import Child
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.openapi import OpenApiTypes
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def growth_data_view(request, child_id):

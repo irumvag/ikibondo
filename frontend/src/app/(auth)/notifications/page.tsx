@@ -1,14 +1,46 @@
 'use client';
 
 import { useState } from 'react';
-import { BellOff, CheckCheck, Bell } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { BellOff, CheckCheck, Check, Trash2 } from 'lucide-react';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useAllNotifications, QK } from '@/lib/api/queries';
-import { markNotificationRead, markAllNotificationsRead } from '@/lib/api/queries';
+import {
+  markNotificationRead, markAllNotificationsRead, deleteNotification,
+} from '@/lib/api/queries';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+import { useAuthStore } from '@/store/authStore';
+import type { AppNotification } from '@/lib/api/notifications';
+
+// ── Navigation map ─────────────────────────────────────────────────────────────
+
+function resolveLink(n: AppNotification, role: string): string | null {
+  const t = n.trigger_type;
+  // Visit-related
+  if (t === 'VISIT_REQUESTED' || t === 'MISSED_VISIT')           return '/chw/requests';
+  if (t === 'VISIT_ACCEPTED' || t === 'VISIT_DECLINED' ||
+      t === 'VISIT_COMPLETED' || t === 'VISIT_WITHDRAWN')        return '/parent/request-visit';
+  // Health / risk
+  if (t === 'SAM_ALERT' || t === 'HIGH_RISK_ALERT' || t === 'GROWTH_RISK') {
+    if (role === 'PARENT')        return n.child_id ? `/parent/children/${n.child_id}` : '/parent';
+    if (role === 'CHW')           return '/chw/records';
+    if (role === 'SUPERVISOR')    return '/supervisor/ai-oversight';
+    return '/nurse/children';
+  }
+  // Vaccination
+  if (t === 'VACCINATION_REMINDER' || t === 'VACCINATION_OVERDUE') {
+    if (role === 'PARENT') return '/parent/vaccines';
+    if (role === 'CHW')    return '/chw/caseload';
+    return '/nurse/children';
+  }
+  // Admin / supervisor
+  if (t === 'ZONE_SUMMARY')  return '/supervisor/analytics';
+  if (t === 'CHW_INACTIVE')  return '/supervisor/staff';
+  if (t === 'BROADCAST')     return null;
+  return null;
+}
 
 const NOTIF_ICON: Record<string, string> = {
   SAM_ALERT:            '🚨',
@@ -19,6 +51,11 @@ const NOTIF_ICON: Record<string, string> = {
   MISSED_VISIT:         '🏠',
   ZONE_SUMMARY:         '📋',
   CHW_INACTIVE:         '👤',
+  VISIT_REQUESTED:      '🏠',
+  VISIT_ACCEPTED:       '✅',
+  VISIT_DECLINED:       '❌',
+  VISIT_COMPLETED:      '🎉',
+  BROADCAST:            '📢',
 };
 
 const TYPE_FILTER_OPTIONS = [
@@ -31,24 +68,130 @@ const TYPE_FILTER_OPTIONS = [
   { value: 'MISSED_VISIT', label: 'Missed Visit' },
   { value: 'ZONE_SUMMARY', label: 'Zone Summary' },
   { value: 'CHW_INACTIVE', label: 'CHW Inactive' },
+  { value: 'VISIT_REQUESTED', label: 'Visit Request' },
 ];
 
 function fmtDate(iso: string | null | undefined) {
   if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-  } catch { return iso; }
+  try { return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }); }
+  catch { return iso; }
 }
 
-export default function AllNotificationsPage() {
-  const qc = useQueryClient();
-  const { data: notifications, isLoading } = useAllNotifications();
-  const [typeFilter, setTypeFilter] = useState('');
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
-  const [dismissing, setDismissing] = useState<string | null>(null);
-  const [markingAll, setMarkingAll] = useState(false);
+// ── Row ────────────────────────────────────────────────────────────────────────
 
-  const all = notifications ?? [];
+function NotifRow({
+  n, role,
+  onRead, onDelete,
+  isMarkingRead, isDeleting,
+}: {
+  n: AppNotification;
+  role: string;
+  onRead: () => void;
+  onDelete: () => void;
+  isMarkingRead: boolean;
+  isDeleting: boolean;
+}) {
+  const router = useRouter();
+  const link = resolveLink(n, role);
+
+  function handleRowClick() {
+    if (!n.is_read) onRead();
+    if (link) router.push(link);
+  }
+
+  return (
+    <div
+      className="flex items-start gap-3 px-4 py-3.5 border-b last:border-b-0 transition-colors group"
+      style={{
+        borderColor:     'var(--border)',
+        backgroundColor: n.is_read ? 'var(--bg-elev)' : 'color-mix(in srgb, var(--warn) 6%, var(--bg-elev))',
+        cursor:          link ? 'pointer' : 'default',
+      }}
+      onClick={link ? handleRowClick : undefined}
+    >
+      {/* Unread dot */}
+      <div className="mt-2 shrink-0 w-2">
+        {!n.is_read && (
+          <span className="block w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--warn)' }} />
+        )}
+      </div>
+
+      {/* Emoji icon */}
+      <span className="text-lg shrink-0 mt-0.5" aria-hidden="true">
+        {NOTIF_ICON[n.trigger_type] ?? '📢'}
+      </span>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{n.title}</p>
+          {link && (
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>→ tap to view</span>
+          )}
+        </div>
+        {n.child_name && (
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            Child: {n.child_name}
+          </p>
+        )}
+        <p className="text-xs mt-0.5 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+          {n.body}
+        </p>
+        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>
+          {fmtDate(n.created_at)}
+        </p>
+      </div>
+
+      {/* Actions — stop propagation so clicks on buttons don't nav */}
+      <div
+        className="flex items-center gap-1 shrink-0 ml-1"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Mark read */}
+        {!n.is_read && (
+          <button
+            title="Mark as read"
+            disabled={isMarkingRead}
+            onClick={onRead}
+            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors hover:bg-[color-mix(in_srgb,var(--success)_12%,transparent)] disabled:opacity-40"
+            style={{ color: 'var(--success)' }}
+          >
+            {isMarkingRead
+              ? <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
+              : <Check size={14} />}
+          </button>
+        )}
+
+        {/* Delete */}
+        <button
+          title="Delete notification"
+          disabled={isDeleting}
+          onClick={onDelete}
+          className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] disabled:opacity-40"
+          style={{ color: 'var(--danger)' }}
+        >
+          {isDeleting
+            ? <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
+            : <Trash2 size={13} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Page ───────────────────────────────────────────────────────────────────────
+
+export default function AllNotificationsPage() {
+  const qc   = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const role = user?.role ?? 'PARENT';
+
+  const { data: notifications, isLoading } = useAllNotifications();
+  const [typeFilter, setTypeFilter]         = useState('');
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [markingAll, setMarkingAll]         = useState(false);
+
+  const all         = notifications ?? [];
   const unreadCount = all.filter((n) => !n.is_read).length;
 
   const filtered = all.filter((n) => {
@@ -57,30 +200,33 @@ export default function AllNotificationsPage() {
     return true;
   });
 
+  const readMut = useMutation({
+    mutationFn: (id: string) => markNotificationRead(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QK.allNotifications });
+      qc.invalidateQueries({ queryKey: QK.notifications });
+    },
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deleteNotification(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QK.allNotifications });
+      qc.invalidateQueries({ queryKey: QK.notifications });
+    },
+  });
+
   const handleMarkAll = async () => {
     setMarkingAll(true);
     try {
       await markAllNotificationsRead();
       qc.invalidateQueries({ queryKey: QK.allNotifications });
       qc.invalidateQueries({ queryKey: QK.notifications });
-    } finally {
-      setMarkingAll(false);
-    }
-  };
-
-  const handleDismiss = async (id: string) => {
-    setDismissing(id);
-    try {
-      await markNotificationRead(id);
-      qc.invalidateQueries({ queryKey: QK.allNotifications });
-      qc.invalidateQueries({ queryKey: QK.notifications });
-    } finally {
-      setDismissing(null);
-    }
+    } finally { setMarkingAll(false); }
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
+    <div className="flex flex-col gap-6 max-w-2xl mx-auto w-full">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
@@ -93,7 +239,7 @@ export default function AllNotificationsPage() {
         </div>
         {unreadCount > 0 && (
           <Button variant="secondary" size="sm" loading={markingAll} onClick={handleMarkAll}>
-            <CheckCheck size={14} className="mr-1.5" aria-hidden="true" />
+            <CheckCheck size={14} className="mr-1.5" />
             Mark all read
           </Button>
         )}
@@ -124,9 +270,9 @@ export default function AllNotificationsPage() {
         <span className="text-xs ml-auto" style={{ color: 'var(--text-muted)' }}>{filtered.length} shown</span>
       </div>
 
-      {/* Table-style list */}
+      {/* List */}
       {isLoading ? (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
         </div>
       ) : filtered.length === 0 ? (
@@ -138,65 +284,15 @@ export default function AllNotificationsPage() {
       ) : (
         <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
           {filtered.map((n) => (
-            <div
+            <NotifRow
               key={n.id}
-              className="flex items-start gap-4 px-4 py-4 border-b last:border-b-0 transition-colors"
-              style={{
-                borderColor:     'var(--border)',
-                backgroundColor: n.is_read ? 'transparent' : 'color-mix(in srgb, var(--warn) 5%, var(--bg-elev))',
-              }}
-            >
-              {/* Unread dot */}
-              <div className="mt-2 shrink-0 w-2">
-                {!n.is_read && (
-                  <span className="block w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--warn)' }} aria-label="Unread" />
-                )}
-              </div>
-
-              {/* Icon */}
-              <span className="text-xl shrink-0 mt-0.5" aria-hidden="true">
-                {NOTIF_ICON[n.trigger_type] ?? '📢'}
-              </span>
-
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-                      {n.title}
-                    </p>
-                    <Badge variant={n.is_read ? 'default' : 'warn'} className="text-xs">
-                      {n.is_read ? 'Read' : 'Unread'}
-                    </Badge>
-                  </div>
-                  <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>
-                    {fmtDate(n.created_at)}
-                  </span>
-                </div>
-                {n.child_name && (
-                  <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    Child: {n.child_name}
-                  </p>
-                )}
-                <p className="text-sm mt-1 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                  {n.body}
-                </p>
-              </div>
-
-              {/* Dismiss */}
-              {!n.is_read && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  loading={dismissing === n.id}
-                  onClick={() => handleDismiss(n.id)}
-                  className="shrink-0"
-                  aria-label="Mark as read"
-                >
-                  <Bell size={12} aria-hidden="true" />
-                </Button>
-              )}
-            </div>
+              n={n}
+              role={role}
+              onRead={() => readMut.mutate(n.id)}
+              onDelete={() => deleteMut.mutate(n.id)}
+              isMarkingRead={readMut.isPending && readMut.variables === n.id}
+              isDeleting={deleteMut.isPending && deleteMut.variables === n.id}
+            />
           ))}
         </div>
       )}

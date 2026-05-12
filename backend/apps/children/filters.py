@@ -10,6 +10,7 @@ class ChildFilter(django_filters.FilterSet):
     age_min = django_filters.NumberFilter(method='filter_age_min')
     age_max = django_filters.NumberFilter(method='filter_age_max')
     status = django_filters.CharFilter(method='filter_nutrition_status')
+    vaccination_status = django_filters.CharFilter(method='filter_vaccination_status')
 
     class Meta:
         model = Child
@@ -47,3 +48,33 @@ class ChildFilter(django_filters.FilterSet):
         return queryset.annotate(
             latest_nutrition_status=Subquery(latest_status)
         ).filter(latest_nutrition_status=value)
+
+    def filter_vaccination_status(self, queryset, name, value):
+        """
+        Filter children by vaccination schedule status.
+        Usage: ?vaccination_status=OVERDUE  or  ?vaccination_status=UP_TO_DATE
+        """
+        from apps.vaccinations.models import VaccinationRecord
+        value = value.upper()
+        if value == 'OVERDUE':
+            # Children who have at least one MISSED vaccination
+            overdue_ids = VaccinationRecord.objects.filter(
+                status='MISSED'
+            ).values_list('child_id', flat=True).distinct()
+            return queryset.filter(id__in=overdue_ids)
+        if value == 'UP_TO_DATE':
+            # Children with no MISSED vaccinations and at least one GIVEN
+            overdue_ids = VaccinationRecord.objects.filter(
+                status='MISSED'
+            ).values_list('child_id', flat=True).distinct()
+            given_ids = VaccinationRecord.objects.filter(
+                status='GIVEN'
+            ).values_list('child_id', flat=True).distinct()
+            return queryset.filter(id__in=given_ids).exclude(id__in=overdue_ids)
+        if value == 'NOT_STARTED':
+            # Children with no GIVEN vaccinations at all
+            given_ids = VaccinationRecord.objects.filter(
+                status='GIVEN'
+            ).values_list('child_id', flat=True).distinct()
+            return queryset.exclude(id__in=given_ids)
+        return queryset

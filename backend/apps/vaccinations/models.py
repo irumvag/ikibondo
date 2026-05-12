@@ -73,6 +73,16 @@ class VaccinationRecord(BaseModel):
 
     notes = models.TextField(blank=True)
 
+    # DHIS2 integration
+    dhis2_event_uid = models.CharField(
+        max_length=100, blank=True, null=True, db_index=True,
+        help_text='DHIS2 tracker Event UID assigned after successful push.',
+    )
+    source = models.CharField(
+        max_length=20, default='LOCAL',
+        help_text='LOCAL (recorded in Ikibondo) or DHIS2 (pulled from registry).',
+    )
+
     class Meta:
         ordering = ['scheduled_date']
         verbose_name = 'Vaccination Record'
@@ -86,3 +96,72 @@ class VaccinationRecord(BaseModel):
         if self.status == DoseStatus.SCHEDULED:
             return self.scheduled_date < timezone.now().date()
         return False
+
+
+class ClinicSessionStatus(models.TextChoices):
+    OPEN = 'OPEN', 'Open'
+    CLOSED = 'CLOSED', 'Closed'
+
+
+class ClinicSession(BaseModel):
+    """
+    A vaccination clinic session — groups bulk vaccination recording by date and vaccine.
+    Opened by a nurse; attendance entries track which children were vaccinated.
+    """
+    camp = models.ForeignKey(
+        'camps.Camp',
+        on_delete=models.PROTECT,
+        related_name='clinic_sessions',
+    )
+    vaccine = models.ForeignKey(
+        Vaccine,
+        on_delete=models.PROTECT,
+        related_name='clinic_sessions',
+    )
+    session_date = models.DateField()
+    opened_by = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='opened_clinic_sessions',
+    )
+    status = models.CharField(
+        max_length=10, choices=ClinicSessionStatus.choices, default=ClinicSessionStatus.OPEN
+    )
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-session_date']
+
+    def __str__(self):
+        return f'ClinicSession({self.vaccine.short_code}, {self.session_date})'
+
+
+class ClinicSessionAttendance(BaseModel):
+    """Individual attendance record within a ClinicSession."""
+    session = models.ForeignKey(
+        ClinicSession,
+        on_delete=models.CASCADE,
+        related_name='attendances',
+    )
+    child = models.ForeignKey(
+        'children.Child',
+        on_delete=models.CASCADE,
+        related_name='clinic_attendances',
+    )
+    vaccination_record = models.ForeignKey(
+        VaccinationRecord,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='clinic_attendance',
+    )
+    status = models.CharField(
+        max_length=20, choices=DoseStatus.choices, default=DoseStatus.DONE
+    )
+    batch_number = models.CharField(max_length=50, blank=True)
+
+    class Meta:
+        unique_together = [['session', 'child']]
+
+    def __str__(self):
+        return f'Attendance({self.child}, {self.session})'

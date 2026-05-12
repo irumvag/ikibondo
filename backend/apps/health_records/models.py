@@ -1,3 +1,6 @@
+import uuid
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
@@ -226,3 +229,35 @@ class ClinicalNote(BaseModel):
             raise ValidationError(
                 'A clinical note must target exactly one of health_record or child, not both or neither.'
             )
+
+
+class AmendmentLog(models.Model):
+    """
+    Clinical-record correction log.
+    CHW window: 24 h from original record creation.
+    Nurse: any time.
+    Admin: any time.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # Generic FK — points to HealthRecord or VaccinationRecord
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.UUIDField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+
+    amended_by = models.ForeignKey(
+        'accounts.CustomUser',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='amendments',
+    )
+    reason = models.TextField()
+    before_data = models.JSONField(help_text='Snapshot of fields before amendment')
+    after_data = models.JSONField(help_text='Snapshot of fields after amendment')
+    amended_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-amended_at']
+        verbose_name = 'Amendment Log'
+
+    def __str__(self):
+        return f'Amendment on {self.content_type.model} {self.object_id} by {self.amended_by}'

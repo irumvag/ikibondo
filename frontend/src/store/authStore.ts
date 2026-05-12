@@ -8,12 +8,19 @@ export interface AuthUser {
   full_name: string;
   role: UserRole;
   phone_number: string | null;
+  national_id?: string | null;
   camp: string | null;
   camp_name: string | null;
   is_approved: boolean;
   must_change_password: boolean;
   preferred_language: 'rw' | 'fr' | 'en';
   theme_preference: 'system' | 'light' | 'dark';
+  onboarded_at: string | null;
+  notification_prefs?: Record<string, unknown>;
+  has_guardian_record?: boolean;
+  suspended_at?: string | null;
+  suspension_reason?: string | null;
+  is_active?: boolean;
 }
 
 interface AuthState {
@@ -64,6 +71,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   clearAuth: () => {
     if (typeof window !== 'undefined') {
+      // Notify the service worker to clear its cache so that a subsequent user
+      // on the same shared device cannot access previously cached health data.
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'LOGOUT' });
+      }
       sessionStorage.clear();
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');

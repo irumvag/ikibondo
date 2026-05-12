@@ -9,11 +9,14 @@ from pathlib import Path
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from apps.core.responses import success_response, error_response
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.openapi import OpenApiTypes
 
 logger = logging.getLogger(__name__)
 _SAVED_MODELS_DIR = Path(__file__).resolve().parent / 'saved_models'
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def predict_risk(request):
@@ -36,6 +39,7 @@ def predict_risk(request):
     return success_response(data=result)
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def model_info(request):
@@ -67,6 +71,7 @@ def model_info(request):
     })
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_predictions(request):

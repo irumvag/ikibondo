@@ -70,3 +70,19 @@ def trigger_ml_prediction(sender, instance, created, **kwargs):
         logger.info('Queued ML prediction for HealthRecord %s', instance.id)
     except Exception as e:
         logger.warning('Failed to queue ML prediction for %s: %s', instance.id, e)
+
+
+@receiver(post_save, sender=HealthRecord)
+def trigger_dhis2_on_high_risk(sender, instance, created, **kwargs):
+    """
+    After a HealthRecord is saved with risk_level=HIGH, push child + vaccinations
+    to DHIS2 asynchronously.  Fires on update (ML sets risk_level after creation).
+    """
+    if instance.risk_level != 'HIGH':
+        return
+    try:
+        from apps.integrations.tasks import dhis2_push_high_risk
+        dhis2_push_high_risk.apply_async(args=[str(instance.id)], countdown=10)
+        logger.info('Queued DHIS2 high-risk push for HealthRecord %s', instance.id)
+    except Exception as exc:
+        logger.warning('Failed to queue DHIS2 high-risk push for %s: %s', instance.id, exc)

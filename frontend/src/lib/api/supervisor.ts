@@ -49,10 +49,20 @@ export interface SupervisedChild {
   age_months: number;
   age_display: string;
   sex: 'M' | 'F';
+  birth_weight: number | null;
+  gestational_age: number | null;
+  feeding_type: 'BREAST' | 'FORMULA' | 'MIXED' | null;
   camp: string;
   camp_name: string;
+  zone: string | null;
+  zone_name: string | null;
+  guardian: string | null;
   guardian_name: string | null;
   guardian_phone: string | null;
+  guardian_has_account?: boolean;
+  risk_level?: 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
+  closure_status?: string | null;
+  deletion_requested_at?: string | null;
 }
 
 export interface Paginated<T> {
@@ -89,14 +99,71 @@ export async function listHighRiskRecords(params?: {
 export async function listCampChildren(params?: {
   camp?: string;
   status?: string;
+  vaccination_status?: string;
   sex?: string;
   search?: string;
   page?: number;
   page_size?: number;
 }): Promise<Paginated<SupervisedChild>> {
   const { data } = await apiClient.get('/children/', { params });
+  // Handle both custom success_response format and standard DRF pagination format
+  const items = data.data ?? data.results ?? [];
+  const count = data.pagination?.count ?? data.count ?? items.length;
+  return { items, count };
+}
+
+// ── Clinic Sessions ───────────────────────────────────────────────────────────
+
+export interface ClinicSession {
+  id: string;
+  camp: string;
+  camp_name: string;
+  vaccine: string;
+  vaccine_name: string;
+  date: string;
+  status: 'OPEN' | 'CLOSED';
+  opened_by: string | null;
+  opened_by_name: string | null;
+  attendee_count: number;
+  created_at: string;
+}
+
+export interface ClinicAttendee {
+  id: string;
+  child: string;
+  child_name: string;
+  status: string;
+  recorded_at: string;
+}
+
+export async function listClinicSessions(params?: {
+  page?: number;
+  page_size?: number;
+  status?: string;
+}): Promise<{ results: ClinicSession[]; count: number }> {
+  const { data } = await apiClient.get('/vaccinations/clinic-sessions/', { params });
+  const payload = data.data ?? data;
   return {
-    items: data.data ?? [],
-    count: data.pagination?.count ?? (data.data?.length ?? 0),
+    results: payload?.results ?? (Array.isArray(payload) ? payload : []),
+    count: payload?.count ?? 0,
   };
+}
+
+export async function createClinicSession(payload: {
+  vaccine: string;
+  date: string;
+}): Promise<ClinicSession> {
+  const { data } = await apiClient.post('/vaccinations/clinic-sessions/', payload);
+  return data.data ?? data;
+}
+
+export async function closeClinicSession(id: string): Promise<ClinicSession> {
+  const { data } = await apiClient.post(`/vaccinations/clinic-sessions/${id}/close/`);
+  return data.data ?? data;
+}
+
+export async function getSessionAttendees(id: string): Promise<ClinicAttendee[]> {
+  const { data } = await apiClient.get(`/vaccinations/clinic-sessions/${id}/attendees/`);
+  const payload = data.data ?? data;
+  return Array.isArray(payload) ? payload : payload?.results ?? [];
 }

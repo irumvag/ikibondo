@@ -24,6 +24,12 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async redirects() {
+    return [
+      { source: '/manager',          destination: '/supervisor',          permanent: true },
+      { source: '/manager/:path*',   destination: '/supervisor/:path*',   permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

@@ -9,18 +9,74 @@ Every prediction:
 """
 import logging
 import pandas as pd
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework import viewsets, status
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import IsAuthenticated
 
 from apps.core.responses import success_response, error_response
+from apps.accounts.permissions import IsAdminUser
 from .loader import ModelLoader
+from .models import MLModelVersion
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.openapi import OpenApiTypes
 from .serializers import (
     MalnutritionPredictSerializer,
     GrowthPredictSerializer,
     VaccinationDropoutSerializer,
+    MLModelVersionSerializer,
 )
 
 logger = logging.getLogger(__name__)
+
+
+class MLModelVersionViewSet(viewsets.ModelViewSet):
+    """
+    GET    /api/v1/ml/model-versions/           — list all versions (authenticated)
+    POST   /api/v1/ml/model-versions/           — register new version (admin only)
+    POST   /api/v1/ml/model-versions/<id>/promote/  — set deployed=True (admin only)
+    POST   /api/v1/ml/model-versions/<id>/rollback/ — set deployed=False (admin only)
+    """
+    serializer_class = MLModelVersionSerializer
+    queryset = MLModelVersion.objects.all().order_by('model_name', '-created_at')
+
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy', 'promote', 'rollback'):
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        serializer.save(uploaded_by=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def promote(self, request, pk=None):
+        version = self.get_object()
+        version.promote()
+        return success_response(
+            data=MLModelVersionSerializer(version).data,
+            message=f'{version.model_name} {version.version} is now the active deployed version.',
+        )
+
+    @action(detail=True, methods=['post'])
+    def rollback(self, request, pk=None):
+        version = self.get_object()
+        if not version.deployed:
+            return error_response('This version is not currently deployed.', 'NOT_DEPLOYED')
+        # Find the previous version (most-recent before this one)
+        previous = MLModelVersion.objects.filter(
+            model_name=version.model_name
+        ).exclude(id=version.id).order_by('-created_at').first()
+        version.deployed = False
+        version.save(update_fields=['deployed', 'updated_at'])
+        if previous:
+            previous.promote()
+            return success_response(
+                data=MLModelVersionSerializer(previous).data,
+                message=f'Rolled back to {previous.model_name} {previous.version}.',
+            )
+        return success_response(
+            data=MLModelVersionSerializer(version).data,
+            message='Deployment cleared. No previous version to restore.',
+        )
 
 
 def _log_prediction(child_id, model_name, input_data, output_data, label, confidence):
@@ -42,6 +98,7 @@ def _log_prediction(child_id, model_name, input_data, output_data, label, confid
         logger.warning('MLPredictionLog write failed: %s', e)
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def predict_malnutrition(request):
@@ -111,6 +168,7 @@ def predict_malnutrition(request):
         return error_response('Prediction failed.', 'PREDICTION_ERROR', status_code=500)
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def predict_growth(request):
@@ -206,6 +264,7 @@ def predict_growth(request):
     return success_response(data=output_data)
 
 
+@extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def predict_vaccination_dropout(request):

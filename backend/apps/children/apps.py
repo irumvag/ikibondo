@@ -14,3 +14,4 @@ class ChildrenConfig(AppConfig):
             auditlog.register(Guardian)
         except ImportError:
             pass
+        import apps.children.signals  # noqa: F401

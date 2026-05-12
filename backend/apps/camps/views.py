@@ -86,6 +86,8 @@ class CampZoneViewSet(viewsets.ModelViewSet):
     serializer_class = CampZoneSerializer
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return CampZone.objects.none()
         return CampZone.objects.filter(camp_id=self.kwargs['camp_pk'], is_active=True)
 
     def get_permissions(self):

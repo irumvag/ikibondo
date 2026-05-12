@@ -1,16 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
-import { getLandingStats, getPublicCamps, listFaq } from './public';
+import { getLandingStats, getPublicCamps, listFaq, getStatsTrend, type TrendPeriod } from './public';
 import {
   listUsers, getPendingApprovals, listCamps, listZones,
   listAllFaqItems, listAuditLog,
+  listAllChildren, listConsultations, listAllReferrals,
+  listAllVisitRequests,
 } from './admin';
 import {
   getZoneStats, getCHWActivity, listHighRiskRecords, listCampChildren,
+  listClinicSessions,
 } from './supervisor';
 import {
   getGrowthData, getChild, getChildHistory, getChildNotes, listHealthRecords,
 } from './nurse';
-import { listVaccinationQueue } from './chw';
+import { listVaccinationQueue, listDailyPlan, listCHWFamilies } from './chw';
 import { listMyChildren, getChildVaccinations, listNotifications } from './parent';
 import { getModelInfo, listPredictions } from './ml';
 import { getAllNotifications, markNotificationRead, markAllNotificationsRead } from './user';
@@ -29,7 +32,7 @@ export const QK = {
   zoneStats:          (campId: string, zoneId: string) => ['zone-stats', campId, zoneId] as const,
   chwActivity:        (campId: string, zoneId: string) => ['chw-activity', campId, zoneId] as const,
   highRiskRecords:    (zone?: string, page?: number)   => ['high-risk-records', zone, page] as const,
-  campChildren:       (camp?: string, status?: string, page?: number) => ['camp-children', camp, status, page] as const,
+  campChildren:       (camp?: string, status?: string, page?: number, search?: string) => ['camp-children', camp, status, page, search] as const,
   growthData:         (childId: string) => ['growth-data', childId] as const,
   child:              (childId: string) => ['child', childId] as const,
   childHistory:       (childId: string) => ['child-history', childId] as const,
@@ -40,11 +43,19 @@ export const QK = {
   childVaccinations:  (childId: string) => ['child-vaccinations', childId] as const,
   notifications:      ['notifications'] as const,
   allNotifications:   ['all-notifications'] as const,
-  auditLog:           (page?: number) => ['audit-log', page] as const,
+  auditLog:           (params?: Record<string, unknown>) => ['audit-log', params] as const,
+  statsTrend:         (period: TrendPeriod) => ['stats-trend', period] as const,
+  dailyPlan:          ['daily-plan'] as const,
+  chwFamilies:        ['chw-families'] as const,
+  supervisorClinicSessions: (params?: Record<string, unknown>) => ['supervisor-clinic-sessions', params] as const,
+  adminChildren:      (params?: Record<string, unknown>) => ['admin-children', params] as const,
+  adminConsultations: (params?: Record<string, unknown>) => ['admin-consultations', params] as const,
+  adminReferrals:     (params?: Record<string, unknown>) => ['admin-referrals', params] as const,
+  adminVisitRequests: (params?: Record<string, unknown>) => ['admin-visit-requests', params] as const,
 };
 
 // re-export mutation helpers so pages can import from one place
-export { markNotificationRead, markAllNotificationsRead };
+export { markNotificationRead, markAllNotificationsRead, deleteNotification } from './user';
 
 export function useLandingStats() {
   return useQuery({
@@ -85,10 +96,10 @@ export function useAdminFaq() {
   });
 }
 
-export function useAdminUsers(role?: string) {
+export function useAdminUsers(role?: string, includeSuspended?: boolean) {
   return useQuery({
-    queryKey: [...QK.adminUsers, role ?? 'all'],
-    queryFn: () => listUsers(role),
+    queryKey: [...QK.adminUsers, role ?? 'all', includeSuspended ? 'suspended' : 'active'],
+    queryFn: () => listUsers(role, includeSuspended),
     staleTime: 30_000,
     retry: 1,
   });
@@ -169,11 +180,21 @@ export function useHighRiskRecords(zone?: string, page = 1) {
   });
 }
 
-export function useCampChildren(camp?: string, status?: string, page = 1) {
+export function useCampChildren(
+  camp?: string,
+  status?: string,
+  page = 1,
+  search?: string,
+  vaccinationStatus?: string,
+) {
   return useQuery({
-    queryKey: QK.campChildren(camp, status, page),
-    queryFn: () => listCampChildren({ camp, status, page, page_size: 20 }),
-    enabled: !!camp,
+    queryKey: QK.campChildren(camp, status, page, search),
+    queryFn: () => listCampChildren({
+      camp, status, page, page_size: 20,
+      search: search || undefined,
+      vaccination_status: vaccinationStatus || undefined,
+    }),
+    // Always enabled — backend scopes results by role even without a camp filter
     staleTime: 30_000,
     retry: 1,
   });
@@ -279,11 +300,87 @@ export function useAllNotifications() {
   });
 }
 
-export function useAuditLog(page = 1) {
+export function useAuditLog(params?: { page?: number; user?: string; action?: string; path?: string }) {
+  const page = params?.page ?? 1;
   return useQuery({
-    queryKey: QK.auditLog(page),
-    queryFn:  () => listAuditLog({ page, page_size: 30 }),
+    queryKey: QK.auditLog(params as Record<string, unknown>),
+    queryFn:  () => listAuditLog({ page, page_size: 30, ...params }),
     staleTime: 60_000,
+    retry: 1,
+  });
+}
+
+export function useStatsTrend(period: TrendPeriod = '30d') {
+  return useQuery({
+    queryKey: QK.statsTrend(period),
+    queryFn:  () => getStatsTrend(period),
+    staleTime: 5 * 60_000,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useDailyPlan() {
+  return useQuery({
+    queryKey: QK.dailyPlan,
+    queryFn:  listDailyPlan,
+    staleTime: 5 * 60_000,
+    refetchInterval: 10 * 60_000,
+    retry: 1,
+  });
+}
+
+export function useSupervisorClinicSessions(params?: { page?: number; status?: string }) {
+  return useQuery({
+    queryKey: QK.supervisorClinicSessions(params as Record<string, unknown>),
+    queryFn: () => listClinicSessions({ ...params, page_size: 20 }),
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useAdminChildren(params?: { search?: string; camp?: string; page?: number }) {
+  return useQuery({
+    queryKey: QK.adminChildren(params as Record<string, unknown>),
+    queryFn: () => listAllChildren({ ...params, page_size: 20 }),
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useAdminConsultations(params?: { status?: string; camp?: string; page?: number }) {
+  return useQuery({
+    queryKey: QK.adminConsultations(params as Record<string, unknown>),
+    queryFn: () => listConsultations(params),
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useAdminReferrals(params?: { status?: string; camp?: string; page?: number }) {
+  return useQuery({
+    queryKey: QK.adminReferrals(params as Record<string, unknown>),
+    queryFn: () => listAllReferrals(params),
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useAdminVisitRequests(params?: { status?: string; camp?: string; page?: number }) {
+  return useQuery({
+    queryKey: QK.adminVisitRequests(params as Record<string, unknown>),
+    queryFn: () => listAllVisitRequests(params),
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useCHWFamilies() {
+  return useQuery({
+    queryKey: QK.chwFamilies,
+    queryFn:  listCHWFamilies,
+    staleTime: 5 * 60_000,
+    refetchInterval: 10 * 60_000,
     retry: 1,
   });
 }

@@ -1,59 +1,162 @@
 'use client';
 
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Users, MapPin, ScrollText, Cpu,
   AlertTriangle, Activity, Baby, FileBarChart, ClipboardList,
-  UserPlus, Stethoscope, Syringe, RefreshCw,
-  Heart, Bell, X, LogOut, Settings, MessageCircleQuestion,
+  UserPlus, Stethoscope, Syringe, RefreshCw, Heart, Bell,
+  X, LogOut, Settings, MessageCircleQuestion, ChevronDown,
+  ChevronRight, PanelLeftClose, PanelLeftOpen, BarChart2,
+  Inbox, GitBranch, Calendar, Bluetooth, ShieldCheck,
+  Globe, ClipboardCheck, Megaphone, FlaskConical,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuthStore, type UserRole } from '@/store/authStore';
 
-interface NavItem {
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface NavLeaf {
+  kind?: 'leaf';
   href: string;
   label: string;
   icon: LucideIcon;
+  badge?: string;
 }
 
-const ROLE_NAV: Record<UserRole, NavItem[]> = {
+interface NavGroup {
+  kind: 'group';
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  items: NavLeaf[];
+}
+
+type NavEntry = NavLeaf | NavGroup;
+
+// ── Role navigation definitions ───────────────────────────────────────────────
+
+const ROLE_NAV: Record<UserRole, NavEntry[]> = {
   ADMIN: [
-    { href: '/admin',          label: 'Overview',     icon: LayoutDashboard },
-    { href: '/admin/users',    label: 'Users',         icon: Users },
-    { href: '/admin/camps',    label: 'Camps & Zones', icon: MapPin },
-    { href: '/admin/audit',    label: 'Audit Log',     icon: ScrollText },
-    { href: '/admin/ml',       label: 'ML Model',      icon: Cpu },
-    { href: '/admin/faq',      label: 'FAQ',            icon: MessageCircleQuestion },
-    { href: '/notifications',  label: 'Notifications', icon: Bell },
+    { href: '/admin', label: 'Overview', icon: LayoutDashboard },
+    {
+      kind: 'group', id: 'admin-mgmt', label: 'Management', icon: Users,
+      items: [
+        { href: '/admin/users',          label: 'Users',          icon: Users },
+        { href: '/admin/camps',          label: 'Camps & Zones',  icon: MapPin },
+        { href: '/admin/children',       label: 'Children',       icon: Baby },
+        { href: '/admin/vaccinations',   label: 'Vaccines',       icon: Syringe },
+        { href: '/admin/guardians',      label: 'Guardians',      icon: Heart },
+        { href: '/admin/health-records', label: 'Health Records', icon: ClipboardList },
+        { href: '/admin/consultations',  label: 'Consultations',  icon: Inbox },
+        { href: '/admin/referrals',      label: 'Referrals',      icon: GitBranch },
+        { href: '/admin/visit-requests', label: 'Visit Requests', icon: ClipboardCheck },
+      ],
+    },
+    {
+      kind: 'group', id: 'admin-intel', label: 'Intelligence', icon: Cpu,
+      items: [
+        { href: '/admin/ml',            label: 'ML Models',   icon: Cpu },
+        { href: '/admin/audit',         label: 'Audit Log',   icon: ScrollText },
+        { href: '/admin/logs',          label: 'System Logs', icon: ClipboardList },
+        { href: '/admin/dhis2',         label: 'DHIS2 Sync',  icon: Globe },
+      ],
+    },
+    { href: '/admin/broadcasts',  label: 'Broadcast',    icon: Megaphone },
+    { href: '/admin/faq',         label: 'FAQ',           icon: MessageCircleQuestion },
+    { href: '/notifications',     label: 'Notifications', icon: Bell },
   ],
+
   SUPERVISOR: [
-    { href: '/supervisor',          label: 'Zone Overview',     icon: LayoutDashboard },
-    { href: '/supervisor/alerts',   label: 'High-Risk Alerts',  icon: AlertTriangle },
-    { href: '/supervisor/chws',     label: 'CHW Activity',      icon: Activity },
-    { href: '/supervisor/children', label: 'Children',          icon: Baby },
-    { href: '/supervisor/reports',  label: 'Reports',           icon: FileBarChart },
-    { href: '/supervisor/users',    label: 'Camp staff',        icon: Users },
-    { href: '/notifications',       label: 'Notifications',     icon: Bell },
+    { href: '/supervisor', label: 'Overview', icon: LayoutDashboard },
+    {
+      kind: 'group', id: 'sup-analytics', label: 'Analytics', icon: BarChart2,
+      items: [
+        { href: '/supervisor/analytics',    label: 'Dashboard',    icon: BarChart2 },
+        { href: '/supervisor/reports',      label: 'Reports',      icon: FileBarChart },
+        { href: '/supervisor/ai-oversight', label: 'AI Oversight', icon: FlaskConical },
+      ],
+    },
+    {
+      kind: 'group', id: 'sup-field', label: 'Field', icon: MapPin,
+      items: [
+        { href: '/supervisor/children',       label: 'Children',        icon: Baby },
+        { href: '/supervisor/zones',          label: 'Zones',           icon: MapPin },
+        { href: '/supervisor/chws',           label: 'CHW Activity',    icon: Activity },
+        { href: '/supervisor/alerts',         label: 'High-Risk Alerts', icon: AlertTriangle },
+        { href: '/supervisor/health-records', label: 'Health Records',  icon: ClipboardList },
+        { href: '/supervisor/consultations',  label: 'Consultations',   icon: Inbox },
+        { href: '/supervisor/referrals',      label: 'Referrals',       icon: GitBranch },
+        { href: '/supervisor/visit-requests', label: 'Visit Requests',  icon: ClipboardCheck },
+        { href: '/supervisor/clinic-sessions', label: 'Clinic Sessions', icon: Syringe },
+      ],
+    },
+    { href: '/supervisor/staff',     label: 'Staff',          icon: Users },
+    { href: '/supervisor/users',     label: 'Approvals',      icon: ShieldCheck },
+    { href: '/supervisor/broadcast', label: 'Broadcast',      icon: Megaphone },
+    { href: '/notifications',        label: 'Notifications',  icon: Bell },
   ],
+
   NURSE: [
-    { href: '/nurse',          label: 'Overview',       icon: LayoutDashboard },
-    { href: '/nurse/children', label: 'Children',       icon: Baby },
-    { href: '/nurse/records',  label: 'Health Records', icon: ClipboardList },
-    { href: '/notifications',  label: 'Notifications',  icon: Bell },
+    { href: '/nurse', label: 'Overview', icon: LayoutDashboard },
+    {
+      kind: 'group', id: 'nurse-clinical', label: 'Clinical', icon: Stethoscope,
+      items: [
+        { href: '/nurse/children',         label: 'Children',        icon: Baby },
+        { href: '/nurse/records',          label: 'Health Records',  icon: ClipboardList },
+        { href: '/nurse/register',         label: 'Register Child',  icon: UserPlus },
+        { href: '/nurse/vaccines',         label: 'Vaccinations',    icon: Syringe },
+        { href: '/nurse/visit-requests',   label: 'Visit Requests',  icon: ClipboardCheck },
+      ],
+    },
+    {
+      kind: 'group', id: 'nurse-comms', label: 'Communication', icon: Inbox,
+      items: [
+        { href: '/nurse/inbox',    label: 'CHW Inbox',  icon: Inbox },
+        { href: '/nurse/referrals', label: 'Referrals', icon: GitBranch },
+      ],
+    },
+    { href: '/nurse/approvals', label: 'Approvals',     icon: ShieldCheck },
+    { href: '/notifications',   label: 'Notifications', icon: Bell },
   ],
+
   CHW: [
-    { href: '/chw',           label: 'My Caseload',       icon: LayoutDashboard },
-    { href: '/chw/register',  label: 'Register Child',    icon: UserPlus },
-    { href: '/chw/visit',     label: 'New Visit',         icon: Stethoscope },
-    { href: '/chw/vaccines',  label: 'Vaccination Queue', icon: Syringe },
-    { href: '/chw/sync',      label: 'Sync Queue',        icon: RefreshCw },
-    { href: '/notifications', label: 'Notifications',     icon: Bell },
+    { href: '/chw/today',   label: 'Today',       icon: Calendar },
+    { href: '/chw',         label: 'My Caseload',  icon: LayoutDashboard },
+    {
+      kind: 'group', id: 'chw-field', label: 'Field', icon: Stethoscope,
+      items: [
+        { href: '/chw/visit',     label: 'Caseload & Visit', icon: Stethoscope },
+        { href: '/chw/parents',   label: 'Parents',          icon: Users },
+        { href: '/chw/records',   label: 'Health Records',   icon: Activity },
+        { href: '/chw/requests',  label: 'Visit Requests',   icon: ClipboardCheck },
+        { href: '/chw/vaccines',  label: 'Vaccine Queue',    icon: Syringe },
+      ],
+    },
+    {
+      kind: 'group', id: 'chw-consult', label: 'Consult', icon: Inbox,
+      items: [
+        { href: '/chw/consultations', label: 'Ask Nurse',  icon: Inbox },
+        { href: '/chw/referrals',     label: 'Referrals',  icon: GitBranch },
+      ],
+    },
+    {
+      kind: 'group', id: 'chw-settings', label: 'Settings', icon: Settings,
+      items: [
+        { href: '/chw/sync',            label: 'Sync Queue',  icon: RefreshCw },
+        { href: '/chw/settings/devices', label: 'BLE Devices', icon: Bluetooth },
+      ],
+    },
+    { href: '/notifications', label: 'Notifications', icon: Bell },
   ],
+
   PARENT: [
-    { href: '/parent',               label: 'My Children',     icon: Heart },
-    { href: '/parent/vaccines',      label: 'Vaccination Card', icon: Syringe },
-    { href: '/parent/notifications', label: 'Notifications',   icon: Bell },
+    { href: '/parent',               label: 'My Children',      icon: Heart },
+    { href: '/parent/vaccines',      label: 'Vaccination Card',  icon: Syringe },
+    { href: '/parent/request-visit', label: 'Request a Visit',   icon: Calendar },
+    { href: '/parent/notifications', label: 'Notifications',     icon: Bell },
+    { href: '/parent/consent',       label: 'Consent & Privacy', icon: ShieldCheck },
   ],
 };
 
@@ -65,24 +168,182 @@ const ROLE_LABEL: Record<UserRole, string> = {
   PARENT:     'Parent / Guardian',
 };
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const STORAGE_OPEN_GROUPS = 'ikibondo.sidebar.groups';
+
+function isActive(pathname: string, href: string): boolean {
+  const segments = href.split('/').filter(Boolean);
+  if (segments.length === 1) return pathname === href;
+  return pathname === href || pathname.startsWith(href + '/');
+}
+
+function groupContainsActive(items: NavLeaf[], pathname: string): boolean {
+  return items.some((item) => isActive(pathname, item.href));
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function NavLeafItem({
+  href, label, icon: Icon, collapsed, onClose,
+}: NavLeaf & { collapsed: boolean; onClose: () => void }) {
+  const pathname = usePathname();
+  const active = isActive(pathname, href);
+
+  return (
+    <li>
+      <Link
+        href={href}
+        onClick={onClose}
+        aria-current={active ? 'page' : undefined}
+        title={collapsed ? label : undefined}
+        className={[
+          'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
+          active
+            ? 'text-[var(--ink)] bg-[var(--bg-sand)]'
+            : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-sand)]',
+        ].join(' ')}
+      >
+        <Icon
+          size={18}
+          aria-hidden="true"
+          className="shrink-0"
+          style={{ color: active ? 'var(--ink)' : 'var(--text-muted)' }}
+        />
+        {!collapsed && (
+          <>
+            <span className="flex-1 truncate">{label}</span>
+            {active && (
+              <span
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ backgroundColor: 'var(--ink)' }}
+                aria-hidden="true"
+              />
+            )}
+          </>
+        )}
+      </Link>
+    </li>
+  );
+}
+
+function NavGroupItem({
+  id, label, icon: Icon, items, collapsed, onClose,
+  openGroups, toggleGroup,
+}: NavGroup & {
+  collapsed: boolean;
+  onClose: () => void;
+  openGroups: Set<string>;
+  toggleGroup: (id: string) => void;
+}) {
+  const pathname = usePathname();
+  const hasActive = groupContainsActive(items, pathname);
+  const isOpen = openGroups.has(id) || hasActive;
+
+  // ── Collapsed mode: render every child item icon directly ──────────────────
+  // (no group header in icon-only mode — each child link is fully reachable)
+  if (collapsed) {
+    return (
+      <>
+        {items.map((item) => (
+          <NavLeafItem
+            key={item.href}
+            {...item}
+            collapsed={true}
+            onClose={onClose}
+          />
+        ))}
+      </>
+    );
+  }
+
+  // ── Expanded mode: collapsible group with children ─────────────────────────
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => toggleGroup(id)}
+        aria-expanded={isOpen}
+        className={[
+          'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
+          hasActive
+            ? 'text-[var(--ink)]'
+            : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-sand)]',
+        ].join(' ')}
+      >
+        <Icon
+          size={18}
+          aria-hidden="true"
+          className="shrink-0"
+          style={{ color: hasActive ? 'var(--ink)' : 'var(--text-muted)' }}
+        />
+        <span className="flex-1 text-left truncate">{label}</span>
+        {isOpen
+          ? <ChevronDown size={14} aria-hidden="true" style={{ color: 'var(--text-muted)' }} />
+          : <ChevronRight size={14} aria-hidden="true" style={{ color: 'var(--text-muted)' }} />
+        }
+      </button>
+
+      {isOpen && (
+        <ul className="mt-0.5 ml-4 pl-3 border-l flex flex-col gap-0.5" style={{ borderColor: 'var(--border)' }}>
+          {items.map((item) => (
+            <NavLeafItem
+              key={item.href}
+              {...item}
+              collapsed={false}
+              onClose={onClose}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+// ── Main Sidebar ──────────────────────────────────────────────────────────────
+
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const pathname = usePathname();
+function SidebarContent({
+  collapsed, onClose, onToggleCollapse,
+}: { collapsed: boolean; onClose: () => void; onToggleCollapse: () => void }) {
   const router = useRouter();
   const { user, clearAuth } = useAuthStore();
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const nav = user ? (ROLE_NAV[user.role] ?? []) : [];
+  // Load persisted open groups on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_OPEN_GROUPS);
+      if (stored) setOpenGroups(new Set(JSON.parse(stored)));
+    } catch { /* ignore */ }
+  }, []);
+
+  const toggleGroup = useCallback((id: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      try { localStorage.setItem(STORAGE_OPEN_GROUPS, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
 
   const handleLogout = () => {
     clearAuth();
     router.push('/login');
   };
 
-  // Initials avatar
+  const handleLogoutConfirmed = () => {
+    setShowLogoutConfirm(false);
+    handleLogout();
+  };
+
   const initials = user?.full_name
     .split(' ')
     .slice(0, 2)
@@ -90,23 +351,63 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     .join('')
     .toUpperCase() ?? '?';
 
-  const sidebarContent = (
-    <div
-      className="flex flex-col h-full"
-      style={{ backgroundColor: 'var(--bg-elev)' }}
-    >
+  const roleNav: NavEntry[] = user ? (ROLE_NAV[user.role] ?? []) : [];
+
+  // Any non-PARENT user whose account is linked to a Guardian (has_guardian_record=true)
+  // gets a collapsible "My Family" group appended to their role nav. This lets nurses,
+  // CHWs, and supervisors who have babies in the system view their own children's records
+  // without switching roles.
+  const guardianGroup: NavGroup | null =
+    user && user.role !== 'PARENT' && user.has_guardian_record
+      ? {
+          kind: 'group',
+          id: 'my-family',
+          label: 'My Family',
+          icon: Heart,
+          items: [
+            { href: '/parent',               label: 'My Children',     icon: Baby },
+            { href: '/parent/vaccines',      label: 'Vaccination Card', icon: Syringe },
+            { href: '/parent/request-visit', label: 'Request a Visit',  icon: Calendar },
+            { href: '/parent/notifications', label: 'My Notifications', icon: Bell },
+          ],
+        }
+      : null;
+
+  const nav: NavEntry[] = guardianGroup ? [...roleNav, guardianGroup] : roleNav;
+
+  return (
+    <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--bg-elev)' }}>
       {/* Logo row */}
       <div
-        className="flex items-center justify-between px-5 h-14 shrink-0 border-b"
+        className="flex items-center justify-between px-4 h-14 shrink-0 border-b"
         style={{ borderColor: 'var(--border)' }}
       >
-        <span
-          className="text-xl font-bold tracking-tight"
-          style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
+        {!collapsed && (
+          <span
+            className="text-xl font-bold tracking-tight"
+            style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
+          >
+            Ikibondo
+          </span>
+        )}
+        {collapsed && <span className="flex-1" />}
+
+        {/* Desktop collapse toggle */}
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-[var(--bg-sand)]"
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar [' : 'Collapse sidebar ['}
+          style={{ color: 'var(--text-muted)' }}
         >
-          Ikibondo
-        </span>
-        {/* Close button — mobile only */}
+          {collapsed
+            ? <PanelLeftOpen size={18} aria-hidden="true" />
+            : <PanelLeftClose size={18} aria-hidden="true" />
+          }
+        </button>
+
+        {/* Mobile close button */}
         <button
           type="button"
           className="lg:hidden flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-[var(--bg-sand)]"
@@ -119,123 +420,175 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Dashboard navigation">
+      <nav
+        className="flex-1 overflow-y-auto py-4 px-2"
+        aria-label="Dashboard navigation"
+      >
         <ul className="flex flex-col gap-0.5">
-          {nav.map(({ href, label, icon: Icon }) => {
-            // Match exact for root pages, prefix for nested
-            const isRoot = href === `/${href.split('/')[1]}`;
-            const active = isRoot ? pathname === href : pathname.startsWith(href);
+          {nav.map((entry) => {
+            if (entry.kind === 'group') {
+              return (
+                <NavGroupItem
+                  key={entry.id}
+                  {...entry}
+                  collapsed={collapsed}
+                  onClose={onClose}
+                  openGroups={openGroups}
+                  toggleGroup={toggleGroup}
+                />
+              );
+            }
             return (
-              <li key={href}>
-                <Link
-                  href={href}
-                  onClick={onClose}
-                  aria-current={active ? 'page' : undefined}
-                  className={[
-                    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
-                    active
-                      ? 'text-[var(--ink)] bg-[var(--bg-sand)]'
-                      : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-sand)]',
-                  ].join(' ')}
-                >
-                  <Icon
-                    size={18}
-                    aria-hidden="true"
-                    style={{ color: active ? 'var(--ink)' : 'var(--text-muted)' }}
-                  />
-                  {label}
-                  {/* Active indicator dot */}
-                  {active && (
-                    <span
-                      className="ml-auto w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{ backgroundColor: 'var(--ink)' }}
-                      aria-hidden="true"
-                    />
-                  )}
-                </Link>
-              </li>
+              <NavLeafItem
+                key={entry.href}
+                {...entry}
+                collapsed={collapsed}
+                onClose={onClose}
+              />
             );
           })}
         </ul>
       </nav>
 
       {/* User footer */}
-      <div
-        className="px-3 py-4 border-t shrink-0"
-        style={{ borderColor: 'var(--border)' }}
-      >
-        <div className="flex items-center gap-3 px-2 mb-2">
-          {/* Avatar */}
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold select-none"
-            style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}
-            aria-hidden="true"
+      <div className="px-2 py-3 border-t shrink-0" style={{ borderColor: 'var(--border)' }}>
+        {!collapsed ? (
+          <Link
+            href="/profile"
+            onClick={onClose}
+            className="flex items-center gap-3 px-2 mb-2 rounded-xl transition-colors cursor-pointer hover:bg-[var(--bg-sand)]"
           >
-            {initials}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p
-              className="text-sm font-semibold truncate"
-              style={{ color: 'var(--ink)' }}
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold select-none"
+              style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}
+              aria-hidden="true"
             >
-              {user?.full_name ?? '—'}
-            </p>
-            <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-              {user ? ROLE_LABEL[user.role] : '—'}
-            </p>
-          </div>
-        </div>
+              {initials}
+            </div>
+            <div className="flex-1 min-w-0 py-1.5">
+              <p className="text-sm font-semibold truncate" style={{ color: 'var(--ink)' }}>
+                {user?.full_name ?? '—'}
+              </p>
+              <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                {user ? ROLE_LABEL[user.role] : '—'}
+              </p>
+            </div>
+          </Link>
+        ) : (
+          <Link
+            href="/profile"
+            onClick={onClose}
+            title="Profile"
+            className="flex items-center justify-center mb-2 w-full rounded-xl transition-colors hover:bg-[var(--bg-sand)]"
+          >
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold select-none"
+              style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}
+              aria-hidden="true"
+            >
+              {initials}
+            </div>
+          </Link>
+        )}
 
-        <Link
-          href="/profile"
-          onClick={onClose}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-[var(--bg-sand)]"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          <Settings size={16} aria-hidden="true" />
-          Profile &amp; settings
-        </Link>
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() => setShowLogoutConfirm(true)}
+          title={collapsed ? 'Sign out' : undefined}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-[var(--high-bg)]"
           style={{ color: 'var(--text-muted)' }}
         >
-          <LogOut size={16} aria-hidden="true" />
-          Sign out
+          <LogOut size={16} aria-hidden="true" className="shrink-0" />
+          {!collapsed && <span>Sign out</span>}
         </button>
       </div>
+
+      {/* Logout confirmation dialog */}
+      {showLogoutConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setShowLogoutConfirm(false); }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border p-6 flex flex-col gap-4 shadow-xl"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--danger, #ef4444) 12%, var(--bg-sand))', color: 'var(--danger, #ef4444)' }}
+              >
+                <LogOut size={18} aria-hidden="true" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Sign out</p>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Are you sure you want to sign out?</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 py-2 rounded-xl border text-sm font-medium transition-colors hover:bg-[var(--bg-sand)]"
+                style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleLogoutConfirmed}
+                className="flex-1 py-2 rounded-xl text-sm font-medium transition-colors"
+                style={{ backgroundColor: 'var(--ink)', color: 'var(--bg)' }}
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
 
+export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {
   return (
     <>
-      {/* Desktop — always visible */}
+      {/* Desktop — sticky sidebar, width controlled by collapsed state */}
       <aside
-        className="hidden lg:flex flex-col w-60 shrink-0 border-r h-screen sticky top-0"
-        style={{ borderColor: 'var(--border)' }}
+        className="hidden lg:flex flex-col shrink-0 border-r h-screen sticky top-0 transition-all duration-200"
+        style={{
+          width: collapsed ? '64px' : '240px',
+          borderColor: 'var(--border)',
+        }}
         aria-label="Sidebar"
       >
-        {sidebarContent}
+        <SidebarContent
+          collapsed={collapsed}
+          onClose={onClose}
+          onToggleCollapse={onToggleCollapse}
+        />
       </aside>
 
       {/* Mobile — off-canvas overlay */}
       {isOpen && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 z-30 lg:hidden"
             style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}
             onClick={onClose}
             aria-hidden="true"
           />
-          {/* Drawer */}
           <aside
             className="fixed inset-y-0 left-0 z-40 w-72 shadow-xl lg:hidden flex flex-col border-r"
             style={{ borderColor: 'var(--border)' }}
             aria-label="Sidebar"
           >
-            {sidebarContent}
+            <SidebarContent
+              collapsed={false}
+              onClose={onClose}
+              onToggleCollapse={onToggleCollapse}
+            />
           </aside>
         </>
       )}

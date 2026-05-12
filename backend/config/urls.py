@@ -4,7 +4,8 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from apps.health_records.views import growth_data_view
-from apps.core.views import health_check, landing_stats_view, stats_trend_view
+from apps.children.views import daily_plan_view, chw_families_view
+from apps.core.views import health_check, landing_stats_view, stats_trend_view, audit_log_view
 from apps.core.sync_views import batch_sync_view
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
@@ -32,6 +33,12 @@ urlpatterns = [
     # Notifications
     path('api/v1/notifications/', include('apps.notifications.urls')),
 
+    # CHW ↔ Nurse consultations
+    path('api/v1/consultations/', include('apps.consultations.urls')),
+
+    # Referrals
+    path('api/v1/referrals/', include('apps.referrals.urls')),
+
     # FAQ (public read, admin CRUD)
     path('api/v1/faq/', include('apps.core.urls')),
 
@@ -39,8 +46,18 @@ urlpatterns = [
     path('api/v1/stats/landing/', landing_stats_view, name='landing-stats'),
     path('api/v1/stats/trend/', stats_trend_view, name='stats-trend'),
 
+    # CHW endpoints
+    path('api/v1/chw/daily-plan/', daily_plan_view, name='chw-daily-plan'),
+    path('api/v1/chw/families/', chw_families_view, name='chw-families'),
+
     # Offline CHW batch sync
     path('api/v1/sync/batch/', batch_sync_view, name='sync-batch'),
+
+    # Audit log (admin only)
+    path('api/v1/audit/log/', audit_log_view, name='audit-log'),
+
+    # DHIS2 integration
+    path('api/v1/integrations/', include('apps.integrations.urls')),
 
     # System health
     path('api/v1/health/', health_check, name='health-check'),

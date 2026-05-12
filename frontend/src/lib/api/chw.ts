@@ -49,6 +49,9 @@ export interface VaccinationRecord {
   id: string;
   child: string;
   child_name: string;
+  zone_name: string | null;
+  guardian_name: string | null;
+  guardian_phone: string | null;
   vaccine: string;
   vaccine_name: string;
   vaccine_code: string;
@@ -88,6 +91,26 @@ export async function createVisit(payload: VisitPayload): Promise<VisitResult> {
   return data.data;
 }
 
+export async function amendHealthRecord(
+  recordId: string,
+  payload: {
+    reason: string;
+    weight_kg?: number | null;
+    height_cm?: number | null;
+    muac_cm?: number | null;
+    oedema?: boolean;
+    temperature_c?: number | null;
+    respiratory_rate?: number | null;
+    heart_rate?: number | null;
+    spo2?: number | null;
+    symptom_flags?: string[];
+    notes?: string;
+  },
+): Promise<import('./nurse').HealthRecordDetail> {
+  const { data } = await apiClient.patch(`/health-records/${recordId}/amend/`, payload);
+  return data.data;
+}
+
 export async function listVaccinationQueue(params?: {
   status?: string;
   page?: number;
@@ -96,10 +119,10 @@ export async function listVaccinationQueue(params?: {
   const { data } = await apiClient.get('/vaccinations/', {
     params: { status: 'SCHEDULED', ...params },
   });
-  return {
-    items: data.data ?? [],
-    count: data.pagination?.count ?? (data.data?.length ?? 0),
-  };
+  // Endpoint uses standard DRF pagination: {count, results} not custom {data, pagination}
+  const items = data.data ?? data.results ?? [];
+  const count = data.pagination?.count ?? data.count ?? items.length;
+  return { items, count };
 }
 
 export async function administerVaccine(
@@ -113,4 +136,155 @@ export async function administerVaccine(
 export async function syncBatch(operations: SyncOperation[]): Promise<SyncResult[]> {
   const { data } = await apiClient.post('/sync/batch/', { operations });
   return data.results ?? [];
+}
+
+// ── CHW Daily Plan ────────────────────────────────────────────────────────────
+
+export interface DailyPlanItem {
+  child_id:            string;
+  child_name:          string;
+  registration_number: string;
+  age_display:         string;
+  priority_score:      number;
+  priority_reasons:    string[];
+  risk_level:          'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
+  has_pending_request: boolean;
+  has_overdue_vaccine: boolean;
+  last_visit_days_ago: number | null;
+}
+
+export async function listDailyPlan(): Promise<DailyPlanItem[]> {
+  const { data } = await apiClient.get('/chw/daily-plan/');
+  return data.data ?? [];
+}
+
+// ── CHW Families (caseload) ───────────────────────────────────────────────────
+
+export interface CHWChildSummary {
+  id: string;
+  full_name: string;
+  registration_number: string;
+  sex: 'M' | 'F';
+  date_of_birth: string;
+  age_display: string;
+  age_months: number;
+  zone_name: string | null;
+  camp_name: string | null;
+  risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
+  last_visit_date: string | null;
+  last_visit_days_ago: number | null;
+  overdue_vaccines: number;
+  upcoming_vaccines: number;
+  next_vaccine_name: string | null;
+  next_vaccine_date: string | null;
+  next_vaccine_overdue: boolean;
+}
+
+export interface CHWFamily {
+  id: string;
+  full_name: string;
+  phone_number: string;
+  relationship: string;
+  has_account: boolean;
+  user_email: string | null;
+  children: CHWChildSummary[];
+}
+
+export async function listCHWFamilies(): Promise<CHWFamily[]> {
+  const { data } = await apiClient.get('/chw/families/');
+  return data.data ?? [];
+}
+
+// ── Visit Requests (CHW side) ─────────────────────────────────────────────────
+
+export type VisitRequestStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'COMPLETED';
+
+export interface CHWVisitRequest {
+  id: string;
+  child: string;
+  child_name: string;
+  requested_by: string;
+  requested_by_name: string | null;
+  urgency: 'ROUTINE' | 'SOON' | 'URGENT';
+  concern_text: string;
+  symptom_flags: string[];
+  status: VisitRequestStatus;
+  assigned_chw: string | null;
+  assigned_chw_name: string | null;
+  eta: string | null;
+  decline_reason: string;
+  accepted_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export async function listCHWVisitRequests(status?: VisitRequestStatus): Promise<CHWVisitRequest[]> {
+  const params = status ? { status, page_size: 100 } : { page_size: 100 };
+  const { data } = await apiClient.get('/children/visit-requests/', { params });
+  const payload = data?.data ?? data;
+  if (Array.isArray(payload)) return payload;
+  if (payload?.results) return payload.results as CHWVisitRequest[];
+  return [];
+}
+
+export async function acceptVisitRequest(id: string, eta?: string): Promise<CHWVisitRequest> {
+  const { data } = await apiClient.post(`/children/visit-requests/${id}/accept/`, { eta });
+  return data.data;
+}
+
+export async function declineVisitRequest(id: string, reason: string): Promise<CHWVisitRequest> {
+  const { data } = await apiClient.post(`/children/visit-requests/${id}/decline/`, { reason });
+  return data.data;
+}
+
+export async function completeVisitRequest(id: string): Promise<CHWVisitRequest> {
+  const { data } = await apiClient.post(`/children/visit-requests/${id}/complete/`, {});
+  return data.data;
+}
+
+// ── Consultations ─────────────────────────────────────────────────────────────
+
+export interface ConsultationMessage {
+  id: string;
+  author: string;
+  author_name: string | null;
+  body: string;
+  created_at: string;
+}
+
+export interface Consultation {
+  id: string;
+  child: string;
+  child_name: string;
+  opened_by: string;
+  opened_by_name: string | null;
+  assigned_nurse: string | null;
+  assigned_nurse_name: string | null;
+  status: 'OPEN' | 'RESOLVED' | 'ESCALATED';
+  helpful_rating: number | null;
+  disputed_classification: boolean;
+  resolved_at: string | null;
+  created_at: string;
+  messages: ConsultationMessage[];
+  message_count: number;
+}
+
+export async function listConsultations(): Promise<Consultation[]> {
+  const { data } = await apiClient.get('/consultations/');
+  return data.data ?? data.results ?? [];
+}
+
+export async function openConsultation(childId: string): Promise<Consultation> {
+  const { data } = await apiClient.post('/consultations/', { child: childId });
+  return data.data;
+}
+
+export async function sendConsultationMessage(consultationId: string, body: string): Promise<ConsultationMessage> {
+  const { data } = await apiClient.post(`/consultations/${consultationId}/reply/`, { body });
+  return data.data;
+}
+
+export async function resolveConsultation(consultationId: string, rating?: number): Promise<Consultation> {
+  const { data } = await apiClient.post(`/consultations/${consultationId}/resolve/`, { helpful_rating: rating });
+  return data.data;
 }

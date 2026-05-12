@@ -78,6 +78,7 @@ export interface ParentUser {
   role: 'PARENT';
   camp: string | null;
   is_approved: boolean;
+  guardian_id: string | null;   // UUID of their linked Guardian, if any
 }
 
 export interface RegisteredChild {
@@ -112,7 +113,13 @@ export async function registerChild(payload: {
   camp: string;
   zone?: string;
   notes?: string;
-  guardian: {
+  birth_weight?: number | null;
+  gestational_age?: number | null;
+  feeding_type?: 'BREAST' | 'FORMULA' | 'MIXED' | null;
+  /** Pass this instead of `guardian` when registering a second child for a parent
+   *  who already has a Guardian record — skips creating a duplicate Guardian. */
+  existing_guardian_id?: string;
+  guardian?: {
     full_name: string;
     phone_number: string;
     relationship: string;
@@ -126,6 +133,23 @@ export async function registerChild(payload: {
 
 export async function linkParentToGuardian(guardianId: string, userId: string): Promise<void> {
   await apiClient.post(`/children/guardians/${guardianId}/link-account/`, { user_id: userId });
+}
+
+export interface GuardianLookupResult {
+  id: string;
+  full_name: string;
+  phone_number: string;
+  relationship: string;
+  national_id: string | null;
+  has_account: boolean;
+  user_email: string | null;
+  children_count: number;
+}
+
+/** Look up an existing Guardian by phone number — used to prevent duplicates. */
+export async function lookupGuardianByPhone(phone: string): Promise<GuardianLookupResult | null> {
+  const { data } = await apiClient.get('/children/guardian-lookup/', { params: { phone } });
+  return data.data ?? null;
 }
 
 export async function getGrowthData(childId: string): Promise<GrowthData> {

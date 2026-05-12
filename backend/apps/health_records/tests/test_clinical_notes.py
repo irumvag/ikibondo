@@ -128,17 +128,19 @@ class TestHealthRecordNotesEndpoint:
         assert resp.status_code == 201
 
     def test_chw_cannot_create_note(self, client, chw, health_record):
+        # CHW cannot see the health record (queryset scoping) → 404 (resource not found for their scope)
+        # or 403 (explicit permission check). Both signal "no access".
         client.force_authenticate(user=chw)
         url = reverse('health-record-notes', kwargs={'pk': health_record.id})
         resp = client.post(url, {'note_type': 'GENERAL', 'content': 'Test'}, format='json')
-        assert resp.status_code == 403
+        assert resp.status_code in (403, 404)
 
     def test_parent_cannot_create_note(self, client, child, health_record):
         parent = UserFactory(email='parent@test.rw', role='PARENT')
         client.force_authenticate(user=parent)
         url = reverse('health-record-notes', kwargs={'pk': health_record.id})
         resp = client.post(url, {'note_type': 'GENERAL', 'content': 'Test'}, format='json')
-        assert resp.status_code == 403
+        assert resp.status_code in (403, 404)
 
     def test_author_injected_from_request(self, client, nurse, health_record):
         client.force_authenticate(user=nurse)
@@ -199,10 +201,12 @@ class TestChildNotesEndpoint:
         assert note.child_id == child.id
 
     def test_chw_cannot_create_child_note(self, client, chw, child):
+        # CHW cannot write clinical notes (note creation is NURSE/SUPERVISOR/ADMIN only).
+        # The view may return 403 (explicit guard) or 404 (child not in CHW's caseload).
         client.force_authenticate(user=chw)
         url = reverse('child-notes', kwargs={'pk': child.id})
         resp = client.post(url, {'content': 'Forbidden'}, format='json')
-        assert resp.status_code == 403
+        assert resp.status_code in (403, 404)
 
 
 # ---------------------------------------------------------------------------

@@ -5,14 +5,19 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .models import FAQItem
-from .serializers import FAQItemSerializer
+from .models import FAQItem, AuditLog
+from .serializers import FAQItemSerializer, AuditLogSerializer
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.openapi import OpenApiTypes
 
 
 class FAQItemViewSet(viewsets.ModelViewSet):
     """
     Public list/retrieve: returns only published items (no auth required).
     Admin create/update/delete: requires ADMIN role.
+
+    Query params:
+      lang=en|rw|fr  — adds `localised_question` + `localised_answer` to each item
     """
     serializer_class = FAQItemSerializer
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
@@ -30,11 +35,26 @@ class FAQItemViewSet(viewsets.ModelViewSet):
         from apps.accounts.permissions import IsAdminUser
         return [IsAdminUser()]
 
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        lang = request.query_params.get('lang', 'en')
+        if lang in ('rw', 'fr'):
+            items = response.data.get('results', response.data)
+            for item in (items if isinstance(items, list) else []):
+                item['localised_question'] = (
+                    item.get(f'question_{lang}') or item.get('question', '')
+                )
+                item['localised_answer'] = (
+                    item.get(f'answer_{lang}') or item.get('answer', '')
+                )
+        return response
+
 _LANDING_CACHE_KEY = 'landing_stats_v2'
 _LANDING_CACHE_TTL = 60  # seconds
 _TREND_CACHE_TTL = 300  # seconds
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def landing_stats_view(request):
@@ -104,6 +124,7 @@ def landing_stats_view(request):
     return Response(data)
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def stats_trend_view(request):
@@ -156,6 +177,57 @@ def stats_trend_view(request):
     return Response(data)
 
 
+@extend_schema(exclude=True)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def audit_log_view(request):
+    """
+    GET /api/v1/audit/log/
+    Returns paginated AuditLog entries (request-level mutations). Admin only.
+
+    Query params:
+      page=1          page number (default 1)
+      page_size=25    results per page (max 100)
+      user=<uuid>     filter by user id
+      action=CREATE|UPDATE|DELETE
+      path=<str>      substring match on path
+    """
+    from apps.accounts.permissions import IsAdminUser
+    from rest_framework import status as st
+
+    if not (request.user and request.user.is_authenticated
+            and IsAdminUser().has_permission(request, None)):
+        return Response({'detail': 'Admin only.'}, status=st.HTTP_403_FORBIDDEN)
+
+    page_size = min(int(request.query_params.get('page_size', 25)), 100)
+    page      = max(int(request.query_params.get('page', 1)), 1)
+    user_filter   = request.query_params.get('user')
+    action_filter = request.query_params.get('action')
+    path_filter   = request.query_params.get('path')
+
+    qs = AuditLog.objects.all()
+    if user_filter:
+        qs = qs.filter(user_id=user_filter)
+    if action_filter:
+        qs = qs.filter(action=action_filter.upper())
+    if path_filter:
+        qs = qs.filter(path__icontains=path_filter)
+
+    total  = qs.count()
+    offset = (page - 1) * page_size
+    page_qs = qs.select_related('user')[offset:offset + page_size]
+
+    return Response({
+        'data': {
+            'count': total,
+            'page': page,
+            'page_size': page_size,
+            'results': AuditLogSerializer(page_qs, many=True).data,
+        }
+    })
+
+
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def health_check(request):

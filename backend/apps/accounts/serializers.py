@@ -57,14 +57,30 @@ class IdentifierAuthSerializer(serializers.Serializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     camp_name = serializers.CharField(source='camp.name', read_only=True, allow_null=True)
+    has_guardian_record = serializers.SerializerMethodField()
+    guardian_id = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
         fields = [
-            'id', 'email', 'full_name', 'role', 'phone_number', 'camp', 'camp_name',
-            'is_approved', 'must_change_password', 'preferred_language', 'theme_preference', 'date_joined',
+            'id', 'email', 'full_name', 'role', 'phone_number', 'national_id', 'camp', 'camp_name',
+            'is_approved', 'is_active', 'must_change_password', 'preferred_language', 'theme_preference',
+            'notification_prefs', 'onboarded_at', 'has_guardian_record', 'guardian_id', 'date_joined',
+            'suspended_at', 'suspension_reason',
         ]
-        read_only_fields = ['id', 'date_joined', 'is_approved', 'must_change_password', 'role', 'camp']
+        read_only_fields = ['id', 'email', 'date_joined', 'is_approved', 'must_change_password', 'role', 'camp']
+
+    def get_has_guardian_record(self, obj) -> bool:
+        from apps.children.models import Guardian
+        return Guardian.objects.filter(user=obj).exists()
+
+    def get_guardian_id(self, obj) -> str | None:
+        """Return the linked Guardian's UUID for PARENT users so nurses can reuse it."""
+        try:
+            g = obj.guardian_profile
+            return str(g.id) if g else None
+        except Exception:
+            return None
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):

@@ -1,155 +1,175 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { Syringe, CheckCircle, Clock, XCircle, SkipForward, ChevronRight } from 'lucide-react';
+import { Syringe, CheckCircle, Clock, XCircle, SkipForward, ChevronDown, ChevronRight } from 'lucide-react';
 import { useMyChildren, useChildVaccinations } from '@/lib/api/queries';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
-import type { VaccinationRecord } from '@/lib/api/parent';
 import type { SupervisedChild } from '@/lib/api/parent';
 
-const VAX_STATUS: Record<string, {
-  label: string;
-  icon:  React.ReactNode;
-  color: string;
-  bg:    string;
-}> = {
-  DONE:      { label: 'Done',     icon: <CheckCircle size={13} />, color: 'var(--success)', bg: '#f0fdf4'         },
-  SCHEDULED: { label: 'Upcoming', icon: <Clock       size={13} />, color: 'var(--ink)',     bg: 'var(--bg-sand)'  },
-  MISSED:    { label: 'Missed',   icon: <XCircle     size={13} />, color: 'var(--danger)',  bg: '#fef2f2'         },
-  SKIPPED:   { label: 'Skipped',  icon: <SkipForward size={13} />, color: 'var(--text-muted)', bg: 'var(--bg-elev)' },
+// ── Types & constants ──────────────────────────────────────────────────────────
+
+type StatusFilter = 'ALL' | 'DONE' | 'SCHEDULED' | 'MISSED' | 'SKIPPED';
+
+const TABS: { key: StatusFilter; label: string; icon: React.ReactNode; color: string }[] = [
+  { key: 'ALL',       label: 'All',      icon: <Syringe   size={13} />, color: 'var(--ink)'        },
+  { key: 'DONE',      label: 'Done',     icon: <CheckCircle size={13} />, color: 'var(--success)'  },
+  { key: 'SCHEDULED', label: 'Upcoming', icon: <Clock     size={13} />, color: 'var(--warn)'       },
+  { key: 'MISSED',    label: 'Missed',   icon: <XCircle   size={13} />, color: 'var(--danger)'     },
+  { key: 'SKIPPED',   label: 'Skipped',  icon: <SkipForward size={13} />, color: 'var(--text-muted)' },
+];
+
+const STATUS_META: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
+  DONE:      { label: 'Done',     icon: <CheckCircle size={12} />, color: 'var(--success)', bg: 'color-mix(in srgb, var(--success) 12%, transparent)' },
+  SCHEDULED: { label: 'Upcoming', icon: <Clock       size={12} />, color: 'var(--warn)',    bg: 'color-mix(in srgb, var(--warn) 12%, transparent)'    },
+  MISSED:    { label: 'Missed',   icon: <XCircle     size={12} />, color: 'var(--danger)',  bg: 'color-mix(in srgb, var(--danger) 12%, transparent)'  },
+  SKIPPED:   { label: 'Skipped',  icon: <SkipForward size={12} />, color: 'var(--text-muted)', bg: 'var(--bg-sand)' },
 };
 
-function ChildVaccineCard({ child }: { child: SupervisedChild }) {
+// ── Child vaccine panel (collapsed by default) ─────────────────────────────────
+
+function ChildVaccinePanel({ child, filter }: { child: SupervisedChild; filter: StatusFilter }) {
+  const [open, setOpen] = useState(false);
   const { data: vaccines, isLoading } = useChildVaccinations(child.id);
-  const done    = vaccines?.filter((v) => v.status === 'DONE').length    ?? 0;
-  const total   = vaccines?.length ?? 0;
-  const overdue = vaccines?.filter((v) => v.is_overdue).length           ?? 0;
+
+  const all     = vaccines ?? [];
+  const done    = all.filter((v) => v.status === 'DONE').length;
+  const overdue = all.filter((v) => v.is_overdue).length;
+  const shown   = filter === 'ALL' ? all : all.filter((v) => v.status === filter);
 
   return (
-    <div
-      className="rounded-2xl border overflow-hidden"
-      style={{ borderColor: 'var(--border)' }}
-    >
-      {/* Child header */}
-      <div
-        className="flex items-center justify-between px-5 py-4 border-b"
-        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: overdue > 0 ? 'color-mix(in srgb, var(--danger) 35%, var(--border))' : 'var(--border)' }}>
+      {/* Header — always clickable */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-[var(--bg-sand)]"
+        style={{ backgroundColor: 'var(--bg-elev)' }}
       >
-        <div>
-          <p className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>
-            {child.full_name}
-          </p>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {child.age_display} &middot; {child.registration_number}
-          </p>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: 'color-mix(in srgb, var(--ink) 8%, var(--bg-sand))' }}>
+            <Syringe size={16} style={{ color: 'var(--ink)' }} aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold truncate" style={{ color: 'var(--ink)' }}>{child.full_name}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              {child.age_display}
+              {!isLoading && <> · <span style={{ color: overdue > 0 ? 'var(--danger)' : 'var(--success)', fontWeight: 600 }}>{done}/{all.length} done</span></>}
+              {overdue > 0 && <span className="ml-1 font-bold" style={{ color: 'var(--danger)' }}>· {overdue} overdue</span>}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {!isLoading && total > 0 && (
-            <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-              {done}/{total} done
-              {overdue > 0 && (
-                <span className="ml-2 font-bold" style={{ color: 'var(--danger)' }}>
-                  · {overdue} overdue
-                </span>
-              )}
-            </span>
-          )}
+
+        <div className="flex items-center gap-2 shrink-0">
           <Link
             href={`/parent/children/${child.id}`}
-            className="flex items-center gap-1 text-xs transition-opacity hover:opacity-70"
-            style={{ color: 'var(--text-muted)' }}
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs px-2 py-1 rounded-lg transition-colors hover:opacity-70"
+            style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}
           >
-            Details <ChevronRight size={12} aria-hidden="true" />
+            Details
           </Link>
+          {open
+            ? <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} />
+            : <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />}
         </div>
-      </div>
+      </button>
 
-      {/* Vaccine rows */}
-      {isLoading ? (
-        <div className="p-4 flex flex-col gap-2">
-          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 rounded-lg" />)}
-        </div>
-      ) : !vaccines || vaccines.length === 0 ? (
-        <div className="px-5 py-6 text-sm text-center" style={{ color: 'var(--text-muted)' }}>
-          No vaccination records yet.
-        </div>
-      ) : (
-        <div>
-          {vaccines.map((rec) => {
-            const cfg = VAX_STATUS[rec.status] ?? VAX_STATUS.SCHEDULED;
-            return (
-              <div
-                key={rec.id}
-                className="flex items-center justify-between px-5 py-3 border-b last:border-b-0"
-                style={{ borderColor: 'var(--border)' }}
-              >
-                <div>
-                  <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
-                    {rec.vaccine_name}
-                    {rec.is_overdue && (
-                      <span className="ml-2 text-xs font-bold" style={{ color: 'var(--danger)' }}>
-                        Overdue
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    {rec.vaccine_code} &middot;{' '}
-                    {rec.administered_date ?? rec.scheduled_date}
-                  </p>
-                </div>
-                <span
-                  className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
-                  style={{ backgroundColor: cfg.bg, color: cfg.color }}
-                >
-                  {cfg.icon}
-                  {cfg.label}
-                </span>
-              </div>
-            );
-          })}
+      {/* Expanded vaccine list */}
+      {open && (
+        <div style={{ borderTop: '1px solid var(--border)' }}>
+          {isLoading ? (
+            <div className="p-4 flex flex-col gap-2">
+              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 rounded-lg" />)}
+            </div>
+          ) : shown.length === 0 ? (
+            <div className="px-4 py-6 text-sm text-center" style={{ color: 'var(--text-muted)' }}>
+              {filter === 'ALL' ? 'No vaccination records yet.' : `No ${filter.toLowerCase()} vaccinations.`}
+            </div>
+          ) : (
+            <div>
+              {shown.map((rec) => {
+                const meta = STATUS_META[rec.status] ?? STATUS_META.SCHEDULED;
+                return (
+                  <div
+                    key={rec.id}
+                    className="flex items-center justify-between px-4 py-3 border-b last:border-b-0"
+                    style={{ borderColor: 'var(--border)' }}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>
+                        {rec.vaccine_name}
+                        {rec.is_overdue && (
+                          <span className="ml-2 text-xs font-bold" style={{ color: 'var(--danger)' }}>Overdue</span>
+                        )}
+                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                        {rec.vaccine_code} · {rec.administered_date ?? rec.scheduled_date}
+                      </p>
+                    </div>
+                    <span
+                      className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ml-3"
+                      style={{ backgroundColor: meta.bg, color: meta.color }}
+                    >
+                      {meta.icon}
+                      {meta.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
+// ── Page ───────────────────────────────────────────────────────────────────────
+
 export default function VaccinationCardPage() {
+  const [filter, setFilter] = useState<StatusFilter>('ALL');
   const { data, isLoading } = useMyChildren();
   const children = data?.items ?? [];
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
+    <div className="flex flex-col gap-5 max-w-xl mx-auto w-full">
       {/* Header */}
       <div>
-        <h2
-          className="text-2xl font-bold"
-          style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
+        <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
           Vaccination Card
         </h2>
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Vaccination history for all your children
+          Tap a child to expand their schedule.
         </p>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-3">
-        {Object.entries(VAX_STATUS).map(([, cfg]) => (
-          <span
-            key={cfg.label}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
-            style={{ backgroundColor: cfg.bg, color: cfg.color }}
+      {/* Filter tabs */}
+      <div className="flex gap-1 p-1 rounded-xl overflow-x-auto" style={{ backgroundColor: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
+        {TABS.map(({ key, label, icon, color }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setFilter(key)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex-1 justify-center"
+            style={{
+              backgroundColor: filter === key ? 'var(--bg)' : 'transparent',
+              color:           filter === key ? color : 'var(--text-muted)',
+              boxShadow:       filter === key ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+            }}
           >
-            {cfg.icon}
-            {cfg.label}
-          </span>
+            {icon}
+            {label}
+          </button>
         ))}
       </div>
 
+      {/* Children */}
       {isLoading ? (
-        <div className="flex flex-col gap-6">
-          {[1, 2].map((i) => <Skeleton key={i} className="h-64 rounded-2xl" />)}
+        <div className="flex flex-col gap-3">
+          {[1, 2].map((i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}
         </div>
       ) : children.length === 0 ? (
         <EmptyState
@@ -159,9 +179,9 @@ export default function VaccinationCardPage() {
           action={{ label: 'Go to My Children', href: '/parent' }}
         />
       ) : (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-3">
           {children.map((child) => (
-            <ChildVaccineCard key={child.id} child={child} />
+            <ChildVaccinePanel key={child.id} child={child} filter={filter} />
           ))}
         </div>
       )}
