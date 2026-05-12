@@ -156,13 +156,13 @@ function ChildCard({ child }: { child: ChildSummary }) {
     <Link
       href={`/nurse/children/${child.id}`}
       className="rounded-xl border flex flex-col gap-3 p-4 hover:shadow-md transition-shadow group"
-      style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+      style={{ background: 'var(--bg-elev)', borderColor: 'var(--border)' }}
     >
       {/* Header row */}
       <div className="flex items-start gap-3">
         <div
           className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0"
-          style={{ background: 'var(--bg)', color: 'var(--ink)' }}
+          style={{ background: 'var(--bg-sand)', color: 'var(--ink)' }}
         >
           {child.full_name.charAt(0)}
         </div>
@@ -187,7 +187,7 @@ function ChildCard({ child }: { child: ChildSummary }) {
           { label: 'Height', val: child.latest_height_cm ? `${parseFloat(child.latest_height_cm).toFixed(1)} cm` : null },
           { label: 'MUAC',   val: child.latest_muac_cm ? `${parseFloat(child.latest_muac_cm).toFixed(1)} cm` : null },
         ].map(({ label, val }) => (
-          <div key={label} className="rounded-lg px-2 py-1.5 text-center" style={{ background: 'var(--bg)' }}>
+          <div key={label} className="rounded-lg px-2 py-1.5 text-center" style={{ background: 'var(--bg-sand)' }}>
             <p style={{ color: 'var(--text-muted)' }}>{label}</p>
             <p className="font-semibold mt-0.5" style={{ color: val ? 'var(--ink)' : 'var(--text-muted)' }}>
               {val ?? '—'}
@@ -290,7 +290,7 @@ function FamilyAdvice({ overview }: { overview: FamilyOverview }) {
   if (neverVisited.length > 0) {
     tips.push({
       icon: <Baby size={15} />,
-      color: 'var(--info)',
+      color: 'var(--text-muted)',
       text: `${neverVisited.map((c) => c.full_name).join(', ')} ${neverVisited.length === 1 ? 'has' : 'have'} no recorded visits. Arrange a home visit or facility check-up.`,
     });
   }
@@ -324,7 +324,7 @@ function FamilyAdvice({ overview }: { overview: FamilyOverview }) {
 
   return (
     <div className="rounded-xl border flex flex-col gap-0 overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-      <div className="px-4 py-3 border-b" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
+      <div className="px-4 py-3 border-b" style={{ background: 'var(--bg-sand)', borderColor: 'var(--border)' }}>
         <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>Clinical Guidance</h3>
         <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
           AI-assisted advice based on this family&apos;s data
@@ -334,7 +334,7 @@ function FamilyAdvice({ overview }: { overview: FamilyOverview }) {
         <div
           key={i}
           className="flex items-start gap-3 px-4 py-3 border-b last:border-b-0"
-          style={{ borderColor: 'var(--border)', background: 'var(--card)' }}
+          style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}
         >
           <span style={{ color: tip.color, flexShrink: 0, marginTop: 1 }}>{tip.icon}</span>
           <p className="text-sm" style={{ color: 'var(--ink)' }}>{tip.text}</p>
@@ -454,7 +454,7 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
             icon: <Baby size={18} />,
             label: 'Children',
             value: String(overview.total_children),
-            color: 'var(--primary)',
+            color: 'var(--ink)',
           },
           {
             icon: <Syringe size={18} />,
@@ -478,7 +478,7 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
           <div
             key={label}
             className="rounded-xl border p-4 flex flex-col gap-1"
-            style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+            style={{ background: 'var(--bg-elev)', borderColor: 'var(--border)' }}
           >
             <span style={{ color }}>{icon}</span>
             <p className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>{value}</p>
@@ -519,7 +519,7 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
                 key={note.id}
                 className="rounded-xl border p-3 flex flex-col gap-1"
                 style={{
-                  background: note.is_pinned ? 'var(--med-bg)' : 'var(--card)',
+                  background: note.is_pinned ? 'var(--med-bg)' : 'var(--bg-elev)',
                   borderColor: note.is_pinned ? 'var(--warn)' : 'var(--border)',
                 }}
               >
@@ -534,7 +534,7 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
                   <Link
                     href={`/nurse/children/${note.child_id}`}
                     className="text-xs hover:underline"
-                    style={{ color: 'var(--primary)' }}
+                    style={{ color: 'var(--ink)' }}
                   >
                     {note.child_name}
                   </Link>
@@ -564,7 +564,7 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
                 <div
                   key={vr.id}
                   className="rounded-xl border p-3 flex flex-col gap-1"
-                  style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+                  style={{ background: 'var(--bg-elev)', borderColor: 'var(--border)' }}
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant={urgencyColor as 'danger' | 'warn' | 'default'}>{vr.urgency}</Badge>
@@ -572,7 +572,7 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
                     <Link
                       href={`/nurse/children/${vr.child_id}`}
                       className="text-xs hover:underline"
-                      style={{ color: 'var(--primary)' }}
+                      style={{ color: 'var(--ink)' }}
                     >
                       {vr.child_name}
                     </Link>
@@ -602,7 +602,7 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
               <div
                 key={status}
                 className="rounded-xl border p-3 text-center"
-                style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+                style={{ background: 'var(--bg-elev)', borderColor: 'var(--border)' }}
               >
                 <p className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>{count}</p>
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
