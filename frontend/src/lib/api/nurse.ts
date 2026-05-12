@@ -79,6 +79,8 @@ export interface ParentUser {
   camp: string | null;
   is_approved: boolean;
   guardian_id: string | null;   // UUID of their linked Guardian, if any
+  /** Only present on freshly-created accounts (one-time, from POST /auth/users/) */
+  temp_password?: string;
 }
 
 export interface RegisteredChild {
@@ -178,6 +180,11 @@ export async function createChildNote(
 ): Promise<ClinicalNote> {
   const { data } = await apiClient.post(`/children/${childId}/notes/`, payload);
   return data.data;
+}
+
+export async function getChildQR(childId: string): Promise<{ qr_code: string; png_base64: string | null }> {
+  const { data } = await apiClient.get(`/children/${childId}/qr/`);
+  return data.data ?? data;
 }
 
 export async function listHealthRecords(params?: {

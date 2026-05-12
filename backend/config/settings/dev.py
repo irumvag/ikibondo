@@ -23,8 +23,14 @@ if _cfg('USE_SQLITE', default='0') == '1':
     CELERY_BROKER_URL = 'memory://'
     CELERY_RESULT_BACKEND = 'cache+memory://'
 
-# Show emails in console during development
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Email — use SMTP if credentials are configured, otherwise fall back to console
+EMAIL_BACKEND = _cfg('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST          = _cfg('EMAIL_HOST',          default='smtp.gmail.com')
+EMAIL_PORT          = _cfg('EMAIL_PORT',          default=587, cast=int)
+EMAIL_USE_TLS       = _cfg('EMAIL_USE_TLS',       default=True, cast=bool)
+EMAIL_HOST_USER     = _cfg('EMAIL_HOST_USER',     default='')
+EMAIL_HOST_PASSWORD = _cfg('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL  = _cfg('DEFAULT_FROM_EMAIL',  default=f'Ikibondo <{EMAIL_HOST_USER}>')
 
 # Looser CORS in development
 CORS_ALLOW_ALL_ORIGINS = True

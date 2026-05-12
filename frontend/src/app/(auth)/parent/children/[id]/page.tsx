@@ -5,20 +5,23 @@ import Link from 'next/link';
 import {
   ArrowLeft, Heart, Syringe, Calendar, CheckCircle,
   XCircle, Clock, SkipForward, AlertTriangle, Home,
-  MessageSquare, Phone, MapPin, Pin, TrendingUp,
+  MessageSquare, Phone, MapPin, Pin, TrendingUp, QrCode, Printer,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+const QRCodeSVG = dynamic(() => import('qrcode.react').then((m) => m.QRCodeSVG), { ssr: false });
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer,
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
-import { useChild, useChildHistory, useChildVaccinations, useChildNotes, useGrowthData } from '@/lib/api/queries';
+import { useChild, useChildHistory, useChildVaccinations, useChildNotes, useGrowthData, useChildQR } from '@/lib/api/queries';
 import { listVisitRequests, type VisitRequest } from '@/lib/api/parent';
 import type { GrowthData } from '@/lib/api/nurse';
 import { RiskExplainer } from '@/components/ui/RiskExplainer';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Badge } from '@/components/ui/Badge';
+import { Tabs } from '@/components/ui/Tabs';
 
 // ── label maps ─────────────────────────────────────────────────────────────────
 
@@ -27,7 +30,7 @@ const RISK_LABEL: Record<string, string> = {
   LOW: 'Healthy', UNKNOWN: 'Not yet assessed',
 };
 const RISK_BG: Record<string, string> = {
-  HIGH: '#fef2f2', MEDIUM: '#fffbeb', LOW: '#f0fdf4', UNKNOWN: 'var(--bg-sand)',
+  HIGH: 'var(--high-bg)', MEDIUM: 'var(--med-bg)', LOW: 'var(--low-bg)', UNKNOWN: 'var(--bg-sand)',
 };
 const RISK_COLOR: Record<string, string> = {
   HIGH: 'var(--danger)', MEDIUM: 'var(--warn)', LOW: 'var(--success)', UNKNOWN: 'var(--text-muted)',
@@ -55,15 +58,18 @@ const VR_STATUS_LABEL: Record<string, string> = {
   PENDING: 'Pending', ACCEPTED: 'Accepted', DECLINED: 'Declined', COMPLETED: 'Completed',
 };
 
-type Tab = 'status' | 'vaccines' | 'visits' | 'notes' | 'requests' | 'growth';
+type Tab = 'status' | 'vaccines' | 'visits' | 'notes' | 'requests' | 'growth' | 'qr';
 type ChartMode = 'weight' | 'height';
 
 // ── WHO growth chart helpers ───────────────────────────────────────────────────
 
 function buildChartData(growth: GrowthData, mode: ChartMode) {
+  const percentiles = growth.who_percentiles;
+  if (!percentiles) return [];
   const who = mode === 'weight'
-    ? growth.who_percentiles.weight_for_age
-    : growth.who_percentiles.height_for_age;
+    ? percentiles.weight_for_age
+    : percentiles.height_for_age;
+  if (!who) return [];
   const allAges = new Map<number, Record<string, number | null>>();
 
   (['p3', 'p50', 'p97'] as const).forEach((band) => {
@@ -270,6 +276,7 @@ interface ChildData {
   guardian_name?: string | null;
   guardian_phone?: string | null;
   assigned_chw_name?: string | null;
+  assigned_chw_phone?: string | null;
   birth_weight?: number | null;
   gestational_age?: number | null;
   feeding_type?: 'BREAST' | 'FORMULA' | 'MIXED' | null;
@@ -284,6 +291,7 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
   const { data: vaccines,  isLoading: vaxLoading    } = useChildVaccinations(id);
   const { data: notes,     isLoading: notesLoading  } = useChildNotes(id);
   const { data: growth,    isLoading: growthLoading } = useGrowthData(id);
+  const { data: qrData                             } = useChildQR(id);
   const { data: visitReqs, isLoading: vrLoading     } = useQuery<VisitRequest[]>({
     queryKey: ['parent', 'visit-requests'],
     queryFn:  () => listVisitRequests(),
@@ -302,6 +310,7 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
     { key: 'visits',   label: 'Visits',         icon: <Calendar      size={14} />, badge: history?.length },
     { key: 'notes',    label: 'Nurse advice',   icon: <MessageSquare size={14} />, badge: pinnedNotes.length || undefined },
     { key: 'requests', label: 'My requests',    icon: <Home          size={14} />, badge: childVRs.filter((r: VisitRequest) => r.status === 'PENDING').length || undefined },
+    { key: 'qr',       label: 'QR Card',        icon: <QrCode        size={14} /> },
   ];
 
   if (childLoading) {
@@ -417,35 +426,11 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
       )}
 
       {/* Tabs */}
-      <div
-        className="flex rounded-2xl p-1 gap-1 overflow-x-auto"
-        style={{ backgroundColor: 'var(--bg-sand)' }}
-      >
-        {TABS.map(({ key, label, icon, badge }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setTab(key)}
-            className="flex-1 relative flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap min-w-0"
-            style={{
-              backgroundColor: tab === key ? 'var(--bg)'  : 'transparent',
-              color:           tab === key ? 'var(--ink)' : 'var(--text-muted)',
-              boxShadow:       tab === key ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-            }}
-          >
-            {icon}
-            <span className="hidden sm:inline">{label}</span>
-            {badge ? (
-              <span
-                className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center"
-                style={{ background: 'var(--warn)', color: 'white' }}
-              >
-                {badge}
-              </span>
-            ) : null}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        active={tab}
+        onChange={(k) => setTab(k as Tab)}
+        tabs={TABS}
+      />
 
       {/* ── Health status tab ─────────────────────────────────────────────────── */}
       {tab === 'status' && (
@@ -550,8 +535,8 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
             <GrowthSparkline data={history ?? []} />
           )}
 
-          {/* CHW contact */}
-          {(child.assigned_chw_name || child.guardian_phone) && (
+          {/* Care team — shows only when a CHW is assigned to the family */}
+          {child.assigned_chw_name && (
             <div
               className="rounded-2xl border p-4 flex flex-col gap-3"
               style={{ background: 'var(--bg-elev)', borderColor: 'var(--border)' }}
@@ -559,34 +544,33 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
               <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                 Your care team
               </p>
-              {child.assigned_chw_name && (
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
-                    style={{ background: 'var(--bg-sand)', color: 'var(--ink)' }}
-                  >
-                    {child.assigned_chw_name.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{child.assigned_chw_name}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Community Health Worker</p>
-                  </div>
-                  <Link
-                    href={`/parent/request-visit?child=${id}`}
-                    className="text-xs px-3 py-1.5 rounded-xl border font-medium transition-colors hover:bg-[var(--bg-sand)]"
-                    style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
-                  >
-                    Request visit
-                  </Link>
-                </div>
-              )}
-              {child.guardian_phone && (
-                <a
-                  href={`tel:${child.guardian_phone}`}
-                  className="flex items-center gap-2 text-sm font-medium"
-                  style={{ color: 'var(--primary, #2563eb)' }}
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
+                  style={{ background: 'var(--bg-sand)', color: 'var(--ink)' }}
                 >
-                  <Phone size={14} /> {child.guardian_phone}
+                  {child.assigned_chw_name.split(' ').map((w: string) => w[0]).join('').slice(0, 2)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--ink)' }}>{child.assigned_chw_name}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Community Health Worker</p>
+                </div>
+                <Link
+                  href={`/parent/request-visit?child=${id}`}
+                  className="text-xs px-3 py-1.5 rounded-xl border font-medium transition-colors hover:bg-[var(--bg-sand)] shrink-0"
+                  style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
+                >
+                  Request visit
+                </Link>
+              </div>
+              {child.assigned_chw_phone && (
+                <a
+                  href={`tel:${child.assigned_chw_phone}`}
+                  className="flex items-center gap-2 text-sm font-medium rounded-xl px-3 py-2 transition-colors hover:bg-[var(--bg-sand)]"
+                  style={{ color: 'var(--ink)', border: '1px solid var(--border)' }}
+                >
+                  <Phone size={14} aria-hidden="true" />
+                  <span>Call CHW — {child.assigned_chw_phone}</span>
                 </a>
               )}
             </div>
@@ -703,7 +687,7 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
               <div className="h-4 rounded" style={{ background: 'var(--bg-sand)', width: '40%' }} />
               <div className="h-56 rounded-xl" style={{ background: 'var(--bg-sand)' }} />
             </div>
-          ) : growth ? (
+          ) : growth?.who_percentiles ? (
             <ParentGrowthChart growth={growth as GrowthData} />
           ) : (
             <p className="text-sm py-6 text-center" style={{ color: 'var(--text-muted)' }}>
@@ -885,6 +869,94 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── QR Card tab ─────────────────────────────────────────────────────── */}
+      {tab === 'qr' && child && (
+        <div className="flex flex-col items-center gap-5">
+          {/* Card */}
+          <div
+            id="parent-child-qr"
+            className="rounded-3xl border p-6 flex flex-col items-center gap-4 w-full max-w-xs"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', boxShadow: 'var(--shadow-md)' }}
+          >
+            {/* Header */}
+            <div className="text-center">
+              <p className="font-bold text-xl" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
+                {child.full_name}
+              </p>
+              <p className="text-xs mt-1 font-mono tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                {child.registration_number}
+              </p>
+            </div>
+
+            {/* QR image — backend PNG preferred, client-side SVG fallback */}
+            <div className="p-4 rounded-2xl" style={{ backgroundColor: '#ffffff', border: '1px solid #e5e7eb' }}>
+              {qrData?.png_base64 ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={`data:image/png;base64,${qrData.png_base64}`}
+                  alt={`QR code for ${child.full_name}`}
+                  width={192}
+                  height={192}
+                  style={{ display: 'block', imageRendering: 'pixelated' }}
+                />
+              ) : (
+                <QRCodeSVG value={id} size={192} level="M" includeMargin={false} />
+              )}
+            </div>
+
+            {/* Camp badge */}
+            {child.camp_name && (
+              <div
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+                style={{ background: 'var(--bg-sand)', color: 'var(--ink)' }}
+              >
+                <MapPin size={11} aria-hidden="true" />
+                {child.camp_name}
+              </div>
+            )}
+
+            <p className="text-xs text-center leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+              Show this code to your nurse or CHW — they can scan it to open the health record instantly.
+            </p>
+          </div>
+
+          {/* Print button */}
+          <button
+            onClick={() => {
+              const card = document.getElementById('parent-child-qr');
+              const w = window.open('', '_blank', 'width=420,height=560');
+              if (!w || !card) return;
+              const qrHtml = qrData?.png_base64
+                ? `<img src="data:image/png;base64,${qrData.png_base64}" width="192" height="192" style="display:block;image-rendering:pixelated;" />`
+                : (card.querySelector('svg')?.outerHTML ?? '');
+              w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>QR Card — ${child.full_name}</title>
+                <style>
+                  body{font-family:Arial,sans-serif;display:flex;flex-direction:column;align-items:center;
+                    justify-content:center;min-height:100vh;margin:0;padding:32px;text-align:center;background:#fff;}
+                  h1{font-size:20px;font-weight:700;margin:0 0 4px;}
+                  .reg{font-size:11px;font-family:monospace;color:#6b7280;letter-spacing:.05em;margin-bottom:16px;}
+                  .qr{padding:16px;border:1px solid #e5e7eb;border-radius:16px;display:inline-block;margin-bottom:16px;}
+                  .camp{font-size:11px;color:#6b7280;margin-bottom:8px;}
+                  .footer{font-size:9px;color:#9ca3af;margin-top:8px;}
+                </style></head>
+                <body>
+                  <h1>${child.full_name}</h1>
+                  <p class="reg">${child.registration_number}</p>
+                  <div class="qr">${qrHtml}</div>
+                  ${child.camp_name ? `<p class="camp">${child.camp_name}</p>` : ''}
+                  <p class="footer">Scan to view health record · Ikibondo</p>
+                  <script>window.onload=function(){window.print();};<\/script>
+                </body></html>`);
+              w.document.close();
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border text-sm font-medium transition-colors hover:bg-[var(--bg-sand)]"
+            style={{ borderColor: 'var(--border)', color: 'var(--ink)', backgroundColor: 'var(--bg-elev)' }}
+          >
+            <Printer size={14} aria-hidden="true" /> Print QR card
+          </button>
         </div>
       )}
     </div>

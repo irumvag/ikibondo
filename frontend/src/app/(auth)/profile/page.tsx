@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AlertTriangle, Check, Lock, Pencil } from 'lucide-react';
+import { Check, Lock, Pencil } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { patchMe, changePassword, getMe } from '@/lib/api/user';
 import { useTheme } from '@/components/layout/ThemeProvider';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Modal } from '@/components/ui/Modal';
+import { Alert } from '@/components/ui/Alert';
+import { useToast } from '@/contexts/ToastContext';
 
 const ROLE_LABEL: Record<string, string> = {
   ADMIN:      'Administrator',
@@ -37,55 +40,34 @@ const THEMES: { value: 'system' | 'light' | 'dark'; label: string }[] = [
   { value: 'dark',   label: 'Dark'           },
 ];
 
-// ── Modal backdrop wrapper ────────────────────────────────────────────────────
-
-function ModalBackdrop({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        className="w-full max-w-md rounded-2xl border p-6 flex flex-col gap-4 shadow-xl"
-        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
 // ── Edit Profile Modal ────────────────────────────────────────────────────────
 
 function EditProfileModal({
   user,
   setUser,
+  open,
   onClose,
 }: {
   user: NonNullable<ReturnType<typeof useAuthStore.getState>['user']>;
   setUser: (u: typeof user) => void;
+  open: boolean;
   onClose: () => void;
 }) {
-  const [editName,       setEditName]       = useState(user.full_name       ?? '');
-  const [editPhone,      setEditPhone]      = useState(user.phone_number    ?? '');
+  const toast = useToast();
+  const [editName,       setEditName]       = useState(user.full_name    ?? '');
+  const [editPhone,      setEditPhone]      = useState(user.phone_number ?? '');
   const [editNationalId, setEditNationalId] = useState((user as typeof user & { national_id?: string }).national_id ?? '');
   const [saving,         setSaving]         = useState(false);
-  const [saved,          setSaved]          = useState(false);
   const [error,          setError]          = useState('');
 
   const handleSave = async () => {
     setSaving(true);
     setError('');
-    setSaved(false);
     try {
       const updated = await patchMe({ full_name: editName, phone_number: editPhone, national_id: editNationalId });
       setUser(updated);
-      setSaved(true);
-      setTimeout(() => {
-        setSaved(false);
-        onClose();
-      }, 1000);
+      toast.success('Profile updated successfully');
+      onClose();
     } catch {
       setError('Failed to save. Please try again.');
     } finally {
@@ -94,48 +76,27 @@ function EditProfileModal({
   };
 
   return (
-    <ModalBackdrop onClose={onClose}>
-      <div className="flex items-center justify-between">
-        <p className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Edit profile</p>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-sm px-3 py-1 rounded-lg transition-colors hover:bg-[var(--bg-sand)]"
-          style={{ color: 'var(--text-muted)' }}
-        >
-          Cancel
-        </button>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Edit profile"
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" onClick={handleSave} loading={saving}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        {error && <Alert variant="danger">{error}</Alert>}
+        <Input label="Full name" type="text" value={editName} onChange={(e) => setEditName(e.target.value)} autoComplete="name" />
+        <Input label="Phone number" type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} autoComplete="tel" />
+        <Input label="National ID" type="text" value={editNationalId} onChange={(e) => setEditNationalId(e.target.value)} autoComplete="off" />
       </div>
-      <Input
-        label="Full name"
-        type="text"
-        value={editName}
-        onChange={(e) => setEditName(e.target.value)}
-        autoComplete="name"
-      />
-      <Input
-        label="Phone number"
-        type="tel"
-        value={editPhone}
-        onChange={(e) => setEditPhone(e.target.value)}
-        autoComplete="tel"
-      />
-      <Input
-        label="National ID"
-        type="text"
-        value={editNationalId}
-        onChange={(e) => setEditNationalId(e.target.value)}
-        autoComplete="off"
-      />
-      {error && (
-        <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>
-      )}
-      <Button variant="primary" onClick={handleSave} loading={saving}>
-        {saved
-          ? <><Check size={15} className="mr-1.5" aria-hidden="true" />Saved</>
-          : 'Save changes'}
-      </Button>
-    </ModalBackdrop>
+    </Modal>
   );
 }
 
@@ -143,55 +104,42 @@ function EditProfileModal({
 
 function ChangePasswordModal({
   forceChange,
+  open,
   onClose,
   setUser,
 }: {
   forceChange: boolean;
+  open: boolean;
   onClose: () => void;
   setUser: (u: NonNullable<ReturnType<typeof useAuthStore.getState>['user']>) => void;
 }) {
   const router = useRouter();
-  const [pwForm, setPwForm]   = useState({ old: '', next: '', confirm: '' });
+  const toast  = useToast();
+  const [pwForm, setPwForm]     = useState({ old: '', next: '', confirm: '' });
   const [pwSaving, setPwSaving] = useState(false);
-  const [pwSaved,  setPwSaved]  = useState(false);
   const [pwError,  setPwError]  = useState('');
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pwForm.next !== pwForm.confirm) {
-      setPwError('New passwords do not match.');
-      return;
-    }
-    if (pwForm.next.length < 8) {
-      setPwError('New password must be at least 8 characters.');
-      return;
-    }
+    if (pwForm.next !== pwForm.confirm) { setPwError('New passwords do not match.'); return; }
+    if (pwForm.next.length < 8) { setPwError('New password must be at least 8 characters.'); return; }
     setPwSaving(true);
     setPwError('');
-    setPwSaved(false);
     try {
       await changePassword(pwForm.old, pwForm.next);
       setPwForm({ old: '', next: '', confirm: '' });
-      setPwSaved(true);
-
       try {
         const fresh = await getMe();
         setUser(fresh);
+        toast.success('Password changed successfully');
         if (forceChange) {
-          setTimeout(() => {
-            router.push(ROLE_HOME[fresh.role] ?? '/');
-          }, 800);
+          router.push(ROLE_HOME[fresh.role] ?? '/');
         } else {
-          setTimeout(() => {
-            setPwSaved(false);
-            onClose();
-          }, 1200);
+          onClose();
         }
       } catch {
-        setTimeout(() => {
-          setPwSaved(false);
-          onClose();
-        }, 1200);
+        toast.success('Password changed');
+        onClose();
       }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -202,58 +150,25 @@ function ChangePasswordModal({
   };
 
   return (
-    <ModalBackdrop onClose={forceChange ? () => {} : onClose}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Lock size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-          <p className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Change password</p>
-        </div>
-        {!forceChange && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-sm px-3 py-1 rounded-lg transition-colors hover:bg-[var(--bg-sand)]"
-            style={{ color: 'var(--text-muted)' }}
-          >
-            Cancel
-          </button>
-        )}
-      </div>
-      <form onSubmit={handleChangePassword} className="flex flex-col gap-3">
-        <Input
-          label="Current password"
-          type="password"
-          value={pwForm.old}
-          onChange={(e) => setPwForm({ ...pwForm, old: e.target.value })}
-          required
-          autoComplete="current-password"
-        />
-        <Input
-          label="New password"
-          type="password"
-          value={pwForm.next}
-          onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })}
-          required
-          autoComplete="new-password"
-        />
-        <Input
-          label="Confirm new password"
-          type="password"
-          value={pwForm.confirm}
-          onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
-          required
-          autoComplete="new-password"
-        />
-        {pwError && (
-          <p className="text-sm" style={{ color: 'var(--danger)' }}>{pwError}</p>
-        )}
+    <Modal
+      open={open}
+      onClose={forceChange ? () => {} : onClose}
+      title="Change password"
+      size="sm"
+    >
+      <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
+        {pwError && <Alert variant="danger">{pwError}</Alert>}
+        <Input label="Current password" type="password" value={pwForm.old} onChange={(e) => setPwForm({ ...pwForm, old: e.target.value })} required autoComplete="current-password" />
+        <Input label="New password" type="password" value={pwForm.next} onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })} required autoComplete="new-password" />
+        <Input label="Confirm new password" type="password" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} required autoComplete="new-password" />
         <Button type="submit" variant="primary" loading={pwSaving}>
-          {pwSaved
-            ? <><Check size={15} className="mr-1.5" aria-hidden="true" />{forceChange ? 'Password changed — redirecting…' : 'Password changed!'}</>
-            : 'Change password'}
+          {pwSaving ? 'Saving…' : 'Change password'}
         </Button>
+        {!forceChange && (
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+        )}
       </form>
-    </ModalBackdrop>
+    </Modal>
   );
 }
 
@@ -261,6 +176,7 @@ function ChangePasswordModal({
 
 export default function ProfilePage() {
   const searchParams = useSearchParams();
+  const toast   = useToast();
   const user    = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const { theme, setTheme } = useTheme();
@@ -269,23 +185,20 @@ export default function ProfilePage() {
 
   const [lang,   setLang]   = useState<'rw' | 'fr' | 'en'>(user?.preferred_language ?? 'en');
   const [saving, setSaving] = useState(false);
-  const [saved,  setSaved]  = useState(false);
   const [error,  setError]  = useState('');
 
-  const [showEditModal,   setShowEditModal]   = useState(false);
-  const [showPwModal,     setShowPwModal]     = useState(forceChange);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showPwModal,   setShowPwModal]   = useState(forceChange);
 
   const isDirty = lang !== (user?.preferred_language ?? 'en');
 
   const handleSave = async () => {
     setSaving(true);
     setError('');
-    setSaved(false);
     try {
       const updated = await patchMe({ preferred_language: lang });
       setUser(updated);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      toast.success('Preferences saved');
     } catch {
       setError('Failed to save preferences. Please try again.');
     } finally {
@@ -303,46 +216,24 @@ export default function ProfilePage() {
   return (
     <>
       <div className="flex flex-col gap-8 max-w-lg mx-auto w-full">
-        {/* Force-password-change banner */}
+
+        {/* Force-change banner */}
         {forceChange && (
-          <div
-            className="flex items-start gap-3 rounded-2xl border px-5 py-4"
-            role="alert"
-            style={{
-              borderColor: 'color-mix(in srgb, var(--warn) 40%, transparent)',
-              backgroundColor: 'color-mix(in srgb, var(--warn) 10%, var(--bg-elev))',
-            }}
-          >
-            <AlertTriangle size={20} className="shrink-0 mt-0.5" style={{ color: 'var(--warn)' }} aria-hidden="true" />
-            <div>
-              <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-                You&apos;re using a temporary password
-              </p>
-              <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                Please set a new password below before continuing. You won&apos;t be able to access other pages until this is done.
-              </p>
-            </div>
-          </div>
+          <Alert variant="warn" title="You're using a temporary password">
+            Please set a new password below before continuing. You won't be able to access other pages until this is done.
+          </Alert>
         )}
 
         {/* Header */}
         <div>
-          <h2
-            className="text-2xl font-bold"
-            style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
+          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
             Profile
           </h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Account details and preferences
-          </p>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Account details and preferences</p>
         </div>
 
         {/* Avatar + identity */}
-        <div
-          className="rounded-2xl border p-6 flex items-center gap-5"
-          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
-        >
+        <div className="rounded-2xl border p-6 flex items-center gap-5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold select-none shrink-0"
             style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}
@@ -351,27 +242,16 @@ export default function ProfilePage() {
             {initials}
           </div>
           <div>
-            <p
-              className="text-lg font-bold"
-              style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-            >
+            <p className="text-lg font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
               {user?.full_name ?? '—'}
             </p>
-            <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              {user?.email ?? '—'}
-            </p>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>{user?.email ?? '—'}</p>
             <div className="flex flex-wrap items-center gap-2 mt-2">
-              <span
-                className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}
-              >
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}>
                 {ROLE_LABEL[user?.role ?? ''] ?? user?.role}
               </span>
               {user?.camp_name && (
-                <span
-                  className="text-xs px-2.5 py-1 rounded-full"
-                  style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' }}
-                >
+                <span className="text-xs px-2.5 py-1 rounded-full" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' }}>
                   {user.camp_name}
                 </span>
               )}
@@ -380,68 +260,42 @@ export default function ProfilePage() {
         </div>
 
         {/* Account info */}
-        <div
-          className="rounded-2xl border p-5 flex flex-col gap-3"
-          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
-        >
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-            Account info
-          </p>
+        <div className="rounded-2xl border p-5 flex flex-col gap-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Account info</p>
           {[
-            ['Email',  user?.email       ?? '—'],
+            ['Email',  user?.email        ?? '—'],
             ['Phone',  user?.phone_number ?? 'Not set'],
             ['Status', user?.is_approved  ? 'Active' : 'Pending approval'],
           ].map(([k, v]) => (
-            <div
-              key={k}
-              className="flex justify-between items-center text-sm border-b last:border-b-0 pb-2.5 last:pb-0"
-              style={{ borderColor: 'var(--border)' }}
-            >
+            <div key={k} className="flex justify-between items-center text-sm border-b last:border-b-0 pb-2.5 last:pb-0" style={{ borderColor: 'var(--border)' }}>
               <span style={{ color: 'var(--text-muted)' }}>{k}</span>
-              <span
-                className="font-medium"
-                style={{ color: k === 'Status' && !user?.is_approved ? 'var(--warn)' : 'var(--ink)' }}
-              >
-                {v}
-              </span>
+              <span className="font-medium" style={{ color: k === 'Status' && !user?.is_approved ? 'var(--warn)' : 'var(--ink)' }}>{v}</span>
             </div>
           ))}
         </div>
 
-        {/* Action buttons — Edit profile + Change password */}
+        {/* Action buttons */}
         {!forceChange && (
           <div className="flex gap-3">
-            <Button
-              variant="secondary"
-              className="flex-1"
-              onClick={() => setShowEditModal(true)}
-            >
+            <Button variant="secondary" className="flex-1" onClick={() => setShowEditModal(true)}>
               <Pencil size={15} className="mr-2" aria-hidden="true" />
               Edit profile
             </Button>
-            <Button
-              variant="secondary"
-              className="flex-1"
-              onClick={() => setShowPwModal(true)}
-            >
+            <Button variant="secondary" className="flex-1" onClick={() => setShowPwModal(true)}>
               <Lock size={15} className="mr-2" aria-hidden="true" />
               Change password
             </Button>
           </div>
         )}
 
-        {/* Preferences — hidden while force-change is active */}
+        {/* Preferences */}
         {!forceChange && (
           <div className="flex flex-col gap-5">
-            <p className="text-base font-semibold" style={{ color: 'var(--ink)' }}>
-              Preferences
-            </p>
+            <p className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Preferences</p>
 
             {/* Language */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
-                Language
-              </label>
+              <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Language</label>
               <div className="flex gap-2">
                 {LANGUAGES.map(({ value, label }) => (
                   <button
@@ -463,9 +317,7 @@ export default function ProfilePage() {
 
             {/* Theme */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
-                Appearance
-              </label>
+              <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Appearance</label>
               <div className="flex gap-2">
                 {THEMES.map(({ value, label }) => (
                   <button
@@ -485,9 +337,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {error && (
-              <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>
-            )}
+            {error && <Alert variant="danger">{error}</Alert>}
 
             <Button
               variant="primary"
@@ -496,29 +346,27 @@ export default function ProfilePage() {
               disabled={!isDirty && !saving}
               className="self-start"
             >
-              {saved
-                ? <><Check size={15} className="mr-1.5" aria-hidden="true" />Saved</>
-                : 'Save preferences'}
+              {saving ? 'Saving…' : <><Check size={15} className="mr-1.5" />Save preferences</>}
             </Button>
           </div>
         )}
       </div>
 
       {/* Modals */}
-      {showEditModal && user && (
+      {user && (
         <EditProfileModal
           user={user}
           setUser={setUser}
+          open={showEditModal}
           onClose={() => setShowEditModal(false)}
         />
       )}
-      {showPwModal && (
-        <ChangePasswordModal
-          forceChange={forceChange}
-          onClose={() => setShowPwModal(false)}
-          setUser={setUser}
-        />
-      )}
+      <ChangePasswordModal
+        forceChange={forceChange}
+        open={showPwModal}
+        onClose={() => setShowPwModal(false)}
+        setUser={setUser}
+      />
     </>
   );
 }

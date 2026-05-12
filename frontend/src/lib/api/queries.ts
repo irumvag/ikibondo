@@ -11,7 +11,7 @@ import {
   listClinicSessions,
 } from './supervisor';
 import {
-  getGrowthData, getChild, getChildHistory, getChildNotes, listHealthRecords,
+  getGrowthData, getChild, getChildHistory, getChildNotes, getChildQR, listHealthRecords,
 } from './nurse';
 import { listVaccinationQueue, listDailyPlan, listCHWFamilies } from './chw';
 import { listMyChildren, getChildVaccinations, listNotifications } from './parent';
@@ -206,6 +206,16 @@ export function useGrowthData(childId: string | null) {
     queryFn: () => getGrowthData(childId!),
     enabled: !!childId,
     staleTime: 60_000,
+    retry: 1,
+  });
+}
+
+export function useChildQR(childId: string | null) {
+  return useQuery({
+    queryKey: ['childQR', childId ?? ''],
+    queryFn: () => getChildQR(childId!),
+    enabled: !!childId,
+    staleTime: 300_000,
     retry: 1,
   });
 }

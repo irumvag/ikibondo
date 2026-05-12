@@ -111,16 +111,31 @@ export function Topbar({ onMenuClick }: TopbarProps) {
       <div className="flex items-center gap-1">
         {/* Sync / offline indicator */}
         {!isOnline ? (
-          <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
-            <WifiOff className="h-3 w-3" />
+          <div
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+            style={{ backgroundColor: 'var(--high-bg)', color: 'var(--danger)', border: '1px solid color-mix(in srgb, var(--danger) 25%, transparent)' }}
+          >
+            <WifiOff size={11} aria-hidden="true" />
             Offline
           </div>
         ) : pendingCount > 0 ? (
-          <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium" title={`${pendingCount} pending · Last sync ${lastSyncAt ? new Date(lastSyncAt).toLocaleTimeString() : 'never'}`}>
-            <RefreshCw className="h-3 w-3 animate-spin" />
-            {pendingCount} pending
+          <div
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+            title={`${pendingCount} pending · Last sync ${lastSyncAt ? new Date(lastSyncAt).toLocaleTimeString() : 'never'}`}
+            style={{ backgroundColor: 'var(--med-bg)', color: 'var(--warn)', border: '1px solid color-mix(in srgb, var(--warn) 25%, transparent)' }}
+          >
+            <RefreshCw size={11} className="animate-spin" aria-hidden="true" />
+            {pendingCount} syncing
           </div>
-        ) : null}
+        ) : (
+          <div
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+            style={{ backgroundColor: 'var(--low-bg)', color: 'var(--success)', border: '1px solid color-mix(in srgb, var(--success) 25%, transparent)' }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--success)' }} aria-hidden="true" />
+            Online
+          </div>
+        )}
 
         <LanguageSwitcher />
         <NotificationBell />

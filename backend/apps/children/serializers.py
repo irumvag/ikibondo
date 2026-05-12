@@ -33,6 +33,8 @@ class ChildSerializer(serializers.ModelSerializer):
     guardian_phone = serializers.CharField(source='guardian.phone_number', read_only=True)
     guardian_has_account = serializers.SerializerMethodField()
     registered_by_name = serializers.CharField(source='registered_by.full_name', read_only=True, allow_null=True)
+    assigned_chw_name  = serializers.CharField(source='guardian.assigned_chw.full_name',         read_only=True, allow_null=True)
+    assigned_chw_phone = serializers.CharField(source='guardian.assigned_chw.phone_number',      read_only=True, allow_null=True)
 
     class Meta:
         model = Child
@@ -43,6 +45,7 @@ class ChildSerializer(serializers.ModelSerializer):
             'camp', 'camp_name',
             'zone', 'zone_name',
             'guardian', 'guardian_name', 'guardian_phone', 'guardian_has_account',
+            'assigned_chw_name', 'assigned_chw_phone',
             'registered_by', 'registered_by_name',
             'photo', 'notes', 'is_active', 'created_at',
             'deletion_requested_at',

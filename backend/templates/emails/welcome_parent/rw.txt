@@ -1,0 +1,24 @@
+Konti yawe ya Ikibondo irateguye
+================================
+
+Muraho {{ full_name }},
+
+Umunyaburengerazuba wo ku kigo {{ camp_name }} yafunguye konti ya Ikibondo
+kugutera. Ikibondo ikureka kureba dosiye y'ubuzima bw'umwana wawe,
+inkingo, n'imikurire y'umwana wawe ukoresheje telefoni yawe.
+
+Amakuru yo kwinjira:
+  Imeyili / Telefoni: {{ email_or_phone }}
+  Ijambo ry'ibanga ry'agateganyo: {{ temp_password }}
+
+Injira hano: {{ login_url }}
+
+INGENZI: Uzasabwa guhindura ijambo ry'ibanga ubwa mbere ubinjiramo.
+Rinda ijambo ry'ibanga neza.
+
+---
+Niba utari wowe wahawe konti iyi, vugana n'umunyaburengerazuba w'ikigo
+cyawe cyangwa andikira support@ikibondo.rw.
+
+Ikibondo - Sisitemu yo Gukurikirana Ubuzima bw'Abana
+{{ frontend_url }}

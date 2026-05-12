@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Baby } from 'lucide-react';
+import Link from 'next/link';
+import { Baby, ArrowRight, AlertTriangle } from 'lucide-react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import { useCampChildren, useAdminZones, QK } from '@/lib/api/queries';
@@ -9,6 +10,8 @@ import { closeChild, transferChildZone } from '@/lib/api/admin';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import type { SupervisedChild } from '@/lib/api/supervisor';
+
+type ChildWithDeletion = SupervisedChild & { deletion_requested_at?: string | null };
 
 const STATUS_OPTIONS = [
   { value: '',       label: 'All statuses' },
@@ -107,14 +110,24 @@ const COLUMNS = (
   onTransfer: (c: SupervisedChild) => void,
 ) => [
   {
-    key: 'full_name', header: 'Child name', width: '180px',
+    key: 'full_name', header: 'Child', width: '220px',
     render: (v: unknown, row: unknown) => {
-      const c = row as SupervisedChild;
+      const c = row as ChildWithDeletion;
       return (
-        <div>
-          <p className="font-medium text-sm" style={{ color: 'var(--ink)' }}>{v as string}</p>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{c.registration_number}</p>
-        </div>
+        <Link href={`/nurse/children/${c.id}`} className="flex items-center gap-2 group">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <p className="font-medium text-sm group-hover:underline" style={{ color: 'var(--ink)' }}>
+                {v as string}
+              </p>
+              {c.deletion_requested_at && (
+                <span title="Deletion pending"><AlertTriangle size={12} style={{ color: 'var(--danger)' }} /></span>
+              )}
+            </div>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{c.registration_number}</p>
+          </div>
+          <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
+        </Link>
       );
     },
   },
@@ -154,6 +167,7 @@ export default function ChildrenPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [vaxFilter, setVaxFilter] = useState('');
   const [sexFilter, setSexFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [closeTarget, setCloseTarget] = useState<SupervisedChild | null>(null);
   const [transferTarget, setTransferTarget] = useState<SupervisedChild | null>(null);
@@ -168,7 +182,7 @@ export default function ChildrenPage() {
     campId || undefined,
     statusFilter || undefined,
     page,
-    undefined,
+    search || undefined,
     vaxFilter || undefined,
   );
 
@@ -195,6 +209,14 @@ export default function ChildrenPage() {
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <Baby size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
+        <input
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          placeholder="Search by name or parent…"
+          className="text-sm px-3 py-1.5 rounded-lg border outline-none flex-1 min-w-[200px]"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
+          aria-label="Search children"
+        />
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
@@ -270,7 +292,7 @@ const modal: React.CSSProperties = {
   padding: 24, width: 400, maxWidth: '90vw',
 };
 const btnPrimary: React.CSSProperties = {
-  background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8,
+  background: 'var(--ink)', color: 'var(--bg)', border: 'none', borderRadius: 8,
   padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600,
 };
 const btnSec: React.CSSProperties = {

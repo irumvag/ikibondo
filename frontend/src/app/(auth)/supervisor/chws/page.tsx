@@ -22,10 +22,10 @@ const COLUMNS = [
       ) : <span style={{ color: 'var(--text-muted)' }}>—</span>,
   },
   {
-    key: 'status', header: 'Status', width: '100px',
+    key: 'status', header: 'Visit activity', width: '130px',
     render: (v: unknown) => (
       <Badge variant={(v as string) === 'active' ? 'success' : 'warn'}>
-        {(v as string) === 'active' ? 'Active' : 'Inactive'}
+        {(v as string) === 'active' ? 'Active this week' : 'No recent visits'}
       </Badge>
     ),
   },
