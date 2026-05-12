@@ -14,11 +14,8 @@ import { registerUser } from '@/lib/api/auth';
 import { usePublicCamps } from '@/lib/api/queries';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-
-const SELECT_CLASS =
-  'w-full px-3 py-2.5 rounded-xl border text-sm transition-colors ' +
-  'bg-[var(--bg-elev)] text-[var(--text)] ' +
-  'focus:outline-none focus:ring-2 focus:ring-[var(--ink)] focus:border-transparent';
+import { Alert } from '@/components/ui/Alert';
+import { Select } from '@/components/ui/Select';
 
 export function RegisterForm() {
   const [success,  setSuccess]  = useState(false);
@@ -42,7 +39,7 @@ export function RegisterForm() {
         full_name:          values.full_name,
         phone_number:       values.phone_number,
         password:           values.password,
-        role:               'PARENT', // self-signup is always PARENT
+        role:               'PARENT',
         preferred_language: values.preferred_language ?? 'rw',
         ...(values.email ? { email: values.email } : {}),
         ...(values.camp  ? { camp:  values.camp  } : {}),
@@ -113,6 +110,15 @@ export function RegisterForm() {
 
   // ── Form ───────────────────────────────────────────────────────────────────
 
+  const langOptions = (
+    Object.entries(LANGUAGE_LABELS) as [keyof typeof LANGUAGE_LABELS, string][]
+  ).map(([value, label]) => ({ value, label }));
+
+  const campOptions = [
+    { value: '', label: 'Select camp…' },
+    ...camps.map((c) => ({ value: String(c.id), label: c.name })),
+  ];
+
   return (
     <div
       className="p-8 rounded-2xl"
@@ -138,16 +144,8 @@ export function RegisterForm() {
       </div>
 
       {apiError && (
-        <div
-          className="mb-5 px-4 py-3 rounded-xl text-sm"
-          role="alert"
-          style={{
-            backgroundColor: 'var(--high-bg)',
-            color: 'var(--danger)',
-            border: '1px solid color-mix(in srgb, var(--danger) 40%, transparent)',
-          }}
-        >
-          {apiError}
+        <div className="mb-5">
+          <Alert variant="danger">{apiError}</Alert>
         </div>
       )}
 
@@ -183,47 +181,21 @@ export function RegisterForm() {
           {...register('email')}
         />
 
-        {/* Language preference */}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-            Language preference
-          </label>
-          <select
-            className={SELECT_CLASS}
-            style={{ borderColor: 'var(--border)' }}
-            {...register('preferred_language')}
-          >
-            {(
-              Object.entries(LANGUAGE_LABELS) as [
-                keyof typeof LANGUAGE_LABELS,
-                string,
-              ][]
-            ).map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </select>
-        </div>
+        <Select
+          label="Language preference"
+          options={langOptions}
+          error={errors.preferred_language?.message}
+          {...register('preferred_language')}
+        />
 
-        {/* Camp */}
         {camps.length > 0 && (
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-              Camp{' '}
-              <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>
-                (where your child is registered)
-              </span>
-            </label>
-            <select
-              className={SELECT_CLASS}
-              style={{ borderColor: 'var(--border)' }}
-              {...register('camp')}
-            >
-              <option value="">Select camp…</option>
-              {camps.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
+          <Select
+            label="Camp"
+            hint="Where your child is registered"
+            options={campOptions}
+            error={errors.camp?.message}
+            {...register('camp')}
+          />
         )}
 
         <Input

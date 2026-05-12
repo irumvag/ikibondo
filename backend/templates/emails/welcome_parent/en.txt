@@ -1,0 +1,24 @@
+Your Ikibondo account is ready
+==============================
+
+Hello {{ full_name }},
+
+A nurse at {{ camp_name }} has created an Ikibondo account for you.
+Ikibondo lets you view your child's health records, vaccinations,
+and growth progress from your phone.
+
+Login credentials:
+  Email / Phone:     {{ email_or_phone }}
+  Temporary Password: {{ temp_password }}
+
+Log in at: {{ login_url }}
+
+IMPORTANT: You will be asked to set a new password on your first login.
+Please keep it safe.
+
+---
+If you did not expect this account, speak to the nurse at your camp or
+email support@ikibondo.rw.
+
+Ikibondo - Child Health Monitoring System
+{{ frontend_url }}

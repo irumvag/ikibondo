@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle, Search, UserPlus, X, AlertTriangle, Copy, UserCheck } from 'lucide-react';
+import { CheckCircle, Search, UserPlus, X, AlertTriangle, Copy, UserCheck, Printer, Eye, EyeOff } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { useAuthStore } from '@/store/authStore';
@@ -52,6 +52,237 @@ const EMPTY_NEWBORN: NewbornForm = {
 
 const RELATIONSHIPS = ['Mother', 'Father', 'Grandmother', 'Grandfather', 'Aunt', 'Uncle', 'Sibling', 'Other'];
 
+// ── Credential slip ────────────────────────────────────────────────────────────
+
+type RegistrationResult = {
+  child_name: string;
+  reg_number: string;
+  parent_name: string;
+  login_id: string;
+  temp_password?: string;
+  account_created: boolean;
+};
+
+function SuccessScreen({
+  result,
+  onReset,
+  onBack,
+}: {
+  result: RegistrationResult;
+  onReset: () => void;
+  onBack: () => void;
+}) {
+  const [copied, setCopied]     = useState(false);
+  const [showPw, setShowPw]     = useState(false);
+  const loginUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login';
+
+  const copy = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const printSlip = () => {
+    const pw = result.temp_password ?? '(ask your nurse)';
+    const w = window.open('', '_blank', 'width=400,height=560');
+    if (!w) return;
+    w.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Ikibondo Login Card — ${result.parent_name}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; background: #fff; padding: 20px; color: #111; }
+    .card { border: 2px solid #085041; border-radius: 10px; padding: 20px 24px; max-width: 340px; margin: 0 auto; }
+    .logo { color: #085041; font-size: 20px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 12px; }
+    h2 { font-size: 14px; color: #085041; margin-bottom: 14px; border-bottom: 1px solid #e0dbd0; padding-bottom: 8px; }
+    .row { margin-bottom: 10px; }
+    .label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.08em; }
+    .value { font-size: 14px; font-weight: 700; color: #111; word-break: break-all; margin-top: 2px; }
+    .value.mono { font-family: 'Courier New', monospace; font-size: 16px; letter-spacing: 0.06em; background: #f3f4f6; padding: 4px 8px; border-radius: 4px; display: inline-block; }
+    .warn { margin-top: 16px; font-size: 11px; color: #b45309; background: #fef3c7; border-left: 3px solid #f59e0b; padding: 8px 10px; border-radius: 0 4px 4px 0; }
+    .footer { margin-top: 14px; font-size: 10px; color: #9ca3af; text-align: center; }
+    @media print { @page { size: 85mm 140mm; margin: 0; } body { padding: 12px; } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">&#9679; IKIBONDO</div>
+    <h2>Parent Login Card — Hand to Guardian</h2>
+    <div class="row">
+      <div class="label">Child registered</div>
+      <div class="value">${result.child_name}</div>
+    </div>
+    <div class="row">
+      <div class="label">Registration number</div>
+      <div class="value mono">${result.reg_number}</div>
+    </div>
+    <div class="row">
+      <div class="label">Parent / Guardian</div>
+      <div class="value">${result.parent_name}</div>
+    </div>
+    <div class="row">
+      <div class="label">Login (Phone or Email)</div>
+      <div class="value mono">${result.login_id}</div>
+    </div>
+    <div class="row">
+      <div class="label">Temporary Password</div>
+      <div class="value mono">${pw}</div>
+    </div>
+    <div class="row">
+      <div class="label">Login at</div>
+      <div class="value">${loginUrl}</div>
+    </div>
+    <div class="warn">
+      &#9888; You will be asked to change this password on first login. Keep this card safe.
+    </div>
+    <div class="footer">Ikibondo Child Health Platform &bull; Do not share with others</div>
+  </div>
+  <script>window.onload = function(){ window.print(); };<\/script>
+</body>
+</html>`);
+    w.document.close();
+  };
+
+  return (
+    <div className="flex flex-col gap-5 max-w-md mx-auto w-full">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div
+          className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+          style={{ backgroundColor: 'var(--low-bg)', color: 'var(--success)' }}
+        >
+          <CheckCircle size={24} aria-hidden="true" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
+            Child registered!
+          </h2>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            {result.child_name} has been added and linked to {result.parent_name}.
+          </p>
+        </div>
+      </div>
+
+      {/* Registration number */}
+      <div
+        className="rounded-2xl border px-5 py-4"
+        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
+      >
+        <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+          Registration number
+        </p>
+        <p className="text-2xl font-mono font-bold" style={{ color: 'var(--ink)' }}>{result.reg_number}</p>
+      </div>
+
+      {/* Credential slip — only when a new account was created */}
+      {result.account_created && (
+        <div
+          className="rounded-2xl border p-5 flex flex-col gap-4"
+          style={{ borderColor: 'var(--warn)', backgroundColor: 'var(--med-bg)' }}
+        >
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={16} style={{ color: 'var(--warn)', marginTop: 2 }} />
+            <div>
+              <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+                Give these login details to {result.parent_name}
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                {result.login_id.includes('@')
+                  ? 'An email was sent if the address is valid. Always share the slip below in person too.'
+                  : 'No email on this account — hand the printed slip or read the password aloud.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Login ID */}
+          <div className="flex flex-col gap-1">
+            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+              Login (phone or email)
+            </p>
+            <div className="flex items-center gap-2">
+              <code
+                className="flex-1 text-sm font-mono px-3 py-2 rounded-lg"
+                style={{ backgroundColor: 'var(--bg)', color: 'var(--ink)', border: '1px solid var(--border)' }}
+              >
+                {result.login_id || '(not set)'}
+              </code>
+              {result.login_id && (
+                <button
+                  onClick={() => copy(result.login_id)}
+                  className="p-2 rounded-lg transition-colors"
+                  style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg)' }}
+                  title="Copy"
+                >
+                  <Copy size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Temp password */}
+          {result.temp_password && (
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                Temporary password
+              </p>
+              <div className="flex items-center gap-2">
+                <code
+                  className="flex-1 text-sm font-mono px-3 py-2 rounded-lg"
+                  style={{ backgroundColor: 'var(--bg)', color: 'var(--ink)', border: '1px solid var(--border)', letterSpacing: showPw ? '0.05em' : '0.2em' }}
+                >
+                  {showPw ? result.temp_password : '•'.repeat(result.temp_password.length)}
+                </code>
+                <button
+                  onClick={() => setShowPw((v) => !v)}
+                  className="p-2 rounded-lg transition-colors"
+                  style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg)' }}
+                  title={showPw ? 'Hide' : 'Show'}
+                >
+                  {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+                <button
+                  onClick={() => copy(result.temp_password!)}
+                  className="p-2 rounded-lg transition-colors"
+                  style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg)' }}
+                  title="Copy"
+                >
+                  {copied ? <CheckCircle size={14} style={{ color: 'var(--success)' }} /> : <Copy size={14} />}
+                </button>
+              </div>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                Parent will be asked to change this on first login.
+              </p>
+            </div>
+          )}
+
+          {/* Print slip button */}
+          <button
+            onClick={printSlip}
+            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-85"
+            style={{ backgroundColor: 'var(--ink)', color: 'var(--bg)' }}
+          >
+            <Printer size={15} aria-hidden="true" />
+            Print credential slip
+          </button>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-3">
+        <Button variant="primary" className="flex-1" onClick={onReset}>
+          Register another
+        </Button>
+        <Button variant="secondary" className="flex-1" onClick={onBack}>
+          Back to children
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function NurseRegisterPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -77,7 +308,17 @@ export default function NurseRegisterPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [result, setResult] = useState<{ child_name: string; reg_number: string; parent_name: string } | null>(null);
+  const [result, setResult] = useState<{
+    child_name: string;
+    reg_number: string;
+    parent_name: string;
+    /** login identifier shown on credential slip */
+    login_id: string;
+    /** temp password — only present when a new account was just created */
+    temp_password?: string;
+    /** whether we created a new account (vs used existing) */
+    account_created: boolean;
+  } | null>(null);
 
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const submitLock = useRef(false); // prevent double-submit on fast clicks
@@ -149,18 +390,19 @@ export default function NurseRegisterPage() {
     if (selectedParent) {
       setNewbornForm((prev) => ({
         ...prev,
-        guardian_full_name: selectedParent.full_name,
-        guardian_phone: selectedParent.phone_number,
+        guardian_full_name: selectedParent.full_name ?? '',
+        guardian_phone: selectedParent.phone_number ?? '',
       }));
     }
   }, [selectedParent]);
 
   const parentReady = selectedParent !== null || (
-    showNewForm && parentForm.full_name.trim() && parentForm.email.trim() && parentForm.phone_number.trim()
+    showNewForm && parentForm.full_name.trim() && parentForm.phone_number.trim()
+    // email is optional — parent can log in with phone
   );
   const newbornReady =
-    newbornForm.full_name.trim() && newbornForm.date_of_birth && newbornForm.sex &&
-    newbornForm.guardian_full_name.trim() && newbornForm.guardian_phone.trim() && newbornForm.guardian_relationship;
+    (newbornForm.full_name ?? '').trim() && newbornForm.date_of_birth && newbornForm.sex &&
+    (newbornForm.guardian_full_name ?? '').trim() && (newbornForm.guardian_phone ?? '').trim() && newbornForm.guardian_relationship;
 
   const resetForm = () => {
     setResult(null);
@@ -239,10 +481,14 @@ export default function NurseRegisterPage() {
         await linkParentToGuardian(child.guardian_id, parentUser.id);
       }
 
+      const accountCreated = !selectedParent; // true when we just created a new account
       setResult({
         child_name: child.full_name,
         reg_number: child.registration_number,
         parent_name: parentUser.full_name,
+        login_id: parentUser.phone_number || parentUser.email || '',
+        temp_password: parentUser.temp_password,
+        account_created: accountCreated,
       });
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -255,43 +501,7 @@ export default function NurseRegisterPage() {
 
   // ── Success screen ─────────────────────────────────────────────────────────
   if (result) {
-    return (
-      <div className="flex flex-col items-center gap-6 max-w-md mx-auto pt-8 text-center">
-        <div
-          className="w-16 h-16 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: 'color-mix(in srgb, var(--success, #22c55e) 15%, transparent)', color: 'var(--success, #22c55e)' }}
-        >
-          <CheckCircle size={32} aria-hidden="true" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-            Child registered!
-          </h2>
-          <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-            {result.child_name} has been added and linked to {result.parent_name}.
-          </p>
-        </div>
-        <div
-          className="rounded-2xl border px-8 py-5 w-full"
-          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
-        >
-          <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Registration number</p>
-          <p className="text-2xl font-mono font-bold" style={{ color: 'var(--ink)' }}>{result.reg_number}</p>
-        </div>
-        <div className="flex gap-3 w-full">
-          <Button
-            variant="primary"
-            className="flex-1"
-            onClick={resetForm}
-          >
-            Register another
-          </Button>
-          <Button variant="secondary" className="flex-1" onClick={() => router.push('/nurse/children')}>
-            Back to children
-          </Button>
-        </div>
-      </div>
-    );
+    return <SuccessScreen result={result} onReset={resetForm} onBack={() => router.push('/nurse/children')} />;
   }
 
   // ── Step indicators ────────────────────────────────────────────────────────

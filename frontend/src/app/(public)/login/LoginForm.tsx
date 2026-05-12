@@ -11,6 +11,7 @@ import { loginUser } from '@/lib/api/auth';
 import { useAuthStore, type UserRole } from '@/store/authStore';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { Alert } from '@/components/ui/Alert';
 
 const ROLE_ROUTES: Record<UserRole, string> = {
   ADMIN:      '/admin',
@@ -39,7 +40,6 @@ export function LoginForm() {
     try {
       const { access, refresh, user } = await loginUser(values);
       setAuth(user, access, refresh);
-      // If a temporary password is in use, force the user to change it first
       if (user.must_change_password) {
         router.push('/profile?force=1');
       } else {
@@ -89,16 +89,8 @@ export function LoginForm() {
 
       {/* API error */}
       {apiError && (
-        <div
-          className="mb-5 px-4 py-3 rounded-xl text-sm"
-          role="alert"
-          style={{
-            backgroundColor: 'var(--high-bg)',
-            color: 'var(--danger)',
-            border: '1px solid color-mix(in srgb, var(--danger) 40%, transparent)',
-          }}
-        >
-          {apiError}
+        <div className="mb-5">
+          <Alert variant="danger">{apiError}</Alert>
         </div>
       )}
 

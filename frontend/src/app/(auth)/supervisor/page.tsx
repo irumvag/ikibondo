@@ -1,42 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Baby, AlertTriangle, Activity, Syringe, Users, Eye } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Select } from '@/components/ui/Select';
+import { Alert } from '@/components/ui/Alert';
 import { useAdminZones, useZoneStats } from '@/lib/api/queries';
 
-function ZoneSelector({
-  zones,
-  selected,
-  onChange,
-}: {
-  zones: { id: string; name: string; code: string }[];
-  selected: string;
-  onChange: (id: string) => void;
-}) {
-  return (
-    <select
-      value={selected}
-      onChange={(e) => onChange(e.target.value)}
-      className="text-sm px-3 py-1.5 rounded-lg border outline-none"
-      style={{
-        borderColor: 'var(--border)',
-        backgroundColor: 'var(--bg-elev)',
-        color: 'var(--ink)',
-      }}
-      aria-label="Select zone"
-    >
-      {zones.map((z) => (
-        <option key={z.id} value={z.id}>
-          {z.name} ({z.code})
-        </option>
-      ))}
-    </select>
-  );
-}
 
 export default function SupervisorDashboard() {
   const user = useAuthStore((s) => s.user);
@@ -72,15 +45,24 @@ export default function SupervisorDashboard() {
           </p>
         </div>
         {zonesLoading ? (
-          <Skeleton className="h-8 w-40 rounded-lg" />
+          <Skeleton className="h-10 w-48 rounded-xl" />
         ) : zones && zones.length > 0 ? (
-          <ZoneSelector
-            zones={zones}
-            selected={activeZoneId ?? ''}
-            onChange={setSelectedZone}
+          <Select
+            value={activeZoneId ?? ''}
+            onChange={(e) => setSelectedZone(e.target.value)}
+            aria-label="Select zone"
+            options={zones.map((z) => ({ value: z.id, label: `${z.name} (${z.code})` }))}
+            className="w-48"
           />
         ) : null}
       </div>
+
+      {/* Alert zone */}
+      {stats && stats.children_never_visited > 0 && (
+        <Alert variant="warn" title={`${stats.children_never_visited} child${stats.children_never_visited !== 1 ? 'ren have' : ' has'} never been visited`}>
+          These children have had no CHW home visit recorded. Assign a CHW or schedule a visit.
+        </Alert>
+      )}
 
       {/* KPIs */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">

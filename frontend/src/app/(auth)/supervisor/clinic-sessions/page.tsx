@@ -60,7 +60,7 @@ function SessionRow({ session, onClose, onRefresh }: {
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={7} style={{ padding: '10px 16px', background: 'color-mix(in srgb, var(--primary) 4%, var(--bg-elev))', borderBottom: '1px solid var(--border)' }}>
+          <td colSpan={7} style={{ padding: '10px 16px', background: 'color-mix(in srgb, var(--ink) 4%, var(--bg-elev))', borderBottom: '1px solid var(--border)' }}>
             {loadingAttendees ? (
               <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading attendees…</span>
             ) : attendees.length === 0 ? (
@@ -115,7 +115,7 @@ function CreateModal({ onDone, onCancel }: { onDone: () => void; onCancel: () =>
         <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
           <button onClick={onCancel} style={btnSec}>Cancel</button>
           <button onClick={() => mut.mutate()} disabled={!vaccineId || !date || mut.isPending}
-            style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, opacity: (!vaccineId || !date || mut.isPending) ? 0.5 : 1 }}>
+            style={{ background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, opacity: (!vaccineId || !date || mut.isPending) ? 0.5 : 1 }}>
             {mut.isPending ? 'Creating…' : 'Create Session'}
           </button>
         </div>
@@ -161,18 +161,18 @@ export default function SupervisorClinicSessionsPage() {
           </p>
         </div>
         <button onClick={() => setShowCreate(true)}
-          style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+          style={{ background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
           <Plus size={15} /> New Session
         </button>
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {STATUSES.map(s => (
-          <button key={s} onClick={() => { setStatus(s); setPage(1); }} style={{
-            border: `1px solid ${status === s ? 'var(--primary)' : 'var(--border)'}`,
+          <button key={s || 'ALL'} onClick={() => { setStatus(s); setPage(1); }} style={{
+            border: `1px solid ${status === s ? 'var(--ink)' : 'var(--border)'}`,
             borderRadius: 20, padding: '5px 14px', cursor: 'pointer', fontSize: 13,
-            background: status === s ? 'color-mix(in srgb, var(--primary) 10%, var(--bg-elev))' : 'var(--bg-elev)',
-            color: status === s ? 'var(--primary)' : 'var(--ink)', fontWeight: status === s ? 600 : 400,
+            background: status === s ? 'color-mix(in srgb, var(--ink) 10%, var(--bg-elev))' : 'var(--bg-elev)',
+            color: status === s ? 'var(--ink)' : 'var(--ink)', fontWeight: status === s ? 600 : 400,
           }}>
             {s || 'All'}
           </button>
@@ -188,7 +188,7 @@ export default function SupervisorClinicSessionsPage() {
           <Syringe size={36} style={{ marginBottom: 8, opacity: 0.4 }} />
           <p>No clinic sessions found.</p>
           <button onClick={() => setShowCreate(true)}
-            style={{ marginTop: 12, background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13 }}>
+            style={{ marginTop: 12, background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13 }}>
             Create first session
           </button>
         </div>

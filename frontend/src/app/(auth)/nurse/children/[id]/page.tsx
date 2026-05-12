@@ -8,8 +8,10 @@ import {
   ArrowLeft, Pin, ClipboardList, TrendingUp, Cpu,
   Printer, Trash2, RotateCcw, AlertTriangle,
   Phone, UserCheck, Users, ExternalLink, Syringe,
-  CheckCircle, Clock, XCircle, SkipForward, Bell, BellOff,
+  CheckCircle, Clock, XCircle, SkipForward, Bell, BellOff, QrCode,
 } from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
+import { useToast } from '@/contexts/ToastContext';
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, ReferenceArea,
@@ -23,6 +25,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { RiskExplainer } from '@/components/ui/RiskExplainer';
+import { Tabs } from '@/components/ui/Tabs';
 import type { GrowthData, HealthRecordDetail, ClinicalNote } from '@/lib/api/nurse';
 
 // ── WHO growth chart colours ──────────────────────────────────────────────────
@@ -40,9 +43,11 @@ const WHO = {
 type ChartMode = 'weight' | 'height';
 
 function buildChartData(growth: GrowthData, mode: ChartMode) {
+  if (!growth.who_percentiles) return [];
   const who = mode === 'weight'
     ? growth.who_percentiles.weight_for_age
     : growth.who_percentiles.height_for_age;
+  if (!who) return [];
   const allAges = new Map<number, Record<string, number | null>>();
 
   (['p3', 'p50', 'p97'] as const).forEach((band) => {
@@ -813,11 +818,12 @@ function VaccinationsTab({
   guardianPhone: string | null;
   guardianHasAccount: boolean;
 }) {
-  const qc = useQueryClient();
+  const qc    = useQueryClient();
+  const toast = useToast();
   const [filter, setFilter]         = useState<'ALL' | 'SCHEDULED' | 'DONE' | 'MISSED' | 'SKIPPED'>('ALL');
   const [reminderSent, setReminderSent] = useState<Set<string>>(new Set());
   const [reminding, setReminding]   = useState<string | null>(null);
-  const [adminId, setAdminId]       = useState<string | null>(null);
+  const [adminRec, setAdminRec]     = useState<VaxRecord | null>(null);
   const [adminDate, setAdminDate]   = useState(new Date().toISOString().split('T')[0]);
   const [adminBatch, setAdminBatch] = useState('');
   const [adminLoading, setAdminLoading] = useState(false);
@@ -850,32 +856,41 @@ function VaccinationsTab({
   async function sendReminder(record: VaxRecord) {
     setReminding(record.id);
     try {
-      await apiClient.post(`/vaccinations/${record.id}/administer/`, {});
-    } catch {
-      // Reminder is a best-effort SMS — use bulk-remind as proxy
-    }
-    // Use the single-record remind approach via notifications
-    try {
       await apiClient.post('/vaccinations/bulk-remind/', {});
-    } catch { /* ignore */ }
+      toast.success('SMS reminder queued for guardian');
+    } catch {
+      toast.error('Could not queue reminder — check server logs');
+    }
     setReminderSent((s) => new Set([...s, record.id]));
     setReminding(null);
   }
 
+  function openAdminModal(rec: VaxRecord) {
+    setAdminRec(rec);
+    setAdminDate(new Date().toISOString().split('T')[0]);
+    setAdminBatch('');
+    setAdminError('');
+  }
+
   async function markAdministered() {
-    if (!adminId) return;
+    if (!adminRec) return;
     setAdminLoading(true);
     setAdminError('');
     try {
-      await apiClient.post(`/vaccinations/${adminId}/administer/`, {
+      await apiClient.post(`/vaccinations/${adminRec.id}/administer/`, {
         administered_date: adminDate,
-        batch_number: adminBatch || undefined,
+        ...(adminBatch ? { batch_number: adminBatch } : {}),
       });
       qc.invalidateQueries({ queryKey: ['child-vaccinations', childId] });
-      setAdminId(null);
+      toast.success(`${adminRec.vaccine_name} recorded as given`);
+      setAdminRec(null);
       setAdminBatch('');
-    } catch {
-      setAdminError('Failed to record dose. Please try again.');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string; error?: { detail?: string } } } })
+        ?.response?.data?.error?.detail
+        ?? (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        ?? 'Failed to record dose. Please try again.';
+      setAdminError(msg);
     } finally {
       setAdminLoading(false);
     }
@@ -884,7 +899,7 @@ function VaccinationsTab({
   // Summary pills
   const pills = [
     { label: 'Overdue',  count: overdue.length,  color: 'var(--danger)' },
-    { label: 'Upcoming', count: upcoming.length,  color: 'var(--primary)' },
+    { label: 'Upcoming', count: upcoming.length,  color: 'var(--ink)' },
     { label: 'Given',    count: given.length,     color: 'var(--success)' },
     { label: 'Missed',   count: missed.length,    color: 'var(--danger)' },
     { label: 'Skipped',  count: skipped.length,   color: 'var(--warn)' },
@@ -944,8 +959,8 @@ function VaccinationsTab({
                 onClick={async () => {
                   try {
                     await apiClient.post('/vaccinations/bulk-remind/', {});
-                    alert('SMS reminder queued for guardian.');
-                  } catch { alert('Could not queue reminder — check server logs.'); }
+                    toast.success('SMS reminder queued for guardian');
+                  } catch { toast.error('Could not queue reminder'); }
                 }}
               >
                 <Bell size={13} className="mr-1" /> Send SMS reminder
@@ -1076,7 +1091,7 @@ function VaccinationsTab({
                       <Button
                         size="sm"
                         variant="primary"
-                        onClick={() => { setAdminId(rec.id); setAdminDate(new Date().toISOString().split('T')[0]); setAdminBatch(''); }}
+                        onClick={() => openAdminModal(rec)}
                       >
                         <CheckCircle size={12} className="mr-1" /> Mark given
                       </Button>
@@ -1098,7 +1113,7 @@ function VaccinationsTab({
                     </span>
                   )}
                   {rec.status === 'MISSED' && (
-                    <Button size="sm" variant="ghost" onClick={() => { setAdminId(rec.id); setAdminDate(new Date().toISOString().split('T')[0]); }}>
+                    <Button size="sm" variant="ghost" onClick={() => openAdminModal(rec)}>
                       <CheckCircle size={12} className="mr-1" /> Record late dose
                     </Button>
                   )}
@@ -1110,51 +1125,49 @@ function VaccinationsTab({
       )}
 
       {/* Administer modal */}
-      {adminId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.45)' }}
-          onClick={(e) => { if (e.target === e.currentTarget) setAdminId(null); }}
-        >
-          <div
-            className="rounded-2xl border w-full max-w-sm p-6 flex flex-col gap-4"
-            style={{ background: 'var(--bg-elev)', borderColor: 'var(--border)' }}
-          >
-            <h3 className="font-bold text-lg" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-              Record Dose — {childName}
-            </h3>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              {records.find((r) => r.id === adminId)?.vaccine_name}
+      <Modal
+        open={!!adminRec}
+        onClose={() => !adminLoading && setAdminRec(null)}
+        title={`Record Dose — ${childName}`}
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setAdminRec(null)} disabled={adminLoading}>Cancel</Button>
+            <Button variant="primary" onClick={markAdministered} loading={adminLoading}>Save dose</Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          {adminRec && (
+            <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{adminRec.vaccine_name}
+              <span className="ml-2 text-xs font-normal" style={{ color: 'var(--text-muted)' }}>{adminRec.vaccine_code}</span>
             </p>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Administration date</label>
-              <input
-                type="date"
-                value={adminDate}
-                onChange={(e) => setAdminDate(e.target.value)}
-                className="text-sm px-3 py-2 rounded-lg border"
-                style={{ borderColor: 'var(--border)', background: 'var(--bg)', color: 'var(--ink)' }}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Batch number (optional)</label>
-              <input
-                type="text"
-                placeholder="e.g. BCG-2025-RW-001"
-                value={adminBatch}
-                onChange={(e) => setAdminBatch(e.target.value)}
-                className="text-sm px-3 py-2 rounded-lg border"
-                style={{ borderColor: 'var(--border)', background: 'var(--bg)', color: 'var(--ink)' }}
-              />
-            </div>
-            {adminError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{adminError}</p>}
-            <div className="flex gap-2 pt-1">
-              <Button variant="secondary" onClick={() => setAdminId(null)} disabled={adminLoading} className="flex-1">Cancel</Button>
-              <Button variant="primary" onClick={markAdministered} loading={adminLoading} className="flex-1">Save</Button>
-            </div>
+          )}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Administration date *</label>
+            <input
+              type="date"
+              value={adminDate}
+              max={new Date().toISOString().split('T')[0]}
+              onChange={(e) => setAdminDate(e.target.value)}
+              className="text-sm px-3 py-2 rounded-lg border outline-none"
+              style={{ borderColor: 'var(--border)', background: 'var(--bg)', color: 'var(--ink)' }}
+            />
           </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Batch number (optional)</label>
+            <input
+              type="text"
+              placeholder="e.g. BCG-2025-RW-001"
+              value={adminBatch}
+              onChange={(e) => setAdminBatch(e.target.value)}
+              className="text-sm px-3 py-2 rounded-lg border outline-none"
+              style={{ borderColor: 'var(--border)', background: 'var(--bg)', color: 'var(--ink)' }}
+            />
+          </div>
+          {adminError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{adminError}</p>}
         </div>
-      )}
+      </Modal>
     </div>
   );
 }
@@ -1357,6 +1370,81 @@ function ReferralsTab({ childId }: { childId: string }) {
   );
 }
 
+// ── QR Card Panel ────────────────────────────────────────────────────────────
+
+import dynamic from 'next/dynamic';
+const QRCodeSVG = dynamic(() => import('qrcode.react').then((m) => m.QRCodeSVG), { ssr: false });
+
+function ChildQRPanel({
+  childId,
+  childName,
+  registrationNumber,
+}: {
+  childId: string;
+  childName: string;
+  registrationNumber: string;
+}) {
+  const qrValue = childId; // UUID used for navigation after scan
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank', 'width=400,height=500');
+    if (!printWindow) return;
+    const svgEl = document.getElementById('child-qr-svg');
+    const svgHTML = svgEl ? svgEl.outerHTML : '';
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>QR Card — ${childName}</title>
+  <style>
+    body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 24px; text-align: center; }
+    h1 { font-size: 18px; margin-bottom: 4px; }
+    p  { font-size: 12px; color: #6b7280; margin: 2px 0; }
+    svg { margin: 16px 0; }
+    @media print { @page { size: 85mm 54mm; margin: 0; } body { padding: 8px; } }
+  </style>
+</head>
+<body>
+  <h1>${childName}</h1>
+  <p>${registrationNumber}</p>
+  ${svgHTML}
+  <p style="font-size:10px;color:#9ca3af;">Scan to view health record · Ikibondo</p>
+  <script>window.onload=function(){window.print();};<\/script>
+</body>
+</html>`);
+    printWindow.document.close();
+  };
+
+  return (
+    <div className="rounded-2xl border p-6 flex flex-col items-center gap-5 max-w-xs mx-auto"
+      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
+      <div className="text-center">
+        <p className="font-bold text-lg" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{childName}</p>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>{registrationNumber}</p>
+      </div>
+
+      <div id="child-qr-svg" className="p-3 rounded-xl" style={{ backgroundColor: '#fff' }}>
+        <QRCodeSVG
+          value={qrValue}
+          size={192}
+          level="M"
+          includeMargin={false}
+        />
+      </div>
+
+      <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+        Scan with Ikibondo app to open this child&apos;s health record instantly.
+      </p>
+
+      <div className="flex gap-2 w-full">
+        <Button variant="secondary" className="flex-1" onClick={handlePrint}>
+          <Printer size={14} className="mr-1.5" /> Print card
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ── Delete panel ──────────────────────────────────────────────────────────────
 
 function DeletePanel({ childId, childName, deletionRequestedAt }: {
@@ -1480,7 +1568,7 @@ function DeletePanel({ childId, childName, deletionRequestedAt }: {
 
 export default function ChildDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [activeTab, setActiveTab] = useState<'chart' | 'vaccines' | 'history' | 'notes' | 'ml' | 'referrals'>('chart');
+  const [activeTab, setActiveTab] = useState<'chart' | 'vaccines' | 'history' | 'notes' | 'ml' | 'referrals' | 'qr'>('chart');
   const [showMeasurementModal, setShowMeasurementModal] = useState(false);
 
   const { data: child, isLoading: childLoading }     = useChild(id);
@@ -1572,7 +1660,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
             {/* Avatar */}
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0"
-              style={{ background: 'var(--primary)', color: '#fff', opacity: 0.9 }}
+              style={{ background: 'var(--ink)', color: '#fff', opacity: 0.9 }}
             >
               {str('guardian_name').charAt(0) || 'G'}
             </div>
@@ -1597,7 +1685,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
                   <a
                     href={`tel:${str('guardian_phone')}`}
                     className="flex items-center gap-1 text-xs hover:underline"
-                    style={{ color: 'var(--primary)' }}
+                    style={{ color: 'var(--ink)' }}
                   >
                     <Phone size={12} />
                     {str('guardian_phone')}
@@ -1614,7 +1702,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
             <Link
               href={`/nurse/guardians/${str('guardian')}`}
               className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0"
-              style={{ background: 'var(--primary)', color: '#fff' }}
+              style={{ background: 'var(--ink)', color: '#fff' }}
             >
               <ExternalLink size={13} />
               Family profile
@@ -1662,37 +1750,27 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
       )}
 
       {/* ── Tab bar ──────────────────────────────────────────────────────── */}
-      <div className="no-print flex gap-1 border-b overflow-x-auto" style={{ borderColor: 'var(--border)' }}>
-        {([
-          { key: 'chart',    label: 'Growth chart',   icon: TrendingUp    },
-          { key: 'vaccines', label: 'Vaccinations',   icon: Syringe       },
-          { key: 'history',  label: 'Visit history',  icon: ClipboardList },
-          { key: 'notes',    label: 'Clinical notes', icon: Pin           },
-          { key: 'ml',        label: 'ML Prediction',  icon: Cpu            },
-          { key: 'referrals', label: 'Referrals',      icon: ExternalLink   },
-        ] as { key: string; label: string; icon: React.ElementType }[]).map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setActiveTab(key as typeof activeTab)}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap"
-            style={{
-              borderColor: activeTab === key ? 'var(--ink)' : 'transparent',
-              color: activeTab === key ? 'var(--ink)' : 'var(--text-muted)',
-            }}
-          >
-            <Icon size={14} aria-hidden="true" />
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        className="no-print"
+        active={activeTab}
+        onChange={(k) => setActiveTab(k as typeof activeTab)}
+        tabs={[
+          { key: 'chart',    label: 'Growth chart',   icon: <TrendingUp size={14} />    },
+          { key: 'vaccines', label: 'Vaccinations',   icon: <Syringe size={14} />       },
+          { key: 'history',  label: 'Visit history',  icon: <ClipboardList size={14} /> },
+          { key: 'notes',    label: 'Clinical notes', icon: <Pin size={14} />           },
+          { key: 'ml',       label: 'ML Prediction',  icon: <Cpu size={14} />           },
+          { key: 'referrals',label: 'Referrals',      icon: <ExternalLink size={14} />  },
+          { key: 'qr',       label: 'QR Card',        icon: <QrCode size={14} />        },
+        ]}
+      />
 
       {/* ── Tab content ──────────────────────────────────────────────────── */}
       <div>
         {activeTab === 'chart' && (
           growthLoading
             ? <Skeleton className="h-72 rounded-2xl" />
-            : growth
+            : growth?.who_percentiles
               ? (
                 <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
                   <GrowthChart growth={growth} childName={str('full_name')} />
@@ -1742,6 +1820,14 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
 
         {activeTab === 'referrals' && (
           <ReferralsTab childId={id} />
+        )}
+
+        {activeTab === 'qr' && (
+          <ChildQRPanel
+            childId={id}
+            childName={str('full_name')}
+            registrationNumber={str('registration_number')}
+          />
         )}
       </div>
 

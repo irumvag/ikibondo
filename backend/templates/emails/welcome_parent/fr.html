@@ -1,0 +1,30 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>Votre compte Ikibondo est prêt</h1>
+<p>Bonjour <strong>{{ full_name }}</strong>,</p>
+<p>
+  Une infirmière du camp <strong>{{ camp_name }}</strong> a créé un compte Ikibondo pour vous.
+  Ikibondo vous permet de consulter le dossier de santé, les vaccinations et la croissance de votre enfant depuis votre téléphone.
+</p>
+
+<div class="credential-box">
+  <strong>Identifiant (Email{% if phone %} ou Téléphone{% endif %})</strong>
+  <code>{{ email_or_phone }}</code>
+</div>
+<div class="credential-box">
+  <strong>Mot de passe temporaire</strong>
+  <code>{{ temp_password }}</code>
+</div>
+
+<p>
+  <a href="{{ login_url }}" class="cta">Se connecter maintenant</a>
+</p>
+
+<p><strong>Important :</strong> Vous devrez choisir un nouveau mot de passe lors de votre première connexion. Conservez-le précieusement.</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  Si vous n'attendiez pas ce compte, veuillez contacter l'infirmière de votre camp ou écrire à
+  <a href="mailto:support@ikibondo.rw">support@ikibondo.rw</a>.
+</p>
+{% endblock %}

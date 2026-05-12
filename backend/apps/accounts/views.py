@@ -232,8 +232,15 @@ def create_user_view(request):
         serializer = UserCreateSerializer(data=data)
         if serializer.is_valid():
             user = serializer.save(is_approved=True)
+            temp_password = getattr(user, '_generated_password', None)
+            _send_welcome_parent_email(user, temp_password, nurse=request.user)
+            response_data = UserProfileSerializer(user).data
+            # Include temp_password so the nurse can hand credentials to parents
+            # who have no email. Shown once — never stored or returned again.
+            if temp_password:
+                response_data['temp_password'] = temp_password
             return created_response(
-                data=UserProfileSerializer(user).data,
+                data=response_data,
                 message='Parent account created and approved.',
             )
         return error_response(str(serializer.errors), 'VALIDATION_ERROR')
@@ -286,6 +293,48 @@ def _send_welcome_staff_email(user, temp_password: str):
                 'email': user.email,
                 'temp_password': temp_password or '(see your supervisor)',
                 'login_url': f'{frontend_url}/login',
+            },
+            language=lang,
+        )
+    except Exception:
+        pass
+
+
+def _send_welcome_parent_email(user, temp_password: str, nurse=None):
+    """Send welcome email to a parent account created by a nurse."""
+    # Only send if the parent has an email address
+    if not user.email:
+        return
+    try:
+        from apps.notifications.tasks import send_email_task
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        lang = user.preferred_language or 'en'
+
+        # Determine what identifier to show (email preferred, fall back to phone)
+        email_or_phone = user.email or user.phone_number or '(contact your nurse)'
+
+        # Camp name from nurse's camp, or user's own camp
+        camp = getattr(nurse, 'camp', None) or getattr(user, 'camp', None)
+        camp_name = getattr(camp, 'name', 'your camp') if camp else 'your camp'
+
+        SUBJECTS = {
+            'en': 'Your Ikibondo account is ready',
+            'fr': 'Votre compte Ikibondo est prêt',
+            'rw': 'Konti yawe ya Ikibondo irateguye',
+        }
+
+        send_email_task.delay(
+            to=user.email,
+            template='welcome_parent',
+            subject=SUBJECTS.get(lang, SUBJECTS['en']),
+            context={
+                'full_name': user.full_name,
+                'email_or_phone': email_or_phone,
+                'phone': user.phone_number or '',
+                'temp_password': temp_password or '(ask the nurse at your camp)',
+                'camp_name': camp_name,
+                'login_url': f'{frontend_url}/login',
+                'frontend_url': frontend_url,
             },
             language=lang,
         )
