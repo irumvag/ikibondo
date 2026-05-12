@@ -49,7 +49,18 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
       );
       controlRef.current = controls as unknown as { stop: () => void };
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Camera access denied or unavailable.';
+      const raw = err instanceof Error ? err.message : '';
+      // Map browser permission / availability errors to friendly messages
+      let msg: string;
+      if (/permission|notallowed|denied/i.test(raw)) {
+        msg = 'Camera access was denied. Please allow camera permission in your browser settings and try again.';
+      } else if (/notfound|devicenotfound|no camera/i.test(raw)) {
+        msg = 'No camera found on this device. Use the manual entry below.';
+      } else if (/notsupported|insecure|https/i.test(raw)) {
+        msg = 'Camera requires a secure connection (HTTPS). Use manual entry instead.';
+      } else {
+        msg = raw || 'Camera unavailable. Use the manual entry below.';
+      }
       setErrMsg(msg);
       setStatus('error');
       onError?.(msg);
@@ -89,14 +100,14 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
             {status === 'starting' ? (
               <Loader2 size={32} className="animate-spin" style={{ color: 'var(--text-muted)' }} />
             ) : status === 'error' ? (
-              <CameraOff size={32} style={{ color: 'var(--danger)' }} />
+              <CameraOff size={32} style={{ color: '#f87171' }} />
             ) : (
               <Camera size={32} style={{ color: 'var(--text-muted)' }} />
             )}
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-xs leading-relaxed" style={{ color: status === 'error' ? '#fca5a5' : 'var(--text-muted)' }}>
               {status === 'starting' ? 'Starting camera…'
                 : status === 'error' ? errMsg
-                : 'Camera not started'}
+                : 'Tap "Start scanning" to open the camera'}
             </p>
           </div>
         )}
