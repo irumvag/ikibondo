@@ -43,12 +43,27 @@ function riskVariant(r: string) {
 // ── SHAP detail drawer ────────────────────────────────────────────────────────
 
 function ShapPanel({ record, onClose }: { record: HealthRecordDetail; onClose: () => void }) {
-  const factors = record.risk_factors as Record<string, number> | string[] | null;
-  const entries: [string, number][] = Array.isArray(factors)
-    ? factors.map((f) => [f, 1])
-    : factors
-      ? Object.entries(factors as Record<string, number>).sort((a, b) => b[1] - a[1]).slice(0, 8)
-      : [];
+  const factors = record.risk_factors;
+  const entries: [string, number][] = (() => {
+    if (!factors) return [];
+    if (Array.isArray(factors)) {
+      // Could be string[] or {feature, value}[] from backend
+      return (factors as unknown[]).map((f): [string, number] => {
+        if (f && typeof f === 'object' && 'feature' in f) {
+          const o = f as { feature: unknown; value?: unknown };
+          return [String(o.feature ?? ''), Number(o.value ?? 1)];
+        }
+        return [String(f), 1];
+      });
+    }
+    if (typeof factors === 'object') {
+      return Object.entries(factors as Record<string, unknown>)
+        .map(([k, v]): [string, number] => [k, Number(v)])
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8);
+    }
+    return [];
+  })();
   const maxVal = entries[0]?.[1] ?? 1;
 
   return (
@@ -104,7 +119,7 @@ function ShapPanel({ record, onClose }: { record: HealthRecordDetail; onClose: (
               {entries.map(([name, val]) => (
                 <div key={name}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs" style={{ color: 'var(--ink)' }}>{name.replace(/_/g, ' ')}</span>
+                    <span className="text-xs" style={{ color: 'var(--ink)' }}>{String(name).replace(/_/g, ' ')}</span>
                     <span className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
                       {typeof val === 'number' ? val.toFixed(3) : val}
                     </span>

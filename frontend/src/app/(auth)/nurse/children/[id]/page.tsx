@@ -1660,7 +1660,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
             {/* Avatar */}
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0"
-              style={{ background: 'var(--ink)', color: '#fff', opacity: 0.9 }}
+              style={{ background: 'var(--ink)', color: 'var(--bg)', opacity: 0.9 }}
             >
               {str('guardian_name').charAt(0) || 'G'}
             </div>
@@ -1702,7 +1702,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
             <Link
               href={`/nurse/guardians/${str('guardian')}`}
               className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0"
-              style={{ background: 'var(--ink)', color: '#fff' }}
+              style={{ background: 'var(--ink)', color: 'var(--bg)' }}
             >
               <ExternalLink size={13} />
               Family profile

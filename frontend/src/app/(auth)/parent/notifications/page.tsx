@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BellOff, CheckCheck, Bell } from 'lucide-react';
+import { BellOff, CheckCheck, Bell, Trash2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNotifications, QK } from '@/lib/api/queries';
 import { markAllRead, markNotificationRead } from '@/lib/api/parent';
+import { deleteNotification } from '@/lib/api/notifications';
 import {
   getLocalNotifs, markLocalNotifRead, markAllLocalNotifsRead,
   LOCAL_NOTIF_ICON,
@@ -59,6 +60,7 @@ export default function NotificationsPage() {
   const [typeFilter, setTypeFilter]       = useState('');
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [dismissing, setDismissing]        = useState<string | null>(null);
+  const [deleting,   setDeleting]          = useState<string | null>(null);
 
   // local notifs state — re-read on storage event
   const [localNotifs, setLocalNotifs] = useState<LocalNotif[]>([]);
@@ -117,6 +119,16 @@ export default function NotificationsPage() {
   const handleDismissLocal = (id: string) => {
     markLocalNotifRead(id);
     setLocalNotifs(getLocalNotifs());
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeleting(id);
+    try {
+      await deleteNotification(id);
+      qc.invalidateQueries({ queryKey: QK.notifications });
+    } finally {
+      setDeleting(null);
+    }
   };
 
   return (
@@ -272,16 +284,27 @@ export default function NotificationsPage() {
                   )}
                   <p className="text-sm mt-1 leading-relaxed" style={{ color: 'var(--text-muted)' }}>{item.message}</p>
                 </div>
-                {!item.is_read && (
+                <div className="flex flex-col gap-1 shrink-0">
+                  {!item.is_read && (
+                    <Button
+                      size="sm" variant="ghost"
+                      loading={dismissing === item.id}
+                      onClick={() => handleDismissServer(item.id)}
+                      title="Mark as read"
+                    >
+                      <Bell size={12} aria-hidden="true" />
+                    </Button>
+                  )}
                   <Button
                     size="sm" variant="ghost"
-                    loading={dismissing === item.id}
-                    onClick={() => handleDismissServer(item.id)}
-                    className="shrink-0"
+                    loading={deleting === item.id}
+                    onClick={() => handleDelete(item.id)}
+                    title="Delete notification"
+                    style={{ color: 'var(--danger)' }}
                   >
-                    <Bell size={12} aria-hidden="true" />
+                    <Trash2 size={12} aria-hidden="true" />
                   </Button>
-                )}
+                </div>
               </div>
             );
           })}

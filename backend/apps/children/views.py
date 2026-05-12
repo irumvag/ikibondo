@@ -232,7 +232,7 @@ class GuardianViewSet(viewsets.ModelViewSet):
                 'zone_name': child.zone.name if child.zone else None,
                 'risk_level': risk,
                 'nutrition_status': status,
-                'nutrition_status_display': hr.nutrition_status_display if hr else '—',
+                'nutrition_status_display': hr.get_nutrition_status_display() if hr else '—',
                 'latest_weight_kg': str(hr.weight_kg) if hr and hr.weight_kg else None,
                 'latest_height_cm': str(hr.height_cm) if hr and hr.height_cm else None,
                 'latest_muac_cm': str(hr.muac_cm) if hr and hr.muac_cm else None,
