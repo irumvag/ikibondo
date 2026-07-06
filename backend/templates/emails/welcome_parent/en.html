@@ -1,0 +1,30 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>Your Ikibondo account is ready</h1>
+<p>Hello <strong>{{ full_name }}</strong>,</p>
+<p>
+  A nurse at <strong>{{ camp_name }}</strong> has created an Ikibondo account for you.
+  Ikibondo lets you view your child's health records, vaccinations, and growth progress from your phone.
+</p>
+
+<div class="credential-box">
+  <strong>Login (Email{% if phone %} or Phone{% endif %})</strong>
+  <code>{{ email_or_phone }}</code>
+</div>
+<div class="credential-box">
+  <strong>Temporary Password</strong>
+  <code>{{ temp_password }}</code>
+</div>
+
+<p>
+  <a href="{{ login_url }}" class="cta">Log In Now</a>
+</p>
+
+<p><strong>Important:</strong> You will be asked to set a new password the first time you log in. Please keep it safe.</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  If you did not expect this account, please speak to the nurse at your camp or email
+  <a href="mailto:support@ikibondo.rw">support@ikibondo.rw</a>.
+</p>
+{% endblock %}

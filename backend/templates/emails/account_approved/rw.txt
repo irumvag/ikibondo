@@ -1,0 +1,14 @@
+Konti yemejwe - Ikibondo
+========================
+
+Muraho {{ full_name }},
+
+Konti yawe ya Ikibondo YEMEJWE.
+
+Injira hano: {{ login_url }}
+
+---
+Ufite ibibazo? Andikira support@ikibondo.rw.
+
+Ikibondo
+{{ frontend_url }}

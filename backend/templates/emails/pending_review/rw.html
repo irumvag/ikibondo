@@ -1,0 +1,30 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>Konti nshya itegerezwa kwemezwa</h1>
+<p>Muraho,</p>
+<p>Umubyeyi mushya / umurera yiyandikishije kuri <strong>Ikibondo</strong> kandi ategerezwa kwemezwa.</p>
+
+<div class="credential-box">
+  <strong>Izina</strong>
+  <code>{{ applicant_name }}</code>
+</div>
+<div class="credential-box">
+  <strong>Imeyili</strong>
+  <code>{{ applicant_email }}</code>
+</div>
+{% if camp_name %}
+<div class="credential-box">
+  <strong>Ikambi</strong>
+  <code>{{ camp_name }}</code>
+</div>
+{% endif %}
+
+<p>
+  <a href="{{ approvals_url }}" class="cta">Reba ibyategerezwa kwemezwa</a>
+</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  Ubutumwa bwa none bwaherewe kuko uri umuyobozi w'ikambi.
+</p>
+{% endblock %}

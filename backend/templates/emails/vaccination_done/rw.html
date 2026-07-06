@@ -1,0 +1,34 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>✅ Inkingo yanditswe</h1>
+<p>Muraho <strong>{{ parent_name }}</strong>,</p>
+<p>
+  Tunezerwa kukubwira ko inkingo ya <strong>{{ vaccine_name }}</strong> ya
+  <strong>{{ child_name }}</strong> yahawe kandi yanditswe neza.
+</p>
+
+<div class="credential-box" style="border-left-color:#16a34a;">
+  <strong style="color:#16a34a;">Inkingo yatanzwe</strong>
+  <code>{{ vaccine_name }}</code>
+  <strong style="margin-top:10px;">Itariki yatanzweho</strong>
+  <code>{{ administered_date }}</code>
+  {% if batch_number %}
+  <strong style="margin-top:10px;">Numero y'uruganda</strong>
+  <code>{{ batch_number }}</code>
+  {% endif %}
+</div>
+
+<p>
+  Bika ibyandiko ibi kuri we. Gahunda y'inkingo ya {{ child_name }} yavuguruwe.
+  Ibutsa rikurikira rizagera igihe gikwiye.
+</p>
+
+<p>
+  <a href="{{ frontend_url }}/parent/children/{{ child_id }}" class="cta">Reba dosiye yose ya {{ child_name }}</a>
+</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  Niba ubona ko ibyandiko bibi, vugana na kigo cy'ubuzima cyangwa ASC wawe.
+</p>
+{% endblock %}

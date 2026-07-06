@@ -1,0 +1,26 @@
+{
+  "model_name": "vaccination_rf_v1",
+  "algorithm": "Ensemble Decision Tree (pure numpy, 7 trees, balanced weights)",
+  "feature_names": [
+    "age_months",
+    "previous_missed_doses",
+    "distance_km",
+    "guardian_age",
+    "num_siblings",
+    "nutrition_status",
+    "days_since_last_visit"
+  ],
+  "classes": [
+    "missed",
+    "on_time"
+  ],
+  "risk_tiers": {
+    "LOW": "< 0.35",
+    "MEDIUM": "0.35-0.65",
+    "HIGH": "> 0.65"
+  },
+  "test_roc_auc": 0.611,
+  "test_accuracy": 0.6625,
+  "test_precision": 0.4815,
+  "test_recall": 0.1955
+}

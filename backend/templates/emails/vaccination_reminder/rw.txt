@@ -1,0 +1,15 @@
+IKIBONDO — Ibutsa ry'inkingo
+
+Muraho {{ parent_name }},
+
+Ubu ni ibutsa ko {{ child_name }} afite inkingo ziteganyijwe:
+
+  Inkingo            : {{ vaccine_name }}
+  Itariki iteganyijwe: {{ due_date }}
+  {% if days_until == 0 %}Imiterere: UYU MUNSI{% elif days_until == 1 %}Imiterere: Ejo hashize{% else %}Imiterere: Mu minsi {{ days_until }}{% endif %}
+
+Mwozane {{ child_name }} ku kigo cy'ubuzima ku itariki iteganyijwe.
+
+Reba dosiye: {{ frontend_url }}/parent/children/{{ child_id }}
+
+— Ikipe ya Ikibondo

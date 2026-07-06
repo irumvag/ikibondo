@@ -1,0 +1,13 @@
+# Docker secrets and environment overrides
+*.env
+secrets/
+
+# SSL certificates (never commit private keys)
+ssl/certs/
+*.pem
+*.key
+*.crt
+*.p12
+
+# Local override compose files
+docker-compose.override.yml

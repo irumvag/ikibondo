@@ -1,0 +1,18 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>Registration Received</h1>
+<p>Hello <strong>{{ full_name }}</strong>,</p>
+<p>Thank you for registering on <strong>Ikibondo</strong>. Your account has been created and is currently <strong>pending approval</strong> by a health facility supervisor.</p>
+<p>You will receive another email as soon as your account is approved and you can log in.</p>
+
+<div class="credential-box">
+  <strong>Your registered email</strong>
+  <code>{{ email }}</code>
+</div>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  Questions? Contact your nearest health facility or email
+  <a href="mailto:support@ikibondo.rw">support@ikibondo.rw</a>.
+</p>
+{% endblock %}

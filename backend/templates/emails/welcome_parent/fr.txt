@@ -1,0 +1,24 @@
+Votre compte Ikibondo est prêt
+===============================
+
+Bonjour {{ full_name }},
+
+Une infirmière du camp {{ camp_name }} a créé un compte Ikibondo pour vous.
+Ikibondo vous permet de consulter le dossier de santé, les vaccinations
+et la croissance de votre enfant depuis votre téléphone.
+
+Identifiants de connexion :
+  Email / Téléphone : {{ email_or_phone }}
+  Mot de passe temporaire : {{ temp_password }}
+
+Connectez-vous sur : {{ login_url }}
+
+IMPORTANT : Vous devrez choisir un nouveau mot de passe lors de votre
+première connexion. Conservez-le précieusement.
+
+---
+Si vous n'attendiez pas ce compte, contactez l'infirmière de votre camp
+ou écrivez à support@ikibondo.rw.
+
+Ikibondo - Système de Suivi de la Santé de l'Enfant
+{{ frontend_url }}

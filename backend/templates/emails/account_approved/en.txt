@@ -1,0 +1,14 @@
+Account Approved - Ikibondo
+===========================
+
+Hello {{ full_name }},
+
+Your Ikibondo account has been APPROVED.
+
+You can now log in at: {{ login_url }}
+
+---
+Questions? Email support@ikibondo.rw.
+
+Ikibondo - Child Health Monitoring System
+{{ frontend_url }}

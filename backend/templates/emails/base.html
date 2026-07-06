@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block subject %}Ikibondo{% endblock %}</title>
+  <style>
+    body { margin:0; padding:0; background:#F2EDE3; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#1a1a1a; }
+    .wrapper { max-width:600px; margin:32px auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+    .header { background:#085041; padding:28px 32px; text-align:center; }
+    .header svg { display:block; margin:0 auto; }
+    .body { padding:32px; }
+    .body h1 { margin:0 0 16px; font-size:22px; font-weight:700; color:#085041; }
+    .body p  { margin:0 0 14px; font-size:15px; line-height:1.6; color:#333; }
+    .cta { display:inline-block; margin:20px 0; padding:12px 28px; background:#085041; color:#ffffff !important; text-decoration:none; border-radius:6px; font-size:15px; font-weight:600; }
+    .credential-box { background:#F2EDE3; border-left:4px solid #FBC800; padding:14px 18px; border-radius:4px; margin:18px 0; font-size:14px; }
+    .credential-box strong { display:block; margin-bottom:4px; color:#085041; }
+    .credential-box code { font-size:16px; font-weight:700; letter-spacing:0.04em; color:#1a1a1a; word-break:break-all; }
+    .footer { padding:20px 32px; background:#F2EDE3; text-align:center; font-size:12px; color:#666; border-top:1px solid #e0dbd0; }
+    .footer a { color:#085041; text-decoration:none; }
+    hr { border:none; border-top:1px solid #e0dbd0; margin:24px 0; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <!-- Inline SVG logo — brand teal + gold -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="160" height="40" viewBox="0 0 160 40">
+        <circle cx="20" cy="20" r="16" fill="#FBC800"/>
+        <text x="20" y="25" text-anchor="middle" font-family="'Helvetica Neue',Arial,sans-serif" font-size="13" font-weight="700" fill="#085041">Iki</text>
+        <text x="55" y="27" font-family="'Helvetica Neue',Arial,sans-serif" font-size="22" font-weight="700" fill="#ffffff">kibondo</text>
+      </svg>
+    </div>
+    <div class="body">
+      {% block content %}{% endblock %}
+    </div>
+    <div class="footer">
+      <p>
+        &copy; 2025 Ikibondo &mdash; Child Health Monitoring System<br>
+        Rwanda Refugee Camps &bull; <a href="{{ frontend_url }}">{{ frontend_url }}</a>
+      </p>
+      <p style="margin-top:8px; color:#999;">
+        This is an automated message. Please do not reply directly to this email.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

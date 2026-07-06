@@ -1,0 +1,68 @@
+{
+  "version": "v20260430",
+  "trained_at": "2026-04-30T06:01:33.029005",
+  "n_train": 89050,
+  "n_test": 15000,
+  "macro_f1": 0.9939,
+  "high_recall": 0.998,
+  "class_report": {
+    "HIGH": {
+      "precision": 0.9982224479431183,
+      "recall": 0.997969027671998,
+      "f1-score": 0.9980957217214675,
+      "support": 3939.0
+    },
+    "LOW": {
+      "precision": 0.9964395917398529,
+      "recall": 0.9847525216983345,
+      "f1-score": 0.9905615856536102,
+      "support": 4263.0
+    },
+    "MEDIUM": {
+      "precision": 0.9893415097094467,
+      "recall": 0.9967637540453075,
+      "f1-score": 0.9930387630981168,
+      "support": 6798.0
+    },
+    "accuracy": 0.9936666666666667,
+    "macro avg": {
+      "precision": 0.9946678497974726,
+      "recall": 0.9931617678052134,
+      "f1-score": 0.9938986901577316,
+      "support": 15000.0
+    },
+    "weighted avg": {
+      "precision": 0.9936909190026503,
+      "recall": 0.9936666666666667,
+      "f1-score": 0.9936627066028799,
+      "support": 15000.0
+    }
+  },
+  "feature_names": [
+    "weight_kg",
+    "height_cm",
+    "head_circumference_cm",
+    "waz",
+    "haz",
+    "whz",
+    "bmi_z",
+    "temperature_c",
+    "respiratory_rate",
+    "heart_rate",
+    "spo2",
+    "vaccines_received",
+    "vaccination_coverage_pct",
+    "overdue_vaccine_count",
+    "max_vaccine_delay_days",
+    "days_since_last_vaccine",
+    "age_months",
+    "sex",
+    "birth_weight",
+    "gestational_age",
+    "feeding_type",
+    "symptom_count",
+    "location_type",
+    "facility_type",
+    "visit_count"
+  ]
+}

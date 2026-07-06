@@ -1,0 +1,16 @@
+IKIBONDO — Vaccination enregistrée ✅
+
+Bonjour {{ parent_name }},
+
+La vaccination {{ vaccine_name }} de {{ child_name }} a bien été administrée.
+
+  Date d'administration : {{ administered_date }}{% if batch_number %}
+  Numéro de lot         : {{ batch_number }}{% endif %}
+
+Le calendrier vaccinal a été mis à jour. Vous recevrez le prochain rappel automatiquement.
+
+Voir le dossier : {{ frontend_url }}/parent/children/{{ child_id }}
+
+Si cet enregistrement est incorrect, contactez votre centre de santé ou ASC.
+
+— L'équipe Ikibondo

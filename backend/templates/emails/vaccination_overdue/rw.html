@@ -1,0 +1,32 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>⚠ Inkingo yazinze — Hagomba gukorwa</h1>
+<p>Muraho <strong>{{ parent_name }}</strong>,</p>
+<p>
+  Inkingo ya <strong>{{ vaccine_name }}</strong> ya <strong>{{ child_name }}</strong> yari iteganyijwe
+  ku <strong>{{ due_date }}</strong> ariko ntaho yanditswe.
+  Yazinze <strong>{{ days_overdue }}</strong> umunsi/iminsi.
+</p>
+
+<div class="credential-box" style="border-left-color:#dc2626;">
+  <strong style="color:#dc2626;">Inkingo yazinze</strong>
+  <code>{{ vaccine_name }}</code>
+  <strong style="margin-top:10px;">Yari iteganyijwe</strong>
+  <code>{{ due_date }}</code>
+  <strong style="margin-top:10px; color:#dc2626;">Iminsi yazinze: {{ days_overdue }}</strong>
+</div>
+
+<p>
+  Kutahabwa inkingo bishobora gushyira umwana wawe mu nabi. Mwiyangire kugira ngo musure
+  ikigo cy'ubuzima gikiranutse vuba bishoboka.
+</p>
+
+<p>
+  <a href="{{ frontend_url }}/parent/children/{{ child_id }}" class="cta">Reba gahunda y'inkingo ya {{ child_name }}</a>
+</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  Niba mwahawe inkingo, mubwire ASC wanyu cyangwa umuforomo ngo bashyiremo ibyandiko.
+</p>
+{% endblock %}

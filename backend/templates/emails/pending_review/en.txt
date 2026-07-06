@@ -1,0 +1,16 @@
+New Account Pending Approval - Ikibondo
+========================================
+
+Hello,
+
+A new parent/guardian has registered on Ikibondo and awaits approval.
+
+Name:  {{ applicant_name }}
+Email: {{ applicant_email }}
+{% if camp_name %}Camp:  {{ camp_name }}{% endif %}
+
+Review here: {{ approvals_url }}
+
+---
+Ikibondo - Child Health Monitoring System
+{{ frontend_url }}

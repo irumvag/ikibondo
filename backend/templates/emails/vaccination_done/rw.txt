@@ -1,0 +1,16 @@
+IKIBONDO — Inkingo yanditswe ✅
+
+Muraho {{ parent_name }},
+
+Inkingo ya {{ vaccine_name }} ya {{ child_name }} yahawe kandi yanditswe.
+
+  Itariki yatanzweho: {{ administered_date }}{% if batch_number %}
+  Numero y'uruganda : {{ batch_number }}{% endif %}
+
+Gahunda y'inkingo yavuguruwe. Ibutsa rikurikira rizagera igihe gikwiye.
+
+Reba dosiye: {{ frontend_url }}/parent/children/{{ child_id }}
+
+Niba ibyandiko bibi, vugana na kigo cy'ubuzima.
+
+— Ikipe ya Ikibondo

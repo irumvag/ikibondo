@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" fill="none" role="img" aria-label="Ikibondo">
+  <!-- Icon mark: stylised leaf/shield in brand teal -->
+  <rect x="4" y="4" width="40" height="40" rx="10" fill="#085041"/>
+  <!-- Gold accent dot -->
+  <circle cx="24" cy="18" r="5" fill="#FBC800"/>
+  <!-- Teal leaf shape -->
+  <path d="M14 36 C14 26 20 20 24 18 C28 20 34 26 34 36 Q24 32 14 36Z" fill="#FBC800" opacity="0.35"/>
+  <path d="M24 18 L24 38" stroke="#FBC800" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Wordmark -->
+  <text
+    x="54"
+    y="32"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="22"
+    font-weight="700"
+    fill="#085041"
+    letter-spacing="-0.5"
+  >Ikibondo</text>
+</svg>

@@ -1,0 +1,27 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>Bienvenue sur Ikibondo</h1>
+<p>Bonjour <strong>{{ full_name }}</strong>,</p>
+<p>Votre compte a ete cree sur la plateforme de surveillance de la sante des enfants <strong>Ikibondo</strong>. Vous pouvez vous connecter avec les identifiants ci-dessous.</p>
+
+<div class="credential-box">
+  <strong>Email</strong>
+  <code>{{ email }}</code>
+</div>
+<div class="credential-box">
+  <strong>Mot de passe temporaire</strong>
+  <code>{{ temp_password }}</code>
+</div>
+
+<p>
+  <a href="{{ login_url }}" class="cta">Se connecter</a>
+</p>
+
+<p><strong>Important :</strong> Vous serez invite a changer votre mot de passe lors de votre premiere connexion. Choisissez un mot de passe fort et unique.</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  Si vous n'attendiez pas ce compte, contactez votre superviseur ou ecrivez a
+  <a href="mailto:support@ikibondo.rw">support@ikibondo.rw</a>.
+</p>
+{% endblock %}

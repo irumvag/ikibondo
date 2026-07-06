@@ -1,0 +1,20 @@
+Bienvenue sur Ikibondo
+======================
+
+Bonjour {{ full_name }},
+
+Votre compte a ete cree sur la plateforme Ikibondo.
+
+Identifiants de connexion :
+  Email :              {{ email }}
+  Mot de passe temp. : {{ temp_password }}
+
+Connectez-vous ici : {{ login_url }}
+
+IMPORTANT : Vous devrez changer votre mot de passe a la premiere connexion.
+
+---
+Si vous n'attendiez pas ce compte, contactez support@ikibondo.rw.
+
+Ikibondo - Systeme de surveillance de la sante des enfants
+{{ frontend_url }}

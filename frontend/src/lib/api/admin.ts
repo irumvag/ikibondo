@@ -1,0 +1,627 @@
+import { apiClient } from './client';
+import type { AuthUser } from '@/store/authStore';
+import type { FAQItem } from './public';
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+
+export async function listUsers(role?: string, includeSuspended?: boolean): Promise<AuthUser[]> {
+  const params: Record<string, string> = {};
+  if (role) params.role = role;
+  if (includeSuspended) params.include_suspended = 'true';
+  const { data } = await apiClient.get('/auth/users/', { params });
+  return data.data ?? [];
+}
+
+export async function createStaffUser(payload: {
+  email: string;
+  full_name: string;
+  role: string;
+  phone_number?: string;
+  camp?: string;
+  password?: string;
+}): Promise<AuthUser> {
+  const { data } = await apiClient.post('/auth/users/', payload);
+  return data.data;
+}
+
+export async function getPendingApprovals(): Promise<AuthUser[]> {
+  const { data } = await apiClient.get('/auth/pending-approvals/');
+  return data.data ?? [];
+}
+
+export async function approveUser(userId: string): Promise<AuthUser> {
+  const { data } = await apiClient.patch(`/auth/approve/${userId}/`);
+  return data.data;
+}
+
+export async function updateUser(
+  userId: string,
+  payload: Partial<{
+    full_name: string;
+    email: string;
+    phone_number: string;
+    role: string;
+    camp: string | null;
+    is_approved: boolean;
+  }>,
+): Promise<AuthUser> {
+  const { data } = await apiClient.patch(`/auth/users/${userId}/`, payload);
+  return data.data;
+}
+
+export async function deactivateUser(userId: string): Promise<void> {
+  await apiClient.delete(`/auth/users/${userId}/`);
+}
+
+// ── Camps & Zones ─────────────────────────────────────────────────────────────
+
+export interface Camp {
+  id: string;
+  name: string;
+  code: string;
+  district?: string;
+  province?: string;
+  estimated_population?: number;
+  managing_body?: string;
+  status: string;
+  capacity?: number;
+  active_children_count: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface CampStats {
+  camp_id: string;
+  camp_name: string;
+  total_children: number;
+  sam_count: number;
+  mam_count: number;
+  normal_count: number;
+  vaccination_coverage_percent: number;
+}
+
+export interface Zone {
+  id: string;
+  camp: string;
+  camp_name: string;
+  name: string;
+  code: string;
+  description?: string;
+  estimated_households?: number;
+  estimated_population?: number;
+  status: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export async function listCamps(): Promise<Camp[]> {
+  const { data } = await apiClient.get('/camps/');
+  // DRF router may return paginated or plain list
+  const payload = data.data ?? data;
+  return payload?.results ?? payload ?? [];
+}
+
+export async function getCampStats(campId: string): Promise<CampStats> {
+  const { data } = await apiClient.get(`/camps/${campId}/stats/`);
+  return data.data;
+}
+
+export async function listZones(campId: string): Promise<Zone[]> {
+  const { data } = await apiClient.get(`/camps/${campId}/zones/`);
+  const payload = data.data ?? data;
+  return payload?.results ?? payload ?? [];
+}
+
+export async function createCamp(payload: {
+  name: string;
+  code: string;
+  district?: string;
+  province?: string;
+  estimated_population?: number;
+  managing_body?: string;
+  status: string;
+  capacity?: number;
+}): Promise<Camp> {
+  const { data } = await apiClient.post('/camps/', payload);
+  return data.data ?? data;
+}
+
+export async function updateCamp(
+  campId: string,
+  payload: Partial<{
+    name: string;
+    code: string;
+    district: string;
+    province: string;
+    estimated_population: number;
+    managing_body: string;
+    status: string;
+    capacity: number;
+  }>,
+): Promise<Camp> {
+  const { data } = await apiClient.patch(`/camps/${campId}/`, payload);
+  return data.data ?? data;
+}
+
+export async function deleteCamp(campId: string): Promise<void> {
+  await apiClient.delete(`/camps/${campId}/`);
+}
+
+export async function createZone(
+  campId: string,
+  payload: {
+    name: string;
+    code: string;
+    description?: string;
+    estimated_households?: number;
+    estimated_population?: number;
+    status: string;
+  },
+): Promise<Zone> {
+  const { data } = await apiClient.post(`/camps/${campId}/zones/`, payload);
+  return data.data ?? data;
+}
+
+export async function updateZone(
+  campId: string,
+  zoneId: string,
+  payload: Partial<{
+    name: string;
+    code: string;
+    description: string;
+    estimated_households: number;
+    estimated_population: number;
+    status: string;
+  }>,
+): Promise<Zone> {
+  const { data } = await apiClient.patch(`/camps/${campId}/zones/${zoneId}/`, payload);
+  return data.data ?? data;
+}
+
+export async function deleteZone(campId: string, zoneId: string): Promise<void> {
+  await apiClient.delete(`/camps/${campId}/zones/${zoneId}/`);
+}
+
+// ── Guardians ─────────────────────────────────────────────────────────────────
+
+export interface Guardian {
+  id: string;
+  full_name: string;
+  phone_number: string;
+  relationship: string;
+  national_id?: string;
+  has_account: boolean;
+  user_id?: string | null;
+  user_email?: string | null;
+  assigned_chw?: string | null;
+  assigned_chw_name?: string | null;
+  children_count: number;
+}
+
+export async function listGuardians(search?: string): Promise<Guardian[]> {
+  const { data } = await apiClient.get('/children/guardians/', {
+    params: search ? { search } : {},
+  });
+  const payload = data.data ?? data;
+  return payload?.results ?? payload ?? [];
+}
+
+export async function linkGuardianAccount(guardianId: string, userId: string | null): Promise<Guardian> {
+  const { data } = await apiClient.post(`/children/guardians/${guardianId}/link-account/`, { user_id: userId });
+  return data.data;
+}
+
+export async function assignCHWToGuardian(guardianId: string, chwId: string | null): Promise<Guardian> {
+  const { data } = await apiClient.post(`/children/guardians/${guardianId}/assign-chw/`, { chw_id: chwId });
+  return data.data;
+}
+
+export async function listGuardiansBycamp(campId?: string): Promise<Guardian[]> {
+  const { data } = await apiClient.get('/children/guardians/', {
+    params: campId ? { camp: campId } : {},
+  });
+  const payload = data.data ?? data;
+  return payload?.results ?? (Array.isArray(payload) ? payload : []);
+}
+
+// ── Vaccinations ──────────────────────────────────────────────────────────────
+
+export interface VaccinationRecord {
+  id: string;
+  child: string;
+  child_name: string;
+  vaccine: string;
+  vaccine_name: string;
+  vaccine_code: string;
+  dose_number: number;
+  scheduled_date: string;
+  administered_date: string | null;
+  administered_by: string | null;
+  administered_by_name: string | null;
+  status: 'SCHEDULED' | 'DONE' | 'MISSED' | 'SKIPPED';
+  batch_number: string;
+  dropout_probability: string | null;
+  dropout_risk_tier: string | null;
+  is_overdue: boolean;
+  notes: string;
+  created_at: string;
+}
+
+export interface VaccineRecord {
+  id: string;
+  name: string;
+  short_code: string;
+  dose_number: number;
+  recommended_age_weeks: number;
+  is_active: boolean;
+}
+
+export async function listVaccinations(params?: {
+  camp?: string;
+  zone?: string;
+  status?: string;
+  child?: string;
+  page?: number;
+}): Promise<{ results: VaccinationRecord[]; count: number }> {
+  const { data } = await apiClient.get('/vaccinations/', { params });
+  const payload = data.data ?? data;
+  return {
+    results: payload?.results ?? (Array.isArray(payload) ? payload : []),
+    count: payload?.count ?? 0,
+  };
+}
+
+export async function createVaccination(payload: {
+  child: string;
+  vaccine: string;
+  scheduled_date: string;
+  status?: string;
+  notes?: string;
+}): Promise<VaccinationRecord> {
+  const { data } = await apiClient.post('/vaccinations/', payload);
+  return data.data ?? data;
+}
+
+export async function updateVaccination(
+  id: string,
+  payload: Partial<{
+    status: string;
+    scheduled_date: string;
+    administered_date: string;
+    batch_number: string;
+    notes: string;
+  }>,
+): Promise<VaccinationRecord> {
+  const { data } = await apiClient.patch(`/vaccinations/${id}/`, payload);
+  return data.data ?? data;
+}
+
+export async function deleteVaccination(id: string): Promise<void> {
+  await apiClient.delete(`/vaccinations/${id}/`);
+}
+
+export async function listVaccines(params?: { search?: string; is_active?: boolean }): Promise<VaccineRecord[]> {
+  const { data } = await apiClient.get('/vaccinations/vaccines/', { params });
+  const payload = data.data ?? data;
+  return payload?.results ?? (Array.isArray(payload) ? payload : []);
+}
+
+// ── User suspension ───────────────────────────────────────────────────────────
+
+export async function suspendUser(
+  userId: string,
+  payload: { suspended: boolean; reason?: string },
+): Promise<AuthUser> {
+  const { data } = await apiClient.post(`/auth/users/${userId}/suspend/`, payload);
+  return data.data;
+}
+
+export async function bulkSuspendUsers(
+  userIds: string[],
+  suspended: boolean,
+  reason?: string,
+): Promise<{ affected: number }> {
+  const { data } = await apiClient.post('/auth/users/bulk-suspend/', {
+    user_ids: userIds,
+    suspended,
+    reason: reason ?? '',
+  });
+  return data.data;
+}
+
+// ── ML Model Versions ─────────────────────────────────────────────────────────
+
+export interface MLModelVersion {
+  id: string;
+  model_name: string;
+  version: string;
+  file_path: string;
+  f1_score: string | null;
+  recall: string | null;
+  precision: string | null;
+  deployed: boolean;
+  notes: string;
+  uploaded_by: string | null;
+  uploaded_by_name: string | null;
+  created_at: string;
+}
+
+export async function listMLModelVersions(): Promise<MLModelVersion[]> {
+  const { data } = await apiClient.get('/ml/model-versions/');
+  const payload = data.data ?? data;
+  return payload?.results ?? (Array.isArray(payload) ? payload : []);
+}
+
+export async function createMLModelVersion(payload: {
+  model_name: string;
+  version: string;
+  file_path?: string;
+  f1_score?: number;
+  recall?: number;
+  precision?: number;
+  notes?: string;
+}): Promise<MLModelVersion> {
+  const { data } = await apiClient.post('/ml/model-versions/', payload);
+  return data.data ?? data;
+}
+
+export async function promoteMLModelVersion(id: string): Promise<MLModelVersion> {
+  const { data } = await apiClient.post(`/ml/model-versions/${id}/promote/`);
+  return data.data;
+}
+
+export async function rollbackMLModelVersion(id: string): Promise<MLModelVersion> {
+  const { data } = await apiClient.post(`/ml/model-versions/${id}/rollback/`);
+  return data.data;
+}
+
+// ── Audit log ─────────────────────────────────────────────────────────────────
+
+export interface AuditLogEntry {
+  id: string | number;
+  user: string | null;
+  user_email: string;
+  user_display: string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE';
+  method: string;
+  path: string;
+  status_code: number;
+  ip_address: string | null;
+  user_agent: string;
+  request_body: Record<string, unknown> | null;
+  timestamp: string;
+}
+
+export async function listAuditLog(params?: {
+  page?: number;
+  page_size?: number;
+  user?: string;
+  action?: string;
+  path?: string;
+}): Promise<{ count: number; page: number; page_size: number; results: AuditLogEntry[] }> {
+  const { data } = await apiClient.get('/audit/log/', { params });
+  const payload = data.data ?? data;
+  return {
+    count:     payload.count     ?? 0,
+    page:      payload.page      ?? 1,
+    page_size: payload.page_size ?? 25,
+    results:   payload.results   ?? [],
+  };
+}
+
+// ── Children (admin) ──────────────────────────────────────────────────────────
+
+export interface AdminChild {
+  id: string;
+  full_name: string;
+  registration_number: string;
+  date_of_birth: string;
+  sex: 'M' | 'F';
+  camp: string;
+  camp_name: string;
+  zone: string | null;
+  zone_name: string | null;
+  risk_level: string | null;
+  nutrition_status: string | null;
+  is_active: boolean;
+  guardian_name?: string;
+  created_at: string;
+}
+
+export async function listAllChildren(params?: {
+  search?: string;
+  camp?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+}): Promise<{ results: AdminChild[]; count: number }> {
+  const { data } = await apiClient.get('/children/', { params });
+  const payload = data.data ?? data;
+  return {
+    results: payload?.results ?? (Array.isArray(payload) ? payload : []),
+    count: payload?.count ?? 0,
+  };
+}
+
+export async function closeChild(
+  id: string,
+  payload: { closure_status: 'DECEASED' | 'TRANSFERRED' | 'DEPARTED'; reason: string },
+): Promise<void> {
+  await apiClient.post(`/children/${id}/close/`, payload);
+}
+
+export async function transferChildZone(
+  id: string,
+  payload: { zone: string },
+): Promise<AdminChild> {
+  const { data } = await apiClient.post(`/children/${id}/transfer-zone/`, payload);
+  return data.data ?? data;
+}
+
+// ── Consultations (admin) ─────────────────────────────────────────────────────
+
+export interface Consultation {
+  id: string;
+  child: string;
+  child_name: string;
+  opened_by: string | null;
+  opened_by_name: string | null;
+  assigned_nurse: string | null;
+  assigned_nurse_name: string | null;
+  status: 'OPEN' | 'ESCALATED' | 'RESOLVED';
+  disputed_ai: boolean;
+  helpful_rating: number | null;
+  opened_at: string;
+  resolved_at: string | null;
+  messages?: ConsultationMessage[];
+}
+
+export interface ConsultationMessage {
+  id: string;
+  author: string | null;
+  author_name: string | null;
+  body: string;
+  created_at: string;
+}
+
+export async function listConsultations(params?: {
+  status?: string;
+  camp?: string;
+  page?: number;
+}): Promise<{ results: Consultation[]; count: number }> {
+  const { data } = await apiClient.get('/consultations/', { params });
+  const payload = data.data ?? data;
+  return {
+    results: payload?.results ?? (Array.isArray(payload) ? payload : []),
+    count: payload?.count ?? 0,
+  };
+}
+
+export async function replyConsultation(id: string, body: string): Promise<ConsultationMessage> {
+  const { data } = await apiClient.post(`/consultations/${id}/reply/`, { body });
+  return data.data ?? data;
+}
+
+export async function resolveConsultation(id: string, rating?: number): Promise<Consultation> {
+  const { data } = await apiClient.post(`/consultations/${id}/resolve/`, rating ? { rating } : {});
+  return data.data ?? data;
+}
+
+export async function disputeConsultation(id: string): Promise<Consultation> {
+  const { data } = await apiClient.post(`/consultations/${id}/dispute/`);
+  return data.data ?? data;
+}
+
+// ── Referrals (admin) ─────────────────────────────────────────────────────────
+
+export interface AdminReferral {
+  id: string;
+  child: string;
+  child_name: string;
+  referred_by: string | null;
+  referred_by_name: string | null;
+  target_facility: string;
+  reason: string;
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  outcome: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export async function listAllReferrals(params?: {
+  status?: string;
+  camp?: string;
+  page?: number;
+}): Promise<{ results: AdminReferral[]; count: number }> {
+  const { data } = await apiClient.get('/referrals/', { params });
+  const payload = data.data ?? data;
+  return {
+    results: payload?.results ?? (Array.isArray(payload) ? payload : []),
+    count: payload?.count ?? 0,
+  };
+}
+
+export async function completeReferral(id: string, outcome: string): Promise<AdminReferral> {
+  const { data } = await apiClient.post(`/referrals/${id}/complete/`, { outcome });
+  return data.data ?? data;
+}
+
+// ── Visit Requests (admin) ────────────────────────────────────────────────────
+
+export interface AdminVisitRequest {
+  id: string;
+  child: string;
+  child_name: string;
+  requested_by: string | null;
+  requested_by_name: string | null;
+  assigned_chw: string | null;
+  assigned_chw_name: string | null;
+  urgency: 'ROUTINE' | 'SOON' | 'URGENT';
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'COMPLETED';
+  concern_text: string;
+  symptom_flags: string[];
+  created_at: string;
+  eta: string | null;
+}
+
+export async function listAllVisitRequests(params?: {
+  status?: string;
+  camp?: string;
+  page?: number;
+}): Promise<{ results: AdminVisitRequest[]; count: number }> {
+  const { data } = await apiClient.get('/children/visit-requests/', {
+    params: { page_size: 50, ...params },
+  });
+  const payload = data.data ?? data;
+  return {
+    results: payload?.results ?? (Array.isArray(payload) ? payload : []),
+    count: payload?.count ?? 0,
+  };
+}
+
+// ── Health record amend (admin) ───────────────────────────────────────────────
+
+export async function adminAmendRecord(
+  id: string,
+  payload: {
+    weight_kg?: number;
+    height_cm?: number;
+    muac_cm?: number;
+    notes?: string;
+    amendment_reason: string;
+  },
+): Promise<void> {
+  await apiClient.patch(`/health-records/${id}/amend/`, payload);
+}
+
+// ── FAQ (admin CRUD) ───────────────────────────────────────────────────────────
+
+type FAQPayload = Pick<FAQItem,
+  'question' | 'answer' |
+  'question_rw' | 'answer_rw' |
+  'question_fr' | 'answer_fr' |
+  'order' | 'is_published'
+>;
+
+export async function listAllFaqItems(): Promise<FAQItem[]> {
+  const { data } = await apiClient.get('/faq/');
+  const payload = data?.results ?? data?.data ?? data;
+  return Array.isArray(payload) ? payload : payload?.results ?? [];
+}
+
+export async function createFaqItem(payload: Partial<FAQPayload>): Promise<FAQItem> {
+  const { data } = await apiClient.post('/faq/', payload);
+  return data?.data ?? data;
+}
+
+export async function updateFaqItem(
+  id: string,
+  payload: Partial<FAQPayload>,
+): Promise<FAQItem> {
+  const { data } = await apiClient.patch(`/faq/${id}/`, payload);
+  return data?.data ?? data;
+}
+
+export async function deleteFaqItem(id: string): Promise<void> {
+  await apiClient.delete(`/faq/${id}/`);
+}

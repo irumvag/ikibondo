@@ -1,0 +1,14 @@
+IKIBONDO — ⚠ Inkingo yazinze
+
+Muraho {{ parent_name }},
+
+Inkingo ya {{ vaccine_name }} ya {{ child_name }} yari iteganyijwe ku {{ due_date }}
+ariko ntaho yanditswe. Yazinze iminsi {{ days_overdue }}.
+
+Mwiyangire gusura ikigo cy'ubuzima vuba.
+
+Reba gahunda: {{ frontend_url }}/parent/children/{{ child_id }}
+
+Niba mwahawe inkingo, mubwire ASC wanyu.
+
+— Ikipe ya Ikibondo

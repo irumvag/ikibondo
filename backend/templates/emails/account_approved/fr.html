@@ -1,0 +1,15 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>Votre compte a ete approuve</h1>
+<p>Bonjour <strong>{{ full_name }}</strong>,</p>
+<p>Bonne nouvelle ! Votre compte <strong>Ikibondo</strong> a ete <strong>approuve</strong>. Vous pouvez maintenant vous connecter et acceder aux dossiers de sante de vos enfants.</p>
+
+<p>
+  <a href="{{ login_url }}" class="cta">Se connecter</a>
+</p>
+
+<hr>
+<p style="font-size:13px; color:#777;">
+  Questions ? Ecrivez a <a href="mailto:support@ikibondo.rw">support@ikibondo.rw</a>.
+</p>
+{% endblock %}

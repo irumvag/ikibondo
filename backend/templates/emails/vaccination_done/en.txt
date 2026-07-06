@@ -1,0 +1,16 @@
+IKIBONDO — Vaccination Recorded ✅
+
+Hello {{ parent_name }},
+
+{{ child_name }}'s {{ vaccine_name }} vaccination has been successfully administered.
+
+  Date administered: {{ administered_date }}{% if batch_number %}
+  Batch number      : {{ batch_number }}{% endif %}
+
+The vaccination schedule has been updated. You will receive the next reminder automatically.
+
+View full record: {{ frontend_url }}/parent/children/{{ child_id }}
+
+If you believe this record is incorrect, contact your health facility or CHW.
+
+— The Ikibondo Team

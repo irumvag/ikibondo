@@ -1,0 +1,16 @@
+Konti nshya itegerezwa kwemezwa - Ikibondo
+==========================================
+
+Muraho,
+
+Umubyeyi mushya yiyandikishije kuri Ikibondo kandi ategerezwa kwemezwa.
+
+Izina:   {{ applicant_name }}
+Imeyili: {{ applicant_email }}
+{% if camp_name %}Ikambi:  {{ camp_name }}{% endif %}
+
+Emeza hano: {{ approvals_url }}
+
+---
+Ikibondo
+{{ frontend_url }}
