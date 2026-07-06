@@ -1,3 +1,19 @@
+const isDev = process.env.NODE_ENV !== "production";
+
+// Allow the API origin the browser is actually configured to call. Derive it
+// from the same env var the API client uses so the CSP never drifts from reality.
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+let apiOrigin;
+try {
+  apiOrigin = new URL(apiUrl).origin;
+} catch {
+  apiOrigin = "http://localhost:8000";
+}
+
+// 'unsafe-eval' is only needed by the Next.js dev server (fast refresh). Never
+// ship it to production.
+const scriptSrc = `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`;
+
 const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
@@ -12,11 +28,11 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      scriptSrc,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob:",
-      "connect-src 'self' http://localhost:8000 https://ikibondo-api.rw",
+      `connect-src 'self' ${apiOrigin}`,
       "frame-ancestors 'none'",
     ].join("; "),
   },
