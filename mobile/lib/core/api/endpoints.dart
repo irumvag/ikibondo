@@ -2,10 +2,38 @@
 /// Base URL is set via --dart-define=API_BASE_URL or defaults to emulator address.
 library;
 
+import 'package:flutter/foundation.dart';
+
 const String kBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
   defaultValue: 'http://10.0.2.2:8000/api/v1', // Android emulator → host localhost
 );
+
+/// Whether the configured base URL is safe to use. HTTPS is always allowed;
+/// plain HTTP is only tolerated for local/emulator hosts during development.
+bool get kBaseUrlIsSecure {
+  final uri = Uri.tryParse(kBaseUrl);
+  if (uri == null) return false;
+  if (uri.scheme == 'https') return true;
+  const devHosts = {'10.0.2.2', '127.0.0.1', 'localhost'};
+  return devHosts.contains(uri.host);
+}
+
+/// Guards against shipping a release build that talks to the backend over plain
+/// HTTP (child health data must not travel unencrypted). Call once at startup:
+/// it throws in release builds and only warns in debug so the emulator default
+/// keeps working. Provide a real URL with
+/// `--dart-define=API_BASE_URL=https://...` when building for release.
+void assertSecureBaseUrl() {
+  if (kBaseUrlIsSecure) return;
+  final message =
+      'Insecure API_BASE_URL "$kBaseUrl": release builds must use https://. '
+      'Pass --dart-define=API_BASE_URL=https://api.example.com/api/v1 when building.';
+  if (kReleaseMode) {
+    throw StateError(message);
+  }
+  debugPrint('WARNING: $message');
+}
 
 class Endpoints {
   Endpoints._();
