@@ -18,11 +18,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements/prod.txt /tmp/requirements.txt
 RUN pip install --upgrade pip && pip install -r /tmp/requirements.txt
 
+# Create an unprivileged user to run the app (avoid running as root)
+RUN useradd --create-home --uid 1000 appuser
+
 # Copy backend source
 COPY backend/ /app/
 
-# Copy ML model artifacts so Django can load them at runtime
-COPY ml/models/ /app/../ml/models/
+# Copy ML model artifacts so Django can load them at runtime.
+# settings.ML_MODELS_DIR resolves to /ml/models (BASE_DIR=/app, so BASE_DIR.parent/ml/models).
+COPY ml/models/ /ml/models/
+
+# Ensure runtime-writable dirs exist and are owned by the non-root user
+RUN mkdir -p /app/staticfiles /app/media \
+    && chown -R appuser:appuser /app /ml
+
+USER appuser
 
 EXPOSE 8000
 
