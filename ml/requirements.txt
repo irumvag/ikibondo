@@ -1,10 +1,13 @@
-numpy>=1.24
-pandas>=2.0
-scikit-learn>=1.4
-xgboost>=2.0
-tensorflow>=2.15
-joblib>=1.3
-matplotlib>=3.7
-seaborn>=0.13
-optuna>=3.5
-scipy>=1.11
+# Pinned for reproducible training / model artifacts. scikit-learn and joblib
+# must stay compatible with the backend (backend/requirements/base.txt) so that
+# pickled models deserialize correctly at serving time.
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.4.2
+xgboost==2.0.3
+tensorflow==2.16.1
+joblib==1.4.2
+matplotlib==3.8.4
+seaborn==0.13.2
+optuna==3.6.1
+scipy==1.13.1
