@@ -3,6 +3,8 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import '../storage/secure_storage.dart';
+import 'database_encryption.dart';
 
 part 'app_database.g.dart';
 
@@ -127,8 +129,21 @@ class AppDatabase extends _$AppDatabase {
 
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
+    // Load SQLCipher over the stock sqlite3 before any database is opened.
+    await initSqlCipher();
+
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'ikibondo.db'));
-    return NativeDatabase.createInBackground(file);
+
+    // 256-bit key kept in the platform keystore/keychain.
+    final key = await SecureStorage.getOrCreateDatabaseKey();
+
+    // Transparently upgrade a legacy plaintext database to encrypted, once.
+    await migratePlaintextDatabaseIfNeeded(file, key);
+
+    // Open on the current isolate (not createInBackground): the setup closure
+    // captures the key and keys the connection with PRAGMA key. The offline
+    // cache is small and opened once, so main-isolate open is fine.
+    return NativeDatabase(file, setup: keyDatabase(key));
   });
 }
