@@ -7,6 +7,8 @@ from rest_framework.response import Response
 
 from .models import FAQItem, AuditLog
 from .serializers import FAQItemSerializer, AuditLogSerializer
+from .utils import safe_int
+from apps.accounts.permissions import IsAdminUser
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.openapi import OpenApiTypes
 
@@ -179,11 +181,12 @@ def stats_trend_view(request):
 
 @extend_schema(exclude=True)
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAdminUser])
 def audit_log_view(request):
     """
     GET /api/v1/audit/log/
-    Returns paginated AuditLog entries (request-level mutations). Admin only.
+    Returns paginated AuditLog entries (request-level mutations). Admin only
+    (enforced by the IsAdminUser permission class above).
 
     Query params:
       page=1          page number (default 1)
@@ -192,15 +195,8 @@ def audit_log_view(request):
       action=CREATE|UPDATE|DELETE
       path=<str>      substring match on path
     """
-    from apps.accounts.permissions import IsAdminUser
-    from rest_framework import status as st
-
-    if not (request.user and request.user.is_authenticated
-            and IsAdminUser().has_permission(request, None)):
-        return Response({'detail': 'Admin only.'}, status=st.HTTP_403_FORBIDDEN)
-
-    page_size = min(int(request.query_params.get('page_size', 25)), 100)
-    page      = max(int(request.query_params.get('page', 1)), 1)
+    page_size = safe_int(request.query_params.get('page_size'), 25, minimum=1, maximum=100)
+    page      = safe_int(request.query_params.get('page'), 1, minimum=1)
     user_filter   = request.query_params.get('user')
     action_filter = request.query_params.get('action')
     path_filter   = request.query_params.get('path')

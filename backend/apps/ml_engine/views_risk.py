@@ -9,6 +9,7 @@ from pathlib import Path
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from apps.core.responses import success_response, error_response
+from apps.core.utils import safe_int
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.openapi import OpenApiTypes
 
@@ -93,7 +94,7 @@ def list_predictions(request):
     model_filter = request.query_params.get('model')
     if model_filter:
         qs = qs.filter(model_name=model_filter)
-    limit = min(int(request.query_params.get('limit', 50)), 200)
+    limit = safe_int(request.query_params.get('limit'), 50, minimum=1, maximum=200)
     qs = qs[:limit]
 
     data = [

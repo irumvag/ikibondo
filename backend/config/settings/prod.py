@@ -8,6 +8,11 @@ DEBUG = False
 SECRET_KEY = config('SECRET_KEY')
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=lambda v: [s.strip() for s in v.split(',')])
 
+# base.py keeps a dev-only default DB password ('ikibondo') for local docker-compose.
+# In production that weak default must never be used — require it from the environment
+# so the app fails fast at startup instead of silently accepting it.
+DATABASES['default']['PASSWORD'] = config('DB_PASSWORD')  # noqa: F405 (from base import *)
+
 # Serve static files via whitenoise
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
