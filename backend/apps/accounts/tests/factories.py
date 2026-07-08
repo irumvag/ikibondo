@@ -10,7 +10,9 @@ class UserFactory(DjangoModelFactory):
     email = factory.Sequence(lambda n: f'user{n}@ikibondo.rw')
     full_name = factory.Faker('name')
     role = UserRole.CHW
-    phone_number = factory.Faker('phone_number')
+    # Deterministic, unique, and within phone_number's max_length=20.
+    # Faker('phone_number') can exceed 20 chars and fails on PostgreSQL.
+    phone_number = factory.Sequence(lambda n: f'+25078{n:07d}')
     is_active = True
 
     @classmethod

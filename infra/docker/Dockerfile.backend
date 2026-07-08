@@ -14,9 +14,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY backend/requirements/prod.txt /tmp/requirements.txt
-RUN pip install --upgrade pip && pip install -r /tmp/requirements.txt
+# Install Python dependencies. Copy the whole requirements/ dir so prod.txt's
+# `-r base.txt` include resolves.
+COPY backend/requirements/ /tmp/requirements/
+RUN pip install --upgrade pip && pip install -r /tmp/requirements/prod.txt
 
 # Create an unprivileged user to run the app (avoid running as root)
 RUN useradd --create-home --uid 1000 appuser
