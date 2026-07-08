@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Syringe, CheckCircle, Clock, XCircle, SkipForward, ChevronDown, ChevronRight } from 'lucide-react';
+import { Syringe, CheckCircle, Clock, XCircle, SkipForward, ChevronDown, ChevronRight, Printer } from 'lucide-react';
 import { useMyChildren, useChildVaccinations } from '@/lib/api/queries';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { SupervisedChild } from '@/lib/api/parent';
+import { printVaccinationCertificate } from '@/lib/vaccinationCertificate';
+import { useToast } from '@/contexts/ToastContext';
 
 // ── Types & constants ──────────────────────────────────────────────────────────
 
@@ -31,12 +33,20 @@ const STATUS_META: Record<string, { label: string; icon: React.ReactNode; color:
 
 function ChildVaccinePanel({ child, filter }: { child: SupervisedChild; filter: StatusFilter }) {
   const [open, setOpen] = useState(false);
+  const toast = useToast();
   const { data: vaccines, isLoading } = useChildVaccinations(child.id);
 
   const all     = vaccines ?? [];
   const done    = all.filter((v) => v.status === 'DONE').length;
   const overdue = all.filter((v) => v.is_overdue).length;
   const shown   = filter === 'ALL' ? all : all.filter((v) => v.status === filter);
+
+  function handleCertificate(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (all.length === 0) return;
+    const ok = printVaccinationCertificate(child, all);
+    if (!ok) toast.warn('Please allow pop-ups to print the certificate.');
+  }
 
   return (
     <div className="rounded-2xl border overflow-hidden" style={{ borderColor: overdue > 0 ? 'color-mix(in srgb, var(--danger) 35%, var(--border))' : 'var(--border)' }}>
@@ -63,6 +73,16 @@ function ChildVaccinePanel({ child, filter }: { child: SupervisedChild; filter: 
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleCertificate}
+            disabled={isLoading || all.length === 0}
+            title="Print vaccination certificate"
+            className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors hover:opacity-70 disabled:opacity-40"
+            style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+          >
+            <Printer size={12} aria-hidden="true" /> Certificate
+          </button>
           <Link
             href={`/parent/children/${child.id}`}
             onClick={(e) => e.stopPropagation()}
