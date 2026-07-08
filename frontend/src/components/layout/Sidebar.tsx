@@ -10,7 +10,7 @@ import {
   X, LogOut, Settings, MessageCircleQuestion, ChevronDown,
   ChevronRight, PanelLeftClose, PanelLeftOpen, BarChart2,
   Inbox, GitBranch, Calendar, Bluetooth, ShieldCheck,
-  Globe, ClipboardCheck, Megaphone, FlaskConical,
+  Globe, ClipboardCheck, Megaphone, FlaskConical, QrCode,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuthStore, type UserRole } from '@/store/authStore';
@@ -104,6 +104,7 @@ const ROLE_NAV: Record<UserRole, NavEntry[]> = {
       kind: 'group', id: 'nurse-clinical', label: 'Clinical', icon: Stethoscope,
       items: [
         { href: '/nurse/children',         label: 'Children',        icon: Baby },
+        { href: '/nurse/scan',             label: 'Scan QR',         icon: QrCode },
         { href: '/nurse/records',          label: 'Health Records',  icon: ClipboardList },
         { href: '/nurse/register',         label: 'Register Child',  icon: UserPlus },
         { href: '/nurse/vaccines',         label: 'Vaccinations',    icon: Syringe },
@@ -127,6 +128,7 @@ const ROLE_NAV: Record<UserRole, NavEntry[]> = {
     {
       kind: 'group', id: 'chw-field', label: 'Field', icon: Stethoscope,
       items: [
+        { href: '/chw/scan',      label: 'Scan QR',          icon: QrCode },
         { href: '/chw/visit',     label: 'Caseload & Visit', icon: Stethoscope },
         { href: '/chw/parents',   label: 'Parents',          icon: Users },
         { href: '/chw/records',   label: 'Health Records',   icon: Activity },
