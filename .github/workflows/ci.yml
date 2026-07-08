@@ -2,8 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, dev, rebuild-2026]
   pull_request:
+  workflow_dispatch:
 
 # Cancel superseded runs on the same ref
 concurrency:
@@ -105,3 +106,23 @@ jobs:
           curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
             | tar -xz gitleaks
           ./gitleaks detect --source . --redact --no-banner --verbose --exit-code 1
+
+  # Deploy-readiness: verify the production backend image builds. It is not
+  # pushed anywhere — wiring an actual deployment (push to a registry + deploy to
+  # a host / Vercel / Fly / etc.) requires a target and secrets to be provided.
+  docker-build:
+    name: Backend image build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build backend image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile.backend
+          push: false
+          tags: ikibondo-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
