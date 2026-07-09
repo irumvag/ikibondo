@@ -20,9 +20,11 @@ class AuthState {
       );
 }
 
-class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier() : super(const AuthState()) {
+class AuthNotifier extends Notifier<AuthState> {
+  @override
+  AuthState build() {
     _restoreSession();
+    return const AuthState();
   }
 
   Future<void> _restoreSession() async {
@@ -64,8 +66,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>(
-  (_) => AuthNotifier(),
+final authProvider = NotifierProvider<AuthNotifier, AuthState>(
+  AuthNotifier.new,
 );
 
 // Convenience providers

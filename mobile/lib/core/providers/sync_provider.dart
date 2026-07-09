@@ -19,7 +19,7 @@ final connectivityProvider = StreamProvider<ConnectivityResult>((ref) {
 });
 
 final isOnlineProvider = Provider<bool>((ref) {
-  final status = ref.watch(connectivityProvider).valueOrNull;
+  final status = ref.watch(connectivityProvider).value;
   return status != null && status != ConnectivityResult.none;
 });
 
@@ -48,12 +48,15 @@ class SyncState {
   );
 }
 
-class SyncNotifier extends StateNotifier<SyncState> {
-  final AppDatabase _db;
+class SyncNotifier extends Notifier<SyncState> {
+  late final AppDatabase _db;
 
-  SyncNotifier(this._db) : super(const SyncState()) {
+  @override
+  SyncState build() {
+    _db = ref.read(dbProvider);
     _loadPending();
     // Auto-sync when connectivity is restored (wired in app.dart via ref.listen)
+    return const SyncState();
   }
 
   Future<void> _loadPending() async {
@@ -132,10 +135,9 @@ class SyncNotifier extends StateNotifier<SyncState> {
   Future<void> refresh() => _loadPending();
 }
 
-final syncProvider = StateNotifierProvider<SyncNotifier, SyncState>((ref) {
-  final db = ref.read(dbProvider);
-  return SyncNotifier(db);
-});
+final syncProvider = NotifierProvider<SyncNotifier, SyncState>(
+  SyncNotifier.new,
+);
 
 final pendingCountProvider = Provider<int>(
   (ref) => ref.watch(syncProvider).pendingCount,

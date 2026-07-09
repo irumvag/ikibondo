@@ -78,13 +78,6 @@ jobs:
   mobile:
     name: Mobile (Flutter)
     runs-on: ubuntu-latest
-    # Non-blocking: the app's pinned riverpod_generator ^4.0.3 is incompatible
-    # with current flutter_test (needs meta ^1.18 / test_api that the SDK's
-    # flutter_test does not provide), so `flutter pub get` / `analyze` cannot pass
-    # cleanly on CI without upgrading the riverpod/build_runner toolchain. This
-    # job still runs best-effort so the failure is visible; fix the deps to make
-    # it a hard gate. See mobile/README.md.
-    continue-on-error: true
     defaults:
       run:
         working-directory: mobile
