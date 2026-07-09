@@ -9,7 +9,6 @@ import '../../core/api/endpoints.dart';
 import '../../core/models/child.dart';
 import '../../core/models/health_record.dart';
 import '../../core/theme/app_theme.dart';
-import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/risk_badge.dart';
 
 final _parentChildProvider = FutureProvider.family.autoDispose<Child, String>((ref, id) async {

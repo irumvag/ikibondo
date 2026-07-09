@@ -8,7 +8,6 @@ import '../../core/api/endpoints.dart';
 import '../../core/models/child.dart';
 import '../../core/providers/sync_provider.dart';
 import '../../core/theme/app_theme.dart';
-import '../chw/dashboard_screen.dart';
 
 const _symptoms = [
   'fever', 'diarrhea', 'cough', 'vomiting',
@@ -26,7 +25,6 @@ class LogVisitScreen extends ConsumerStatefulWidget {
 class _LogVisitScreenState extends ConsumerState<LogVisitScreen> {
   final _formKey     = GlobalKey<FormState>();
   Child? _child;
-  bool  _loadingChild = false;
 
   // Measurement controllers
   final _weightCtrl = TextEditingController();
@@ -53,14 +51,11 @@ class _LogVisitScreenState extends ConsumerState<LogVisitScreen> {
   }
 
   Future<void> _loadChild(String id) async {
-    setState(() => _loadingChild = true);
     try {
       final resp = await ApiClient.dio.get(Endpoints.child(id));
       final data = resp.data['data'] ?? resp.data;
       setState(() => _child = Child.fromJson(data as Map<String, dynamic>));
-    } catch (_) {} finally {
-      setState(() => _loadingChild = false);
-    }
+    } catch (_) {}
   }
 
   Future<void> _submit() async {

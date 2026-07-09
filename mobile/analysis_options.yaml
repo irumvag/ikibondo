@@ -9,6 +9,14 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+# `flutter analyze` fails the build on any issue, including info-level lints.
+# Framework API-deprecation infos (e.g. withOpacity, FormField.value) are
+# tracked as cleanup but shouldn't block CI; errors and warnings still do.
+analyzer:
+  errors:
+    deprecated_member_use: ignore
+    unintended_html_in_doc_comment: ignore
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

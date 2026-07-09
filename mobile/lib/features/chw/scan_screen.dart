@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/endpoints.dart';
-import '../../core/db/app_database.dart';
 import '../../core/providers/sync_provider.dart';
 import '../../core/theme/app_theme.dart';
 

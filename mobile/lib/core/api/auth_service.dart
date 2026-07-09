@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import '../storage/secure_storage.dart';
 import 'api_client.dart';
 import 'endpoints.dart';
