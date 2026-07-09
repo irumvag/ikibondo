@@ -44,3 +44,26 @@ flutter build apk --release \
   pre-existing plaintext database is migrated to encrypted on first launch.
 - Depends on `sqlcipher_flutter_libs` — do **not** add `sqlite3_flutter_libs`
   alongside it, or the non-encrypting sqlite3 library may be linked instead.
+
+## CI status (known dependency issue)
+
+The mobile job in `.github/workflows/ci.yml` is currently **non-blocking**
+(`continue-on-error`). The pinned code-gen toolchain does not resolve against
+current Flutter:
+
+- `riverpod_generator ^4.0.3` requires `meta ^1.18` / a `test_api` that the
+  Flutter SDK's bundled `flutter_test` does not provide, so `flutter pub get`
+  fails version solving on recent stable SDKs; older SDKs in turn fail
+  `google_fonts ^8.1.0` (needs Dart ≥ 3.9).
+
+To make the job a hard gate, upgrade the code-gen deps together in a local
+Flutter environment and commit the regenerated `pubspec.lock`:
+
+```bash
+flutter pub upgrade --major-versions riverpod_generator build_runner \
+  riverpod_annotation flutter_riverpod
+dart run build_runner build --delete-conflicting-outputs
+flutter analyze && flutter test
+```
+
+Then remove `continue-on-error` from the mobile job.
