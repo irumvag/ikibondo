@@ -10,22 +10,29 @@ import pytest
 from rest_framework.test import APIClient
 
 from apps.accounts.models import UserRole
+from apps.camps.tests.factories import CampFactory
 from .factories import UserFactory, NurseFactory, SupervisorFactory, AdminUserFactory
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 @pytest.fixture
+def camp():
+    return CampFactory()
+
+@pytest.fixture
 def chw():
     return UserFactory(role=UserRole.CHW, is_approved=True)
 
 @pytest.fixture
-def nurse():
-    return NurseFactory(is_approved=True)
+def nurse(camp):
+    # Nurse/supervisor need a camp assignment, otherwise camp-scoped endpoints
+    # (e.g. pending-approvals) return 403 as an anti-enumeration guard.
+    return NurseFactory(is_approved=True, camp=camp)
 
 @pytest.fixture
-def supervisor():
-    return SupervisorFactory(is_approved=True)
+def supervisor(camp):
+    return SupervisorFactory(is_approved=True, camp=camp)
 
 @pytest.fixture
 def admin():

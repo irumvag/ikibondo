@@ -157,7 +157,8 @@ class TestAuditLogMiddleware:
 class TestAuditLogEndpoint:
     def test_requires_auth(self, client):
         res = client.get(AUDIT_URL)
-        assert res.status_code == 403
+        # Unauthenticated → 401 (the IsAdminUser permission requires authentication).
+        assert res.status_code == 401
 
     def test_non_admin_forbidden(self, client, nurse):
         client.force_authenticate(nurse)
