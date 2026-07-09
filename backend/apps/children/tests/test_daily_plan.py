@@ -4,7 +4,8 @@ Tests for Sprint 7 CHW field endpoints:
   GET /api/v1/chw/families/     — full family caseload
 """
 import pytest
-from datetime import date, timedelta
+from datetime import timedelta
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.accounts.tests.factories import UserFactory, NurseFactory
@@ -127,7 +128,7 @@ class TestDailyPlanPriorityScoring:
         assert item['priority_score'] >= 40
 
     def test_high_risk_adds_30(self, client, chw, child, nurse):
-        HealthRecordFactory(child=child, recorded_by=nurse, measurement_date=date.today(), risk_level='HIGH')
+        HealthRecordFactory(child=child, recorded_by=nurse, measurement_date=timezone.now().date(), risk_level='HIGH')
         client.force_authenticate(chw)
         item = self._get_item(client, chw, child.id)
         assert item['risk_level'] == 'HIGH'
@@ -138,7 +139,7 @@ class TestDailyPlanPriorityScoring:
             child=child,
             vaccine=vaccine,
             status=DoseStatus.SCHEDULED,
-            scheduled_date=date.today() - timedelta(days=5),
+            scheduled_date=timezone.now().date() - timedelta(days=5),
         )
         client.force_authenticate(chw)
         item = self._get_item(client, chw, child.id)
@@ -153,20 +154,20 @@ class TestDailyPlanPriorityScoring:
         assert item['priority_score'] >= 15
 
     def test_visited_over_30_days_ago_adds_5(self, client, chw, child, nurse):
-        HealthRecordFactory(child=child, recorded_by=nurse, measurement_date=date.today() - timedelta(days=35), risk_level='LOW')
+        HealthRecordFactory(child=child, recorded_by=nurse, measurement_date=timezone.now().date() - timedelta(days=35), risk_level='LOW')
         client.force_authenticate(chw)
         item = self._get_item(client, chw, child.id)
         assert item['last_visit_days_ago'] == 35
         assert item['priority_score'] >= 5
 
     def test_recently_visited_low_risk_scores_zero(self, client, chw, child, nurse):
-        HealthRecordFactory(child=child, recorded_by=nurse, measurement_date=date.today() - timedelta(days=3), risk_level='LOW')
+        HealthRecordFactory(child=child, recorded_by=nurse, measurement_date=timezone.now().date() - timedelta(days=3), risk_level='LOW')
         client.force_authenticate(chw)
         item = self._get_item(client, chw, child.id)
         assert item['priority_score'] == 0
 
     def test_combined_score_request_and_high_risk(self, client, chw, child, nurse):
-        HealthRecordFactory(child=child, recorded_by=nurse, measurement_date=date.today(), risk_level='HIGH')
+        HealthRecordFactory(child=child, recorded_by=nurse, measurement_date=timezone.now().date(), risk_level='HIGH')
         VisitRequest.objects.create(
             child=child,
             requested_by=chw,
@@ -186,7 +187,7 @@ class TestDailyPlanPriorityScoring:
         # Child B: low priority — recently visited
         g_b = GuardianFactory(assigned_chw=chw)
         child_b = ChildFactory(camp=camp, guardian=g_b)
-        HealthRecordFactory(child=child_b, recorded_by=nurse, measurement_date=date.today() - timedelta(days=2), risk_level='LOW')
+        HealthRecordFactory(child=child_b, recorded_by=nurse, measurement_date=timezone.now().date() - timedelta(days=2), risk_level='LOW')
 
         client.force_authenticate(chw)
         items = client.get(DAILY_PLAN_URL).json()['data']
@@ -242,7 +243,7 @@ class TestCHWFamiliesPayload:
         assert res.json()['data'] == []
 
     def test_risk_level_returned(self, client, chw, child, nurse):
-        HealthRecordFactory(child=child, recorded_by=nurse, measurement_date=date.today(), risk_level='HIGH')
+        HealthRecordFactory(child=child, recorded_by=nurse, measurement_date=timezone.now().date(), risk_level='HIGH')
         client.force_authenticate(chw)
         c_entry = self._get_child_entry(client, chw, child)
         assert c_entry['risk_level'] == 'HIGH'
@@ -257,7 +258,7 @@ class TestCHWFamiliesPayload:
             child=child,
             vaccine=vaccine,
             status=DoseStatus.SCHEDULED,
-            scheduled_date=date.today() - timedelta(days=10),
+            scheduled_date=timezone.now().date() - timedelta(days=10),
         )
         client.force_authenticate(chw)
         c_entry = self._get_child_entry(client, chw, child)
@@ -268,14 +269,14 @@ class TestCHWFamiliesPayload:
             child=child,
             vaccine=vaccine,
             status=DoseStatus.SCHEDULED,
-            scheduled_date=date.today() + timedelta(days=7),
+            scheduled_date=timezone.now().date() + timedelta(days=7),
         )
         client.force_authenticate(chw)
         c_entry = self._get_child_entry(client, chw, child)
         assert c_entry['upcoming_vaccines'] == 1
 
     def test_next_vaccine_name_and_date(self, client, chw, child, vaccine):
-        target_date = date.today() + timedelta(days=14)
+        target_date = timezone.now().date() + timedelta(days=14)
         VaccinationRecordFactory(
             child=child,
             vaccine=vaccine,
@@ -288,7 +289,7 @@ class TestCHWFamiliesPayload:
         assert c_entry['next_vaccine_date'] == str(target_date)
 
     def test_last_visit_date_returned(self, client, chw, child, nurse):
-        visit_date = date.today() - timedelta(days=10)
+        visit_date = timezone.now().date() - timedelta(days=10)
         HealthRecordFactory(child=child, recorded_by=nurse, measurement_date=visit_date, risk_level='LOW')
         client.force_authenticate(chw)
         c_entry = self._get_child_entry(client, chw, child)
