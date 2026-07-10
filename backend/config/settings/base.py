@@ -164,6 +164,8 @@ REST_FRAMEWORK = {
     ),
     # Required for drf-spectacular to generate the OpenAPI schema
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # Rewrap DRF exceptions into the standard {success,error,code} envelope
+    'EXCEPTION_HANDLER': 'apps.core.exceptions.envelope_exception_handler',
     # Rate limiting — auth endpoints use stricter limits
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
