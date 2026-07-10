@@ -53,7 +53,36 @@ class CachedHealthRecords extends Table {
   RealColumn get muacCm          => real().nullable()();
   TextColumn get nutritionStatus => text().nullable()();
   TextColumn get riskLevel       => text().nullable()();
+  // Clinical detail needed for offline triage (schema v2)
+  BoolColumn get oedema          => boolean().withDefault(const Constant(false))();
+  RealColumn get temperatureC    => real().nullable()();
+  IntColumn  get respiratoryRate => integer().nullable()();
+  IntColumn  get heartRate       => integer().nullable()();
+  RealColumn get spo2            => real().nullable()();
+  RealColumn get weightForHeightZ => real().nullable()();
+  RealColumn get heightForAgeZ   => real().nullable()();
+  RealColumn get weightForAgeZ   => real().nullable()();
+  TextColumn get symptomFlags    => text().nullable()(); // JSON-encoded list
   DateTimeColumn get cachedAt    => dateTime()
+      .withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class CachedVaccinationRecords extends Table {
+  TextColumn get id               => text()();
+  TextColumn get childId          => text()();
+  TextColumn get childName        => text().nullable()();
+  TextColumn get vaccineName      => text().nullable()();
+  TextColumn get vaccineCode      => text().nullable()();
+  IntColumn  get doseNumber       => integer().nullable()();
+  TextColumn get scheduledDate    => text()();
+  TextColumn get administeredDate => text().nullable()();
+  TextColumn get status           => text()(); // SCHEDULED | DONE | MISSED | SKIPPED
+  BoolColumn get isOverdue        => boolean().withDefault(const Constant(false))();
+  TextColumn get batchNumber      => text().nullable()();
+  DateTimeColumn get cachedAt     => dateTime()
       .withDefault(currentDateAndTime)();
 
   @override
@@ -62,12 +91,39 @@ class CachedHealthRecords extends Table {
 
 // ── Database ───────────────────────────────────────────────────────────────
 
-@DriftDatabase(tables: [PendingOperations, CachedChildren, CachedHealthRecords])
+@DriftDatabase(tables: [
+  PendingOperations,
+  CachedChildren,
+  CachedHealthRecords,
+  CachedVaccinationRecords,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  /// Test-only constructor: inject an in-memory (or otherwise custom) executor
+  /// so tests never touch SQLCipher, secure storage, or the file system.
+  AppDatabase.forTesting(super.executor);
+
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(cachedVaccinationRecords);
+            await m.addColumn(cachedHealthRecords, cachedHealthRecords.oedema);
+            await m.addColumn(cachedHealthRecords, cachedHealthRecords.temperatureC);
+            await m.addColumn(cachedHealthRecords, cachedHealthRecords.respiratoryRate);
+            await m.addColumn(cachedHealthRecords, cachedHealthRecords.heartRate);
+            await m.addColumn(cachedHealthRecords, cachedHealthRecords.spo2);
+            await m.addColumn(cachedHealthRecords, cachedHealthRecords.weightForHeightZ);
+            await m.addColumn(cachedHealthRecords, cachedHealthRecords.heightForAgeZ);
+            await m.addColumn(cachedHealthRecords, cachedHealthRecords.weightForAgeZ);
+            await m.addColumn(cachedHealthRecords, cachedHealthRecords.symptomFlags);
+          }
+        },
+      );
 
   // ── Pending operations ─────────────────────────────────────────────────
   Future<List<PendingOperation>> allPending() =>
@@ -125,6 +181,30 @@ class AppDatabase extends _$AppDatabase {
         ..where((t) => t.childId.equals(childId))
         ..orderBy([(t) => OrderingTerm.desc(t.measurementDate)]))
           .get();
+
+  // ── Vaccination cache ──────────────────────────────────────────────────
+  Future<void> cacheVaccinationRecords(
+      List<CachedVaccinationRecordsCompanion> records) =>
+      batch((b) => b.insertAllOnConflictUpdate(cachedVaccinationRecords, records));
+
+  /// Offline vaccine queue: scheduled doses, soonest first.
+  Future<List<CachedVaccinationRecord>> getCachedVaccineQueue() =>
+      (select(cachedVaccinationRecords)
+        ..where((t) => t.status.equals('SCHEDULED'))
+        ..orderBy([(t) => OrderingTerm.asc(t.scheduledDate)]))
+          .get();
+
+  Future<List<CachedVaccinationRecord>> getCachedVaccinations(String childId) =>
+      (select(cachedVaccinationRecords)
+        ..where((t) => t.childId.equals(childId))
+        ..orderBy([(t) => OrderingTerm.asc(t.scheduledDate)]))
+          .get();
+
+  Future<void> pruneCachedVaccinations() async {
+    final cutoff = DateTime.now().subtract(const Duration(days: 7));
+    await (delete(cachedVaccinationRecords)
+      ..where((t) => t.cachedAt.isSmallerThan(Variable(cutoff)))).go();
+  }
 }
 
 LazyDatabase _openConnection() {

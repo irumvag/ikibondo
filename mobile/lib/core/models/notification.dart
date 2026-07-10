@@ -28,6 +28,17 @@ class AppNotification {
         createdAt:        json['created_at'] as String,
       );
 
+  /// Round-trips with [fromJson] — used for offline caching.
+  Map<String, dynamic> toJson() => {
+        'id':                id,
+        'notification_type': notificationType,
+        'message':           message,
+        'is_read':           isRead,
+        'child':             childId,
+        'child_name':        childName,
+        'created_at':        createdAt,
+      };
+
   bool get isHighRisk => notificationType.contains('HIGH_RISK') ||
       notificationType.contains('SAM');
   bool get isVaccination => notificationType.contains('VACCINATION');

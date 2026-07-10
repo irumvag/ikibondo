@@ -13,9 +13,8 @@ dependencies:
   # Navigation
   go_router: ^17.2.3
 
-  # State management
+  # State management (Riverpod 3 Notifier API — no codegen)
   flutter_riverpod: ^3.3.1
-  riverpod_annotation: ^4.0.2
 
   # HTTP
   dio: ^5.4.3
@@ -45,17 +44,11 @@ dependencies:
   # Charts (growth charts)
   fl_chart: ^1.2.0
 
-  # JSON serialization
-  json_annotation: ^4.9.0
-
   # Connectivity
   connectivity_plus: ^7.1.1
 
   # Date formatting
   intl: ^0.20.2
-
-  # Image picker (child photo)
-  image_picker: ^1.1.2
 
   # URL launching (tel: links for CHW contact)
   url_launcher: ^6.3.0
@@ -74,8 +67,6 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   build_runner: ^2.4.9
   drift_dev: ^2.18.0
-  json_serializable: ^6.8.0
-  riverpod_generator: ^4.0.3
 
 flutter:
   uses-material-design: true

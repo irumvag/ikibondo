@@ -55,7 +55,8 @@ class AppUser {
     }
   }
 
-  String toJsonString() => jsonEncode({
+  /// Round-trips with [fromJson] — same convention as the other models.
+  Map<String, dynamic> toJson() => {
     'id': id,
     'email': email,
     'full_name': fullName,
@@ -67,7 +68,9 @@ class AppUser {
     'must_change_password': mustChangePassword,
     'preferred_language': preferredLanguage,
     'guardian_id': guardianId,
-  });
+  };
+
+  String toJsonString() => jsonEncode(toJson());
 
   factory AppUser.fromJsonString(String s) =>
       AppUser.fromJson(jsonDecode(s) as Map<String, dynamic>);

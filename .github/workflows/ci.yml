@@ -88,10 +88,13 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - name: Code generation (drift / json_serializable)
+      - name: Code generation (drift)
         run: dart run build_runner build --delete-conflicting-outputs
       - name: Analyze
         run: flutter analyze
+      # Drift's NativeDatabase.memory() in unit tests needs a host sqlite3.
+      - name: Install host sqlite3 for drift tests
+        run: sudo apt-get update -q && sudo apt-get install -y -q libsqlite3-dev
       - name: Tests
         run: flutter test
 

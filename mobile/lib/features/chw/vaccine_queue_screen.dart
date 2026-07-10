@@ -1,21 +1,63 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/endpoints.dart';
+import '../../core/db/app_database.dart';
 import '../../core/models/vaccination_record.dart';
 import '../../core/providers/sync_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/loading_skeleton.dart';
 
 final _vaccineQueueProvider = FutureProvider.autoDispose<List<VaccinationRecord>>((ref) async {
-  final resp = await ApiClient.dio.get(
-    Endpoints.vaccinations,
-    queryParameters: {'status': 'SCHEDULED', 'ordering': 'scheduled_date'},
-  );
-  final items = (resp.data['data']?['results'] ?? resp.data['results'] ?? resp.data['data'] ?? []) as List;
-  return items.map((e) => VaccinationRecord.fromJson(e as Map<String, dynamic>)).toList();
+  final db = ref.read(dbProvider);
+  try {
+    final resp = await ApiClient.dio.get(
+      Endpoints.vaccinations,
+      queryParameters: {'status': 'SCHEDULED', 'ordering': 'scheduled_date'},
+    );
+    final items = (resp.data['data']?['results'] ?? resp.data['results'] ?? resp.data['data'] ?? []) as List;
+    final records = items.map((e) => VaccinationRecord.fromJson(e as Map<String, dynamic>)).toList();
+    // Refresh the offline cache so the queue survives losing connectivity.
+    await db.cacheVaccinationRecords([
+      for (final r in records)
+        CachedVaccinationRecordsCompanion(
+          id:               Value(r.id),
+          childId:          Value(r.childId),
+          childName:        Value(r.childName),
+          vaccineName:      Value(r.vaccineName),
+          vaccineCode:      Value(r.vaccineCode),
+          doseNumber:       Value(r.doseNumber),
+          scheduledDate:    Value(r.scheduledDate),
+          administeredDate: Value(r.administeredDate),
+          status:           Value(r.status),
+          isOverdue:        Value(r.isOverdue),
+          batchNumber:      Value(r.batchNumber),
+        ),
+    ]);
+    return records;
+  } catch (_) {
+    // Offline (or server error): serve the cached queue instead of failing.
+    final cached = await db.getCachedVaccineQueue();
+    return [
+      for (final c in cached)
+        VaccinationRecord(
+          id:               c.id,
+          childId:          c.childId,
+          childName:        c.childName,
+          vaccineName:      c.vaccineName,
+          vaccineCode:      c.vaccineCode,
+          doseNumber:       c.doseNumber,
+          scheduledDate:    c.scheduledDate,
+          administeredDate: c.administeredDate,
+          status:           c.status,
+          isOverdue:        c.isOverdue,
+          batchNumber:      c.batchNumber,
+        ),
+    ];
+  }
 });
 
 class VaccineQueueScreen extends ConsumerWidget {

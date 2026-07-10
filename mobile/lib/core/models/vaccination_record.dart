@@ -48,4 +48,22 @@ class VaccinationRecord {
         dropoutProbability:  (json['dropout_probability'] as num?)?.toDouble(),
         dropoutRiskTier:     json['dropout_risk_tier'] as String?,
       );
+
+  /// Round-trips with [fromJson] — used for offline caching and enqueueing.
+  Map<String, dynamic> toJson() => {
+        'id':                  id,
+        'child':               childId,
+        'child_name':          childName,
+        'vaccine_name':        vaccineName,
+        'vaccine_code':        vaccineCode,
+        'dose_number':         doseNumber,
+        'scheduled_date':      scheduledDate,
+        'administered_date':   administeredDate,
+        'status':              status,
+        'is_overdue':          isOverdue,
+        'batch_number':        batchNumber,
+        'notes':               notes,
+        'dropout_probability': dropoutProbability,
+        'dropout_risk_tier':   dropoutRiskTier,
+      };
 }
