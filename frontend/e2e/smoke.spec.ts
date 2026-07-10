@@ -23,15 +23,6 @@ async function login(page: Page, email: string, password: string) {
   await page.waitForURL(/\/(chw|nurse|supervisor|admin|parent|onboarding)/, { timeout: 10_000 });
 }
 
-async function logout(page: Page) {
-  // Click user avatar / logout button in topbar
-  const avatar = page.locator('[aria-label="Account menu"], [data-testid="user-avatar"]').first();
-  if (await avatar.isVisible()) {
-    await avatar.click();
-    await page.click('text=Sign out', { timeout: 3_000 });
-  }
-  await page.goto(`${BASE_URL}/login`);
-}
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 

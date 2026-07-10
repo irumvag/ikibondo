@@ -60,7 +60,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setAuth: (user, accessToken, refreshToken) => {
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('access_token', accessToken);
+      // Single source of truth for tokens: localStorage (client.ts reads it).
       localStorage.setItem('access_token', accessToken);
       localStorage.setItem('refresh_token', refreshToken);
       setRoleCookie(user.role);

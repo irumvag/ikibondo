@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { CheckCircle } from 'lucide-react';
@@ -27,8 +27,9 @@ export function RegisterForm() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(registerSchema) as any,
+    // zodResolver's generic can't see through the .refine() wrapper; a typed
+    // Resolver cast keeps field-name safety without falling back to `any`.
+    resolver: zodResolver(registerSchema) as Resolver<RegisterFormValues>,
     defaultValues: { preferred_language: 'rw' as const },
   });
 

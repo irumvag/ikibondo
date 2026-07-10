@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Megaphone, CheckCircle2 } from 'lucide-react';
-import { listBroadcasts, sendBroadcast, type Broadcast } from '@/lib/api/notifications';
+import { listBroadcasts, sendBroadcast } from '@/lib/api/notifications';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
 

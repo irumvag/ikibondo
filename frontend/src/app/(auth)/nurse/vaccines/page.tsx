@@ -570,7 +570,7 @@ export default function NurseVaccinesPage() {
             <div className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm" style={{ backgroundColor: 'var(--high-bg)', color: 'var(--danger)' }}>
               <AlertTriangle size={14} aria-hidden="true" />
               {overdueCount} child{overdueCount !== 1 ? 'ren' : ''} missed their scheduled vaccination.
-              Use "Remind overdue" to send SMS reminders to their guardians.
+              Use &quot;Remind overdue&quot; to send SMS reminders to their guardians.
             </div>
           )}
           <VaxTable

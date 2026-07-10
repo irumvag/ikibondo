@@ -9,11 +9,11 @@ export const apiClient = axios.create({
   withCredentials: false, // JWT in Authorization header (not cookies in this impl)
 });
 
-// ── Attach access token from sessionStorage / localStorage ────────────────
+// ── Attach access token (localStorage is the single token store) ──────────
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token =
     typeof window !== 'undefined'
-      ? sessionStorage.getItem('access_token') ?? localStorage.getItem('access_token')
+      ? localStorage.getItem('access_token')
       : null;
   if (token && config.headers) {
     config.headers['Authorization'] = `Bearer ${token}`;
@@ -58,7 +58,7 @@ apiClient.interceptors.response.use(
     isRefreshing = true;
     const refresh =
       typeof window !== 'undefined'
-        ? sessionStorage.getItem('refresh_token') ?? localStorage.getItem('refresh_token')
+        ? localStorage.getItem('refresh_token')
         : null;
 
     if (!refresh) {
@@ -74,7 +74,6 @@ apiClient.interceptors.response.use(
       const newAccess: string = data.access;
 
       if (typeof window !== 'undefined') {
-        sessionStorage.setItem('access_token', newAccess);
         localStorage.setItem('access_token', newAccess);
       }
 

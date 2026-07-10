@@ -220,7 +220,7 @@ export default function ProfilePage() {
         {/* Force-change banner */}
         {forceChange && (
           <Alert variant="warn" title="You're using a temporary password">
-            Please set a new password below before continuing. You won't be able to access other pages until this is done.
+            Please set a new password below before continuing. You won&apos;t be able to access other pages until this is done.
           </Alert>
         )}
 

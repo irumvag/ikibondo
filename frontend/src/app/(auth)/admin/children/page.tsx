@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { Baby, Search, X, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Baby, Search, X, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { useAdminChildren, useAdminCamps, QK } from '@/lib/api/queries';
 import { closeChild, transferChildZone, listZones } from '@/lib/api/admin';

@@ -36,7 +36,8 @@ export default function CHWDashboard() {
 
   const { data: vaccines, isLoading: vaxLoading } = useVaccinationQueue(1);
 
-  const { data: records } = useQuery({
+  // Warm the records cache for the Records tab; the result isn't shown here.
+  useQuery({
     queryKey: ['chw-records', 1, 'ALL'],
     queryFn: () => listHealthRecords({ page: 1, page_size: 1 }),
     staleTime: 60_000,
@@ -117,7 +118,7 @@ export default function CHWDashboard() {
       {highRiskCount > 0 && (
         <Alert variant="danger" title={`${highRiskCount} high-risk child${highRiskCount !== 1 ? 'ren' : ''} need attention today`}>
           <Link href="/chw/today" className="underline font-medium">
-            View today's priority visit plan →
+            View today&apos;s priority visit plan →
           </Link>
         </Alert>
       )}

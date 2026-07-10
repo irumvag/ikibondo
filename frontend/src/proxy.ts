@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const PUBLIC_PATHS = ['/', '/about', '/login', '/register'];
 
 // Routes available to any authenticated user regardless of role
-const SHARED_AUTH_PATHS = ['/profile', '/notifications'];
+const SHARED_AUTH_PATHS = ['/profile', '/notifications', '/onboarding'];
 
 function isSharedAuth(pathname: string) {
   return SHARED_AUTH_PATHS.some(

@@ -1,6 +1,6 @@
 import logging
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 
 logger = logging.getLogger(__name__)
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -15,6 +15,15 @@ from drf_spectacular.openapi import OpenApiTypes
 class LoginThrottle(AnonRateThrottle):
     """Stricter rate limit for login attempts — 10/minute per IP."""
     scope = 'auth_login'
+
+
+class RegistrationThrottle(AnonRateThrottle):
+    """Rate limit for public self-registration — 10/hour per IP.
+
+    Registration creates DB rows and sends two emails per request, so it
+    needs a much tighter cap than the global anon throttle (60/minute).
+    """
+    scope = 'auth_register'
 
 from apps.core.responses import success_response, created_response, error_response
 from .serializers import (
@@ -93,7 +102,8 @@ def me_view(request):
 
 @extend_schema(exclude=True)
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([AllowAny])  # public by design; throttled below
+@throttle_classes([RegistrationThrottle])
 def register_view(request):
     """
     POST /api/v1/auth/register/ — public self-registration.

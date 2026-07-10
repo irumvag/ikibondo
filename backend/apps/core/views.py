@@ -58,7 +58,7 @@ _TREND_CACHE_TTL = 300  # seconds
 
 @extend_schema(exclude=True)
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([AllowAny])  # intentionally public: anonymous landing page
 def landing_stats_view(request):
     """GET /api/v1/stats/landing/ — public aggregate counts for the homepage."""
     def _compute():

@@ -2,13 +2,13 @@
 
 import { useState, useCallback } from 'react';
 import {
-  Syringe, Search, Filter, Trash2, Plus, Edit2, Check, X,
+  Filter, Trash2, Plus, Edit2, Check, X,
   ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import {
   listVaccinations, deleteVaccination, updateVaccination, createVaccination,
   listVaccines, listCamps,
-  type VaccinationRecord, type VaccineRecord, type Camp,
+  type VaccinationRecord,
 } from '@/lib/api/admin';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';

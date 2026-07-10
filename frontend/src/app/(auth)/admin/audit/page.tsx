@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ScrollText, ChevronLeft, ChevronRight, BarChart2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, BarChart2 } from 'lucide-react';
 import { usePredictions, useAuditLog } from '@/lib/api/queries';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';

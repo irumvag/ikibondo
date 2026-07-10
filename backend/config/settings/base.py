@@ -176,6 +176,7 @@ REST_FRAMEWORK = {
         'user': '300/minute',
         'auth_login': '10/minute',
         'auth_otp': '3/hour',
+        'auth_register': '10/hour',
     },
 }
 

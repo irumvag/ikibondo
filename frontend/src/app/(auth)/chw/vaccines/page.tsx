@@ -223,7 +223,7 @@ function ChildDetailPanel({
                   </div>
                 )}
                 {latest.notes && (
-                  <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>"{latest.notes}"</p>
+                  <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>&quot;{latest.notes}&quot;</p>
                 )}
               </div>
             )}
@@ -349,7 +349,7 @@ export default function VaccinesPage() {
         style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
       >
         <CheckCircle2 size={14} style={{ color: 'var(--success)', flexShrink: 0 }} />
-        Tap any row to view the child's details, visit history, and nurse notes.
+        Tap any row to view the child&apos;s details, visit history, and nurse notes.
         Vaccines are administered by nurses at the health facility.
       </div>
 

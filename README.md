@@ -40,23 +40,28 @@ Ikibondo addresses the challenge of tracking child nutrition in resource-limited
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Next.js 15 Frontend                │
-│  React Query · Zustand · Recharts · Dexie (IndexedDB)│
-└─────────────────────┬───────────────────────────────┘
-                      │ REST API (JSON)
-┌─────────────────────▼───────────────────────────────┐
-│              Django 5.1 REST API (DRF)               │
-│  JWT Auth · Role permissions · drf-spectacular       │
-├──────────────┬──────────────┬────────────────────────┤
-│  PostgreSQL  │    Redis     │    Celery Beat          │
-│  (primary DB)│  (cache/MQ) │  (async tasks)          │
-└──────────────┴──────────────┴────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────┐
-│               ML Engine (scikit-learn)               │
-│  Random Forest · SMOTE-Tomek · SHAP explainability  │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────┐   ┌──────────────────────────────┐
+│      Next.js 16 Frontend     │   │     Flutter Mobile (CHW/     │
+│  React Query · Zustand ·     │   │     Nurse/Parent)            │
+│  Recharts · Dexie (IndexedDB)│   │  Riverpod 3 · Drift+SQLCipher│
+└──────────────┬───────────────┘   │  · TLS cert pinning · offline│
+               │                   │  batch sync                  │
+               │                   └──────────────┬───────────────┘
+               │        REST API (JSON)           │
+               └──────────────┬───────────────────┘
+                              │  (nginx reverse proxy in prod)
+┌─────────────────────────────▼───────────────────────────────────┐
+│                    Django 5.2 REST API (DRF)                     │
+│        JWT Auth · Role permissions · drf-spectacular             │
+├──────────────────┬──────────────────┬────────────────────────────┤
+│    PostgreSQL    │      Redis       │        Celery Beat         │
+│   (primary DB)   │    (cache/MQ)    │       (async tasks)        │
+└──────────────────┴──────────────────┴────────────────────────────┘
+                              │
+┌─────────────────────────────▼───────────────────────────────────┐
+│                   ML Engine (scikit-learn)                       │
+│      Random Forest · SMOTE-Tomek · SHAP explainability          │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -67,7 +72,7 @@ Ikibondo addresses the challenge of tracking child nutrition in resource-limited
 
 | Component | Technology |
 |-----------|-----------|
-| Framework | Django 5.1 + Django REST Framework |
+| Framework | Django 5.2 + Django REST Framework |
 | Auth | SimpleJWT (access + refresh tokens) |
 | Database | PostgreSQL (prod) / SQLite (dev) |
 | Task queue | Celery 5 + Redis |
@@ -81,7 +86,7 @@ Ikibondo addresses the challenge of tracking child nutrition in resource-limited
 
 | Component | Technology |
 |-----------|-----------|
-| Framework | Next.js 15 (App Router) |
+| Framework | Next.js 16 (App Router) |
 | Language | TypeScript |
 | State | Zustand (auth + offline sync store) |
 | Data fetching | TanStack React Query v5 |
@@ -360,9 +365,10 @@ ikibondo/
 ### Prerequisites
 
 - Python 3.11+
-- Node.js 20+
+- Node.js 24+ *(required by `@zxing/library`)*
 - PostgreSQL 15+ *(or SQLite for development)*
 - Redis 7+ *(required for Celery task queue)*
+- Flutter 3.35+ *(mobile app only — see `mobile/README.md`)*
 
 ### 1. Backend
 
@@ -521,11 +527,13 @@ Configure DHIS2 credentials in the backend `.env` file. If credentials are not s
 
 | Branch | Purpose |
 |--------|---------|
-| `main` | Stable releases only — never commit directly |
-| `dev` | All backend API and frontend development |
-| `ml` | ML training scripts, notebooks, and model evaluation |
+| `main` | Stable, CI-green history |
+| `rebuild-2026` | Active development branch (pushed to GitHub; CI runs here) |
 
-All active development happens on `dev`. The `main` branch is updated only for tagged releases.
+CI (`.github/workflows/ci.yml`) gates every push with five jobs: backend
+(pytest + Django checks against PostgreSQL), frontend (lint + production
+build), mobile (Flutter analyze + test), a backend Docker image build, and a
+gitleaks secret scan.
 
 ---
 
