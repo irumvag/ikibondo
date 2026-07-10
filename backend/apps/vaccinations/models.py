@@ -48,7 +48,7 @@ class VaccinationRecord(BaseModel):
         on_delete=models.PROTECT,
         related_name='records'
     )
-    scheduled_date = models.DateField()
+    scheduled_date = models.DateField(db_index=True)
     administered_date = models.DateField(null=True, blank=True)
     administered_by = models.ForeignKey(
         'accounts.CustomUser',
@@ -59,7 +59,8 @@ class VaccinationRecord(BaseModel):
     status = models.CharField(
         max_length=20,
         choices=DoseStatus.choices,
-        default=DoseStatus.SCHEDULED
+        default=DoseStatus.SCHEDULED,
+        db_index=True,
     )
     batch_number = models.CharField(max_length=50, blank=True)
 

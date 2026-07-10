@@ -38,7 +38,8 @@ class Referral(BaseModel):
     reason = models.TextField()
     clinical_notes = models.TextField(blank=True, help_text='Additional clinical context for the receiving facility')
     status = models.CharField(
-        max_length=10, choices=ReferralStatus.choices, default=ReferralStatus.PENDING
+        max_length=10, choices=ReferralStatus.choices, default=ReferralStatus.PENDING,
+        db_index=True,
     )
     outcome = models.TextField(blank=True)
     referred_at = models.DateTimeField(auto_now_add=True)

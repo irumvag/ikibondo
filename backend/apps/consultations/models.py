@@ -29,7 +29,8 @@ class Consultation(BaseModel):
         limit_choices_to={'role__in': ['NURSE', 'SUPERVISOR', 'ADMIN']},
     )
     status = models.CharField(
-        max_length=10, choices=ConsultationStatus.choices, default=ConsultationStatus.OPEN
+        max_length=10, choices=ConsultationStatus.choices, default=ConsultationStatus.OPEN,
+        db_index=True,
     )
     helpful_rating = models.PositiveSmallIntegerField(null=True, blank=True)
     disputed_classification = models.BooleanField(default=False)

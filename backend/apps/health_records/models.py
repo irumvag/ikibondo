@@ -46,7 +46,7 @@ class HealthRecord(BaseModel):
         blank=True,
         related_name='health_records',
     )
-    measurement_date = models.DateField()
+    measurement_date = models.DateField(db_index=True)
 
     # --- Raw measurements ---
     weight_kg = models.DecimalField(max_digits=5, decimal_places=2,
@@ -97,6 +97,7 @@ class HealthRecord(BaseModel):
         choices=[('LOW', 'Low'), ('MEDIUM', 'Medium'), ('HIGH', 'High')],
         null=True,
         blank=True,
+        db_index=True,
     )
     risk_factors = models.JSONField(default=list, blank=True,
                                     help_text='Top 5 SHAP factors from ML prediction')

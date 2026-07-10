@@ -45,7 +45,9 @@ class Notification(BaseModel):
         related_name='notifications',
         null=True, blank=True
     )
-    notification_type = models.CharField(max_length=30, choices=NotificationType.choices)
+    notification_type = models.CharField(
+        max_length=30, choices=NotificationType.choices, db_index=True
+    )
     channel = models.CharField(
         max_length=10, choices=NotificationChannel.choices, default=NotificationChannel.PUSH
     )
@@ -53,7 +55,7 @@ class Notification(BaseModel):
     status = models.CharField(
         max_length=10, choices=NotificationStatus.choices, default=NotificationStatus.PENDING
     )
-    is_read = models.BooleanField(default=False)
+    is_read = models.BooleanField(default=False, db_index=True)
     sent_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -106,3 +108,6 @@ class BroadcastDelivery(BaseModel):
 
     class Meta:
         unique_together = [['broadcast', 'recipient']]
+
+    def __str__(self):
+        return f'BroadcastDelivery({self.recipient}, {self.status})'
