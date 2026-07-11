@@ -289,9 +289,20 @@ ml/
 └── models/             # Saved .pkl/.joblib artifacts (gitignored — regenerate below)
 ```
 
-Model binaries (`*.pkl`, `*.joblib`) are **not** committed — they are gitignored and must
-be regenerated from a trusted build step (pickle/joblib deserialization runs arbitrary
-code, so never load an untrusted artifact). To rebuild them locally:
+Model binaries (`*.pkl`, `*.joblib`) are **not** committed — pickle/joblib
+deserialization runs arbitrary code, so binaries never live in git history.
+The canonical copies (including the 64 MB serving pipeline used by
+`backend/apps/ml_engine/`) are attached to the
+[`ml-models-v1` GitHub release](https://github.com/irumvag/ikibondo/releases/tag/ml-models-v1)
+with SHA-256 checksums.
+
+**Restore all model artifacts** (fresh clone or lost local copies):
+
+```bash
+python ml/scripts/fetch_models.py   # downloads + verifies checksums into place
+```
+
+Or **retrain from scratch** on the synthetic data:
 
 ```bash
 cd ml
@@ -302,6 +313,10 @@ python scripts/train_growth.py
 python scripts/train_vaccination.py
 python scripts/evaluate_all.py               # verify metrics
 ```
+
+After retraining, upload the new binaries as a new release
+(`gh release create ml-models-v2 ...`) and update `RELEASE` in
+`fetch_models.py`.
 
 ---
 
