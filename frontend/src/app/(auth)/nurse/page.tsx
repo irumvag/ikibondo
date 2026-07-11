@@ -93,8 +93,8 @@ export default function NurseDashboard() {
         </div>
       )}
 
-      {/* ── KPI grid ──────────────────────────────────────────────────── */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* ── KPI grid — 2-up on phones (matches CHW dashboard) ─────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <Link href="/nurse/children" className="group">
           <KPICard
             label="Children registered"

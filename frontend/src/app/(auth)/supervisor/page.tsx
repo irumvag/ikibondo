@@ -64,8 +64,8 @@ export default function SupervisorDashboard() {
         </Alert>
       )}
 
-      {/* KPIs */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPIs — 2-up on phones (matches CHW dashboard) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KPICard
           label="Children in zone"
           value={stats ? stats.total_children.toLocaleString() : '—'}

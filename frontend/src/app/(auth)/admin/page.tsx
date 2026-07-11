@@ -91,8 +91,8 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ── KPI row ────────────────────────────────────────────────────── */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── KPI row — 2-up on phones (matches CHW dashboard) ───────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Link href="/admin/children" className="group">
           <KPICard
             label="Total children"

@@ -429,14 +429,14 @@ export default function NurseVaccinesPage() {
         ))}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b" style={{ borderColor: 'var(--border)' }}>
+      {/* Tabs — scrollable on narrow screens so no tab is unreachable */}
+      <div className="flex gap-1 border-b overflow-x-auto" style={{ borderColor: 'var(--border)' }}>
         {TABS.map(({ key, label, icon }) => (
           <button
             key={key}
             type="button"
             onClick={() => setTab(key)}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap shrink-0"
             style={{
               borderColor: tab === key ? 'var(--ink)' : 'transparent',
               color: tab === key ? 'var(--ink)' : 'var(--text-muted)',
