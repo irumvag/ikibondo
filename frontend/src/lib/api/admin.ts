@@ -445,9 +445,34 @@ export async function listAllChildren(params?: {
 
 export async function closeChild(
   id: string,
-  payload: { closure_status: 'DECEASED' | 'TRANSFERRED' | 'DEPARTED'; reason: string },
+  payload: { status: 'DECEASED' | 'TRANSFERRED' | 'DEPARTED'; reason: string },
 ): Promise<void> {
+  // Backend expects {status, reason} — not closure_status.
   await apiClient.post(`/children/${id}/close/`, payload);
+}
+
+export interface ClosedCase {
+  id: string;
+  child_id: string;
+  child_name: string;
+  registration_number: string;
+  camp_name: string | null;
+  date_of_birth: string;
+  guardian_name: string | null;
+  status: 'DECEASED' | 'TRANSFERRED' | 'DEPARTED';
+  reason: string;
+  closed_by_name: string | null;
+  closed_at: string;
+}
+
+export async function listClosedCases(
+  filter?: 'DECEASED' | 'TRANSFERRED' | 'DEPARTED',
+): Promise<ClosedCase[]> {
+  const url = filter
+    ? `/children/closed/?status=${filter}`
+    : '/children/closed/';
+  const { data } = await apiClient.get(url);
+  return (data?.data ?? data) as ClosedCase[];
 }
 
 export async function transferChildZone(

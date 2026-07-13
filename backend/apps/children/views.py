@@ -332,6 +332,42 @@ class ChildViewSet(viewsets.ModelViewSet):
             qs = qs.filter(guardian__user=self.request.user)
         return qs
 
+    @action(detail=False, methods=['get'], url_path='closed',
+            permission_classes=[IsNurseOrSupervisorOrAdmin])
+    def closed(self, request):
+        """
+        GET /api/v1/children/closed/?status=DECEASED|TRANSFERRED|DEPARTED
+
+        Reporting endpoint listing closed cases with the closure audit trail.
+        Scoped by role: NURSE sees their own camp; SUPERVISOR/ADMIN see
+        everything. Ordered by closure date, most recent first.
+        """
+        user = request.user
+        qs = ChildClosure.objects.select_related(
+            'child', 'child__camp', 'child__guardian', 'closed_by',
+        )
+        status_val = request.query_params.get('status', '').upper()
+        if status_val in ('DECEASED', 'TRANSFERRED', 'DEPARTED'):
+            qs = qs.filter(status=status_val)
+        if user.role == UserRole.NURSE and user.camp_id:
+            qs = qs.filter(child__camp_id=user.camp_id)
+        # SUPERVISOR/ADMIN see all; CHW/PARENT are already rejected by permissions.
+
+        data = [{
+            'id': str(c.id),
+            'child_id': str(c.child.id),
+            'child_name': c.child.full_name,
+            'registration_number': c.child.registration_number,
+            'camp_name': c.child.camp.name if c.child.camp else None,
+            'date_of_birth': str(c.child.date_of_birth),
+            'guardian_name': c.child.guardian.full_name if c.child.guardian_id else None,
+            'status': c.status,
+            'reason': c.reason,
+            'closed_by_name': c.closed_by.full_name if c.closed_by_id else None,
+            'closed_at': c.closed_at.isoformat(),
+        } for c in qs[:500]]
+        return success_response(data=data)
+
     @action(detail=False, methods=['get'], url_path='my-children',
             permission_classes=[IsAuthenticated])
     def my_children(self, request):
@@ -523,16 +559,36 @@ class ChildViewSet(viewsets.ModelViewSet):
             png_b64 = None
         return success_response(data={'qr_code': child.qr_code, 'png_base64': png_b64})
 
-    @action(detail=True, methods=['post'], url_path='close', permission_classes=[IsSupervisorOrAdmin])
+    @action(detail=True, methods=['post'], url_path='close',
+            permission_classes=[IsNurseOrSupervisorOrAdmin])
     def close(self, request, pk=None):
         """
         POST /api/v1/children/<id>/close/
         Body: {"status": "DECEASED|TRANSFERRED|DEPARTED", "reason": "..."}
-        Nurse, Supervisor, Admin. Sets closure_status + creates ChildClosure record.
+
+        Closes a child's case atomically:
+          - creates a ChildClosure audit record with reason/actor;
+          - flips closure_status + is_active=False (hides the child from every
+            active-case query across the app);
+          - cancels every SCHEDULED vaccination as SKIPPED (so they stop
+            appearing on the queue and don't accrue "overdue" counts against
+            a deceased/departed child);
+          - withdraws pending guardian visit requests;
+          - notifies the assigned CHW and every SUPERVISOR/ADMIN in the
+            child's camp (deceased is a serious event that must page a lead).
+
+        Access: NURSE, SUPERVISOR, ADMIN.
         """
-        if not IsNurseOrSupervisorOrAdmin().has_permission(request, self):
-            return error_response('Permission denied.', 'FORBIDDEN', status_code=403)
-        child = self.get_object()
+        # get_queryset() filters is_active=True — for this action we still
+        # want to surface a 409 on a re-close attempt (rather than a 404),
+        # so look up the child directly.
+        try:
+            child = Child.objects.select_related('camp', 'guardian').get(pk=pk)
+        except Child.DoesNotExist:
+            return error_response('Not found.', 'NOT_FOUND', status_code=404)
+        # Enforce role scoping now that we bypassed get_queryset.
+        if request.user.role == UserRole.NURSE and child.camp_id != request.user.camp_id:
+            return error_response('Not found.', 'NOT_FOUND', status_code=404)
         status_val = request.data.get('status', '').upper()
         reason = request.data.get('reason', '').strip()
         allowed = ('DECEASED', 'TRANSFERRED', 'DEPARTED')
@@ -540,12 +596,77 @@ class ChildViewSet(viewsets.ModelViewSet):
             return error_response(f'status must be one of {allowed}.', 'VALIDATION_ERROR')
         if not reason:
             return error_response('reason is required.', 'VALIDATION_ERROR')
-        ChildClosure.objects.create(
-            child=child, status=status_val, reason=reason, closed_by=request.user,
-        )
-        child.closure_status = status_val
-        child.is_active = False
-        child.save(update_fields=['closure_status', 'is_active', 'updated_at'])
+        if not child.is_active:
+            return error_response(
+                f'Case is already closed ({child.closure_status}).',
+                'ALREADY_CLOSED', status_code=409,
+            )
+
+        from django.db import transaction
+        from django.db.models import Q
+        from apps.vaccinations.models import VaccinationRecord, DoseStatus
+        from apps.notifications.models import Notification, NotificationType
+
+        with transaction.atomic():
+            ChildClosure.objects.create(
+                child=child, status=status_val, reason=reason, closed_by=request.user,
+            )
+            child.closure_status = status_val
+            child.is_active = False
+            child.save(update_fields=['closure_status', 'is_active', 'updated_at'])
+
+            # Cancel every scheduled dose so the queue and overdue counters
+            # stop showing this child. Batch-notes each row for the audit trail.
+            VaccinationRecord.objects.filter(
+                child=child, status=DoseStatus.SCHEDULED,
+            ).update(
+                status=DoseStatus.SKIPPED,
+                notes=f'Case closed ({status_val}) — {reason[:120]}',
+            )
+
+            # Withdraw any open guardian visit requests.
+            VisitRequest.objects.filter(
+                child=child,
+                status__in=[VisitRequestStatus.PENDING, VisitRequestStatus.ACCEPTED],
+            ).update(status=VisitRequestStatus.WITHDRAWN)
+
+            # Assemble the recipient list: the assigned CHW plus every
+            # SUPERVISOR/ADMIN in the child's camp. De-duplicate so a nurse
+            # who also supervises doesn't get two copies.
+            recipients = set()
+            chw = getattr(child.guardian, 'assigned_chw', None)
+            if chw and chw.is_active:
+                recipients.add(chw.id)
+            from apps.accounts.models import CustomUser
+            # Admins have no camp scoping — every case closure pages every
+            # admin. Supervisors are scoped to the child's camp.
+            leads = CustomUser.objects.filter(is_active=True).filter(
+                Q(role=UserRole.ADMIN)
+                | Q(role=UserRole.SUPERVISOR, camp=child.camp)
+            ).values_list('id', flat=True)
+            recipients.update(leads)
+            recipients.discard(request.user.id)  # don't notify the actor
+
+            if recipients:
+                verb = {
+                    'DECEASED':   'marked deceased',
+                    'TRANSFERRED': 'transferred out',
+                    'DEPARTED':   'departed the camp',
+                }[status_val]
+                message = (
+                    f'{child.full_name} ({child.registration_number}) was '
+                    f'{verb} by {request.user.full_name}. Reason: {reason[:160]}'
+                )
+                Notification.objects.bulk_create([
+                    Notification(
+                        recipient_id=uid,
+                        child=child,
+                        notification_type=NotificationType.CASE_CLOSED,
+                        message=message,
+                    )
+                    for uid in recipients
+                ])
+
         return success_response(
             data=ChildSerializer(child).data,
             message=f'{child.full_name} marked as {status_val}.',

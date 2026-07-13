@@ -52,6 +52,7 @@ const ROLE_NAV: Record<UserRole, NavEntry[]> = {
         { href: '/admin/consultations',  label: 'Consultations',  icon: Inbox },
         { href: '/admin/referrals',      label: 'Referrals',      icon: GitBranch },
         { href: '/admin/visit-requests', label: 'Visit Requests', icon: ClipboardCheck },
+        { href: '/admin/closed-cases',   label: 'Closed Cases',   icon: FileBarChart },
       ],
     },
     {
@@ -90,6 +91,7 @@ const ROLE_NAV: Record<UserRole, NavEntry[]> = {
         { href: '/supervisor/referrals',      label: 'Referrals',       icon: GitBranch },
         { href: '/supervisor/visit-requests', label: 'Visit Requests',  icon: ClipboardCheck },
         { href: '/supervisor/clinic-sessions', label: 'Clinic Sessions', icon: Syringe },
+        { href: '/supervisor/closed-cases',   label: 'Closed Cases',    icon: FileBarChart },
       ],
     },
     { href: '/supervisor/staff',     label: 'Staff',          icon: Users },
@@ -109,6 +111,7 @@ const ROLE_NAV: Record<UserRole, NavEntry[]> = {
         { href: '/nurse/register',         label: 'Register Child',  icon: UserPlus },
         { href: '/nurse/vaccines',         label: 'Vaccinations',    icon: Syringe },
         { href: '/nurse/visit-requests',   label: 'Visit Requests',  icon: ClipboardCheck },
+        { href: '/nurse/closed-cases',     label: 'Closed Cases',    icon: FileBarChart },
       ],
     },
     {

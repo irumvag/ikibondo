@@ -20,6 +20,8 @@ class NotificationType(models.TextChoices):
     VISIT_REQUEST_ACCEPTED = 'VISIT_REQUEST_ACCEPTED', 'Visit request accepted by CHW'
     VISIT_REQUEST_DECLINED = 'VISIT_REQUEST_DECLINED', 'Visit request declined'
     VISIT_REQUEST_COMPLETED = 'VISIT_REQUEST_COMPLETED', 'Visit completed'
+    # Case closure — deceased, transferred, or departed
+    CASE_CLOSED = 'CASE_CLOSED', 'Child case closed (deceased/transferred/departed)'
 
 
 class NotificationChannel(models.TextChoices):
