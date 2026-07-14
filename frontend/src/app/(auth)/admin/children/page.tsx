@@ -60,7 +60,7 @@ function CloseModal({
   const [status, setStatus] = useState<'DECEASED' | 'TRANSFERRED' | 'DEPARTED'>('DECEASED');
   const [reason, setReason] = useState('');
   const mut = useMutation({
-    mutationFn: () => closeChild(child.id, { closure_status: status, reason }),
+    mutationFn: () => closeChild(child.id, { status, reason }),
     onSuccess: onDone,
   });
   return (
