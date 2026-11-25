@@ -580,16 +580,8 @@ gitleaks secret scan.
 
 ## Contributing
 
-1. **Branch**: Work directly on `dev` — do not create feature branches
-2. **Commit format**:
-   ```
-   feat(scope): short description
-
-   Co-Authored-By: Gentille Tumukunde <tumukundegentille001@gmail.com>
-   ```
-3. **Scopes**: `auth`, `children`, `health-records`, `vaccinations`, `chw`, `nurse`, `supervisor`, `parent`, `admin`, `ml`, `dhis2`, `ui`, `scan`, `notif`, `core`
-4. **Before committing**: run `npx tsc --noEmit` (frontend) and `pytest` (backend)
-5. **Never commit**: `.env` files, ML model binaries (`.pkl`/`.joblib`), or media uploads
+See [CONTRIBUTING.md](CONTRIBUTING.md) (commit credit rule, branches, who approves releases) and
+[docs/handover.md](docs/handover.md) (setup, current state, next tasks).
 
 ---
 
