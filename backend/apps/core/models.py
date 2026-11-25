@@ -86,6 +86,7 @@ class SyncOperation(models.Model):
     OP_CREATE_VISIT = 'create_visit'
     OP_REGISTER_CHILD = 'register_child'
     OP_ADMINISTER_VACCINE = 'administer_vaccine'
+    OP_RECORD_ATTENDANCE = 'record_attendance'
 
     client_id = models.UUIDField(unique=True, db_index=True)
     user = models.ForeignKey(

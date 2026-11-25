@@ -74,7 +74,7 @@ export interface SyncOperation {
 
 export interface SyncResult {
   id: string;
-  status: 'ok' | 'error' | 'conflict';
+  status: 'ok' | 'error' | 'conflict' | 'forbidden';
   data?: unknown;
   error?: string;
 }

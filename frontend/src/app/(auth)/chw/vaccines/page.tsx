@@ -173,7 +173,7 @@ function ChildDetailPanel({
 
           {/* Latest health record */}
           <section>
-            <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+            <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
               Latest health record
             </h4>
             {histLoading ? (
@@ -223,7 +223,7 @@ function ChildDetailPanel({
                   </div>
                 )}
                 {latest.notes && (
-                  <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>&quot;{latest.notes}&quot;</p>
+                  <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>&ldquo;{latest.notes}&rdquo;</p>
                 )}
               </div>
             )}
@@ -232,7 +232,7 @@ function ChildDetailPanel({
           {/* Recent records timeline */}
           {history.length > 1 && (
             <section>
-              <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+              <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
                 Visit history
               </h4>
               <div className="flex flex-col gap-2">
@@ -257,7 +257,7 @@ function ChildDetailPanel({
 
           {/* Nurse notes */}
           <section>
-            <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+            <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
               Nurse notes &amp; advice
             </h4>
             {notesLoading ? (
@@ -370,7 +370,7 @@ export default function VaccinesPage() {
             <div className="overflow-x-auto">
               {/* Head */}
               <div
-                className="grid grid-cols-[1fr_1fr_130px_90px_80px_90px] gap-3 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider min-w-[640px]"
+                className="grid grid-cols-[1fr_1fr_130px_90px_80px_90px] gap-3 px-4 py-2.5 text-xs font-semibold min-w-[640px]"
                 style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-elev)', borderBottom: '1px solid var(--border)' }}
               >
                 <span>Child</span>

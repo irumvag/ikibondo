@@ -12,7 +12,7 @@ class GuardianSerializer(serializers.ModelSerializer):
     class Meta:
         model = Guardian
         fields = [
-            'id', 'full_name', 'phone_number', 'relationship', 'national_id',
+            'id', 'full_name', 'phone_number', 'relationship', 'national_id', 'year_of_birth',
             'has_account', 'user_id', 'user_email',
             'assigned_chw', 'assigned_chw_name',
             'children_count',
@@ -55,6 +55,13 @@ class ChildSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.BooleanField())
     def get_guardian_has_account(self, obj):
         return obj.guardian.user_id is not None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Photos are only reachable through short-lived signed links, never a public /media/ path
+        from apps.core.media import signed_media_url
+        data['photo'] = signed_media_url(self.context.get('request'), instance.photo)
+        return data
 
 
 class VisitRequestSerializer(serializers.ModelSerializer):

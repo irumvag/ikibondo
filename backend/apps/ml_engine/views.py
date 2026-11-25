@@ -16,6 +16,7 @@ from rest_framework.permissions import IsAuthenticated
 from apps.core.responses import success_response, error_response
 from apps.accounts.models import UserRole
 from apps.accounts.permissions import IsAdminUser
+from apps.core.scoping import can_access_child
 from .loader import ModelLoader
 from .models import MLModelVersion
 from drf_spectacular.utils import extend_schema
@@ -32,9 +33,8 @@ logger = logging.getLogger(__name__)
 
 def _assert_child_access(request, child_id):
     """
-    Raises PermissionError when a PARENT user requests data for a child
-    that does not belong to their guardian profile.
-    Returns the Child instance on success.
+    Returns the Child when it is inside the user's scope (apps/core/scoping.py),
+    None when it does not exist, and raises PermissionError when it is out of scope.
     """
     from apps.children.models import Child
     try:
@@ -42,10 +42,8 @@ def _assert_child_access(request, child_id):
     except Child.DoesNotExist:
         return None  # caller handles 404
 
-    if request.user.role == UserRole.PARENT:
-        guardian = getattr(request.user, 'guardian_profile', None)
-        if guardian is None or child.guardian_id != guardian.id:
-            raise PermissionError('You do not have access to this child.')
+    if not can_access_child(request.user, child):
+        raise PermissionError('You do not have access to this child.')
     return child
 
 
@@ -71,6 +69,7 @@ class MLModelVersionViewSet(viewsets.ModelViewSet):
     def promote(self, request, pk=None):
         version = self.get_object()
         version.promote()
+        _reload_if_risk_model(version)
         return success_response(
             data=MLModelVersionSerializer(version).data,
             message=f'{version.model_name} {version.version} is now the active deployed version.',
@@ -89,6 +88,8 @@ class MLModelVersionViewSet(viewsets.ModelViewSet):
         version.save(update_fields=['deployed', 'updated_at'])
         if previous:
             previous.promote()
+        _reload_if_risk_model(version)
+        if previous:
             return success_response(
                 data=MLModelVersionSerializer(previous).data,
                 message=f'Rolled back to {previous.model_name} {previous.version}.',
@@ -130,6 +131,11 @@ def predict_malnutrition(request):
     serializer = MalnutritionPredictSerializer(data=request.data)
     if not serializer.is_valid():
         return error_response(str(serializer.errors), 'VALIDATION_ERROR')
+    if serializer.validated_data.get('child_id'):
+        from apps.children.models import Child
+        child = Child.objects.filter(id=serializer.validated_data['child_id']).first()
+        if child is None or not can_access_child(request.user, child):
+            return error_response('Child not found.', 'NOT_FOUND', status_code=404)
 
     model = ModelLoader.get('malnutrition')
     if model is None:
@@ -431,3 +437,10 @@ def _nutrition_code(child):
     if not last:
         return 0
     return {'NORMAL': 0, 'MAM': 1, 'SAM': 2}.get(last.nutrition_status, 0)
+
+
+def _reload_if_risk_model(version):
+    """Promote / rollback take effect immediately, without restarting the server."""
+    if version.model_name == 'malnutrition':
+        from .prediction_service import PredictionService
+        PredictionService.reload()

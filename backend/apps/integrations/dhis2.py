@@ -47,8 +47,24 @@ def _session(base_url, username, password):
     return s
 
 
+def configuration_problems():
+    """What still needs setting before DHIS2 sync can work (empty when ready)."""
+    problems = []
+    if _creds() is None:
+        problems.append('Set DHIS2_URL, DHIS2_USERNAME and DHIS2_PASSWORD.')
+    placeholders = [
+        name for name in ('DHIS2_PROGRAM_UID', 'DHIS2_TE_TYPE_UID', 'DHIS2_ORG_UNIT_UID', 'DHIS2_ATTR_REG_NUMBER')
+        if str(getattr(settings, name, '')).startswith('ikibondo')
+    ]
+    if placeholders:
+        problems.append('Replace placeholder metadata IDs with the real ones from your DHIS2 instance: '
+                        + ', '.join(placeholders) + '.')
+    return problems
+
+
 def is_configured():
-    return _creds() is not None
+    # Placeholder metadata IDs would make every push fail, so they count as not configured
+    return not configuration_problems()
 
 
 # ── DHIS2 attribute / program UIDs ────────────────────────────────────────────
@@ -144,11 +160,7 @@ def push_vaccination_record(vax_record):
     s = _session(base_url, username, password)
 
     vaccine = vax_record.vaccine
-    event_date = (
-        str(vax_record.administered_at.date())
-        if vax_record.administered_at
-        else str(date.today())
-    )
+    event_date = str(vax_record.administered_date or date.today())
 
     payload = {
         'events': [{
@@ -233,6 +245,15 @@ def pull_from_dhis2(since=None):
         return []
 
 
+def _local_dose_status(value):
+    """Map a DHIS2 status data value onto Ikibondo's dose statuses (DONE/MISSED/SKIPPED/SCHEDULED)."""
+    v = (value or '').strip().upper()
+    if v in ('MISSED', 'SKIPPED', 'SCHEDULED', 'DONE'):
+        return v
+    # DHIS2 events are records of something that happened; treat anything else as given
+    return 'DONE'
+
+
 def _upsert_vaccination_from_tei(tei):
     """
     Given a raw DHIS2 TEI dict, upsert local VaccinationRecord rows.
@@ -257,7 +278,7 @@ def _upsert_vaccination_from_tei(tei):
         for event in enrollment.get('events', []):
             de_map = {dv['dataElement']: dv.get('value', '') for dv in event.get('dataValues', [])}
             vaccine_name = de_map.get(DATA_ELEM_VACCINE)
-            status       = de_map.get(DATA_ELEM_STATUS, 'ADMINISTERED')
+            status       = _local_dose_status(de_map.get(DATA_ELEM_STATUS))
             batch        = de_map.get(DATA_ELEM_BATCH, '')
             occurred_at  = event.get('occurredAt')
 
@@ -268,11 +289,10 @@ def _upsert_vaccination_from_tei(tei):
                 name=vaccine_name,
                 defaults={'dose_number': 1, 'recommended_age_weeks': 0},
             )
-            administered_at = None
+            administered = None
             if occurred_at:
                 try:
-                    dt = datetime.strptime(occurred_at[:10], '%Y-%m-%d')
-                    administered_at = timezone.make_aware(dt)
+                    administered = datetime.strptime(occurred_at[:10], '%Y-%m-%d').date()
                 except ValueError:
                     pass
 
@@ -282,14 +302,40 @@ def _upsert_vaccination_from_tei(tei):
                 defaults={
                     'status': status,
                     'batch_number': batch,
-                    'administered_at': administered_at,
+                    'administered_date': administered if status == 'DONE' else None,
+                    # Remember DHIS2's id so this record is never pushed back as a duplicate
+                    'dhis2_event_uid': event.get('event') or event.get('uid'),
                     'source': 'DHIS2',
+                },
+                create_defaults={
+                    'status': status,
+                    'batch_number': batch,
+                    'administered_date': administered if status == 'DONE' else None,
+                    'dhis2_event_uid': event.get('event') or event.get('uid'),
+                    'source': 'DHIS2',
+                    'scheduled_date': administered or date.today(),
                 },
             )
             if created:
                 count += 1
 
     return count
+
+
+# ── failure log ───────────────────────────────────────────────────────────────
+
+def record_push_result(object_type, obj, label, result):
+    """Keep failed pushes for the admin conflicts list; clear them once a push succeeds."""
+    from django.db.models import F
+    from apps.integrations.models import DHIS2SyncFailure
+
+    open_failures = DHIS2SyncFailure.objects.filter(object_type=object_type, object_id=obj.pk, resolved_at__isnull=True)
+    if result['status'] == 'ok':
+        open_failures.update(resolved_at=timezone.now())
+    elif result['status'] == 'error':
+        if not open_failures.update(error=result['detail'][:2000], attempts=F('attempts') + 1, label=label[:200]):
+            DHIS2SyncFailure.objects.create(object_type=object_type, object_id=obj.pk,
+                                            label=label[:200], error=result['detail'][:2000])
 
 
 # ── batch sync ────────────────────────────────────────────────────────────────
@@ -339,6 +385,7 @@ def batch_sync(since=None):
 
     for child in unsynced:
         result = push_child_registration(child)
+        record_push_result('child', child, child.registration_number, result)
         if result['status'] == 'ok':
             if result.get('dhis2_uid'):
                 Child.objects.filter(pk=child.pk).update(dhis2_uid=result['dhis2_uid'])
@@ -350,14 +397,15 @@ def batch_sync(since=None):
     from apps.vaccinations.models import VaccinationRecord
 
     vax_qs = VaccinationRecord.objects.filter(
-        status='ADMINISTERED',
+        status='DONE',
         dhis2_event_uid__isnull=True,
     ).select_related('child', 'vaccine')
     if since:
-        vax_qs = vax_qs.filter(administered_at__gte=since)
+        vax_qs = vax_qs.filter(administered_date__gte=since.date() if hasattr(since, 'date') else since)
 
     for vr in vax_qs[:500]:
         result = push_vaccination_record(vr)
+        record_push_result('vaccination', vr, f'{vr.child.registration_number} · {vr.vaccine.name}', result)
         if result['status'] == 'ok':
             if result.get('event_uid'):
                 VaccinationRecord.objects.filter(pk=vr.pk).update(dhis2_event_uid=result['event_uid'])

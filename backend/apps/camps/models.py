@@ -45,6 +45,10 @@ class CampZone(BaseModel):
     description = models.TextField(blank=True)
     estimated_households = models.PositiveIntegerField(default=0)
     estimated_population = models.PositiveIntegerField(default=0)
+    # Approximate centre of the zone; with the camp's coordinates (its health post)
+    # this gives each family's travel distance for the vaccination dropout model.
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     status = models.CharField(
         max_length=20,
         choices=[('active', 'Active'), ('inactive', 'Inactive')],

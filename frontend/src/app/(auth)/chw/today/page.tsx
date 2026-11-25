@@ -132,7 +132,7 @@ export default function CHWTodayPage() {
         <>
           {activeFamilies.length > 0 && (
             <div className="flex flex-col gap-3">
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                 Needs attention · {activeFamilies.length} famil{activeFamilies.length === 1 ? 'y' : 'ies'}
               </p>
               {activeFamilies.map((family) => (
@@ -152,7 +152,7 @@ export default function CHWTodayPage() {
 
           {quietFamilies.length > 0 && (
             <div className="flex flex-col gap-3">
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                 Up to date · {quietFamilies.length} famil{quietFamilies.length === 1 ? 'y' : 'ies'}
               </p>
               {quietFamilies.map((family) => (

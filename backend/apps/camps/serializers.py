@@ -15,6 +15,15 @@ class CampSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
 
+class CampPublicSerializer(serializers.ModelSerializer):
+    """What anonymous visitors may see (e.g. the camp picker on registration): no population or child counts."""
+
+    class Meta:
+        model = Camp
+        fields = ['id', 'name', 'code', 'district']
+        read_only_fields = fields
+
+
 class CampStatsSerializer(serializers.Serializer):
     camp_id = serializers.UUIDField()
     camp_name = serializers.CharField()
@@ -34,7 +43,7 @@ class CampZoneSerializer(serializers.ModelSerializer):
         model = CampZone
         fields = [
             'id', 'camp', 'camp_name', 'name', 'code', 'description',
-            'estimated_households', 'estimated_population', 'status',
+            'estimated_households', 'estimated_population', 'latitude', 'longitude', 'status',
             'is_active', 'created_at',
         ]
         read_only_fields = ['id', 'created_at', 'camp', 'camp_name']

@@ -155,3 +155,25 @@ class ConsentRecord(models.Model):
     def __str__(self):
         state = 'granted' if self.granted and not self.withdrawn_at else 'withdrawn'
         return f'{self.user.full_name} — {self.scope} — {state}'
+
+
+class PasswordResetCode(models.Model):
+    """
+    One-time code for resetting a forgotten password (web and mobile).
+    Only a hash of the code is stored; codes expire, are single-use, and lock after too many guesses.
+    """
+    MAX_ATTEMPTS = 5
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='password_reset_codes')
+    code_hash = models.CharField(max_length=128)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Password reset for {self.user_id} ({"used" if self.used_at else "open"})'

@@ -1,20 +1,15 @@
-import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Atkinson_Hyperlegible_Next } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { Providers } from "@/components/layout/Providers";
 import { THEME_SCRIPT } from "@/lib/theme";
 
-const fraunces = Fraunces({
+// One family for the whole product: Atkinson Hyperlegible was designed for
+// low-vision legibility, which matters for CHWs reading cheap phones in sunlight.
+const atkinson = Atkinson_Hyperlegible_Next({
   subsets: ["latin"],
-  variable: "--font-fraunces",
-  display: "swap",
-  weight: ["300", "400", "500", "600", "700"],
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-atkinson",
   display: "swap",
 });
 
@@ -28,6 +23,13 @@ export const metadata: Metadata = {
   keywords: ["child health", "nutrition", "Rwanda", "refugee camps", "malnutrition"],
   robots: { index: false, follow: false },
   manifest: '/manifest.webmanifest',
+  icons: { apple: '/apple-touch-icon.png' },
+  // Lets "Add to Home Screen" on iPhone open as a standalone app
+  appleWebApp: { capable: true, title: 'Ikibondo', statusBarStyle: 'default' },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#16324F',
 };
 
 export default function RootLayout({
@@ -44,9 +46,9 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${fraunces.variable} ${inter.variable} font-sans antialiased`}
+        className={`${atkinson.variable} font-sans antialiased`}
         style={{
-          fontFamily: "var(--font-inter), system-ui, sans-serif",
+          fontFamily: "var(--font-atkinson), system-ui, sans-serif",
           backgroundColor: "var(--bg)",
           color: "var(--text)",
         }}

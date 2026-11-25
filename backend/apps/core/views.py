@@ -1,6 +1,7 @@
 from django.core.cache import cache
 from django.utils import timezone
 from rest_framework import viewsets, permissions
+from apps.accounts.permissions import IsAdminUser
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -58,9 +59,9 @@ _TREND_CACHE_TTL = 300  # seconds
 
 @extend_schema(exclude=True)
 @api_view(['GET'])
-@permission_classes([AllowAny])  # intentionally public: anonymous landing page
+@permission_classes([IsAdminUser])
 def landing_stats_view(request):
-    """GET /api/v1/stats/landing/ — public aggregate counts for the homepage."""
+    """GET /api/v1/stats/landing/ — platform-wide aggregate counts. Admin only: these figures describe real children."""
     def _compute():
         from apps.children.models import Child
         from apps.camps.models import Camp
@@ -128,7 +129,7 @@ def landing_stats_view(request):
 
 @extend_schema(exclude=True)
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAdminUser])
 def stats_trend_view(request):
     """
     GET /api/v1/stats/trend/?period=7d|30d|90d
@@ -243,4 +244,29 @@ def health_check(request):
         'database': 'connected' if db_ok else 'error',
         'ml_model': ml_status,
         'version': '2.0',
+    })
+
+
+@extend_schema(exclude=True)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def app_config_view(request):
+    """
+    GET /api/v1/app/config/ — read by the mobile app at launch, before sign-in.
+    Holds only version gates and on/off switches; nothing about users or data.
+    """
+    from django.conf import settings
+    from apps.notifications.push import push_configured
+    from apps.notifications.sms import sms_configured
+    return Response({
+        'success': True,
+        'data': {
+            'min_version': settings.MOBILE_MIN_VERSION,
+            'latest_version': settings.MOBILE_LATEST_VERSION,
+            'features': {
+                'push_notifications': push_configured(),
+                'sms_reset_codes': sms_configured(),
+                'offline_sync': True,
+            },
+        },
     })

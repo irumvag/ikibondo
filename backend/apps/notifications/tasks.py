@@ -91,35 +91,20 @@ def notify_high_risk(record_id: str):
 
 @shared_task
 def send_sms(notification_id: str):
-    """Send an SMS notification via Africa's Talking API."""
+    """Send an SMS notification via Africa's Talking. Message bodies are never logged."""
     from .models import Notification, NotificationStatus
-    from django.conf import settings
+    from .sms import send_sms_text, sms_configured
 
     try:
         notif = Notification.objects.select_related('recipient').get(id=notification_id)
         phone = notif.recipient.phone_number
         if not phone:
             notif.status = NotificationStatus.FAILED
-            notif.save(update_fields=['status', 'updated_at'])
-            return
-
-        at_username = getattr(settings, 'AFRICASTALKING_USERNAME', '')
-        at_api_key = getattr(settings, 'AFRICASTALKING_API_KEY', '')
-
-        if at_username and at_api_key:
-            try:
-                import africastalking
-                africastalking.initialize(at_username, at_api_key)
-                sms = africastalking.SMS
-                sms.send(notif.message, [phone])
-                notif.status = NotificationStatus.SENT
-            except Exception as e:
-                logger.warning('Africa\'s Talking SMS failed for %s: %s', notification_id, e)
-                notif.status = NotificationStatus.FAILED
+        elif not sms_configured():
+            # No provider: record that nothing was sent instead of pretending it was
+            notif.status = NotificationStatus.SKIPPED
         else:
-            # No SMS provider configured — log and mark sent for dev
-            logger.info('[SMS] To %s: %s', phone, notif.message[:80])
-            notif.status = NotificationStatus.SENT
+            notif.status = NotificationStatus.SENT if send_sms_text(phone, notif.message) else NotificationStatus.FAILED
 
         notif.sent_at = timezone.now()
         notif.save(update_fields=['status', 'sent_at', 'updated_at'])
@@ -132,36 +117,22 @@ def send_sms(notification_id: str):
 
 @shared_task
 def send_push(notification_id: str):
-    """Send a push notification via FCM."""
+    """Send a push notification to all of the recipient's devices via FCM HTTP v1."""
     from .models import Notification, NotificationStatus
-    from django.conf import settings
+    from .push import push_configured, send_to_user
 
     try:
         notif = Notification.objects.select_related('recipient').get(id=notification_id)
-
-        fcm_key = getattr(settings, 'FCM_SERVER_KEY', '')
-        if fcm_key:
-            # Basic FCM HTTP API call
-            try:
-                import urllib.request, json as _json
-                payload = _json.dumps({
-                    'to': f'/topics/user-{notif.recipient_id}',
-                    'notification': {'title': 'Ikibondo Alert', 'body': notif.message[:200]},
-                    'data': {'notification_id': str(notif.id), 'type': notif.notification_type},
-                }).encode()
-                req = urllib.request.Request(
-                    'https://fcm.googleapis.com/fcm/send',
-                    data=payload,
-                    headers={'Authorization': f'key={fcm_key}', 'Content-Type': 'application/json'},
-                )
-                urllib.request.urlopen(req, timeout=10)
-                notif.status = NotificationStatus.SENT
-            except Exception as e:
-                logger.warning('FCM push failed for %s: %s', notification_id, e)
-                notif.status = NotificationStatus.FAILED
+        if not push_configured():
+            notif.status = NotificationStatus.SKIPPED
         else:
-            logger.info('[PUSH] To user %s: %s', notif.recipient_id, notif.message[:80])
-            notif.status = NotificationStatus.SENT
+            delivered = send_to_user(
+                notif.recipient,
+                title='Ikibondo',
+                body=notif.message,
+                data={'notification_id': notif.id, 'type': notif.notification_type},
+            )
+            notif.status = NotificationStatus.SENT if delivered else NotificationStatus.SKIPPED
 
         notif.sent_at = timezone.now()
         notif.save(update_fields=['status', 'sent_at', 'updated_at'])

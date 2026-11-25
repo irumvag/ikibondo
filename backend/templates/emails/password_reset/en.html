@@ -1,0 +1,12 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1>Your password reset code</h1>
+<p>Hello <strong>{{ full_name }}</strong>,</p>
+<p>Use this code to set a new password. It expires in {{ minutes }} minutes and can be used once.</p>
+<div class="credential-box">
+  <strong>Reset code</strong>
+  <code>{{ code }}</code>
+</div>
+<p>If you did not ask to reset your password, ignore this email. Your password has not changed.</p>
+<p style="font-size:13px; color:#777;">Never share this code with anyone, including Ikibondo staff.</p>
+{% endblock %}

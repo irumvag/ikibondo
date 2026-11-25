@@ -61,3 +61,5 @@ CLAUDE.md
 # ── ML / binary model artifacts (regenerate via ml/scripts/train_*.py) ──
 *.pkl
 *.joblib
+# TLS certificates mounted into nginx
+infra/nginx/certs/

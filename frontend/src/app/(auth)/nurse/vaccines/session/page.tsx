@@ -418,7 +418,7 @@ export default function ClinicSessionPage() {
             <>
               {openSessions.length > 0 && (
                 <>
-                  <p className="text-xs font-semibold uppercase tracking-wider px-1 mt-1 mb-0.5 flex items-center gap-1" style={{ color: 'var(--success)' }}>
+                  <p className="text-xs font-semibold px-1 mt-1 mb-0.5 flex items-center gap-1" style={{ color: 'var(--success)' }}>
                     <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: 'var(--success)' }} />
                     Open ({openSessions.length})
                   </p>
@@ -436,7 +436,7 @@ export default function ClinicSessionPage() {
               )}
               {closedSessions.length > 0 && (
                 <>
-                  <p className="text-xs font-semibold uppercase tracking-wider px-1 mt-3 mb-0.5 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                  <p className="text-xs font-semibold px-1 mt-3 mb-0.5 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
                     Closed ({closedSessions.length})
                   </p>
                   {closedSessions.map((s) => (

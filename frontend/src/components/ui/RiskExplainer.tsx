@@ -83,7 +83,7 @@ export function RiskExplainer({ factors, riskLevel, plain = false, limit = 5 }: 
     // ── Parent-friendly view ─────────────────────────────────────────────────
     return (
       <div className="flex flex-col gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
           Key factors identified
         </p>
         <div className="flex flex-col gap-1.5">
@@ -113,7 +113,7 @@ export function RiskExplainer({ factors, riskLevel, plain = false, limit = 5 }: 
   // ── Clinical view (nurse / CHW / supervisor) ─────────────────────────────────
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+      <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
         SHAP feature contributions
       </p>
       <div className="flex flex-col gap-2">

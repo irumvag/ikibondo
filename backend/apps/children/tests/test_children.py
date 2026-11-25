@@ -242,14 +242,18 @@ class TestFamilyOverview:
     """Guardian family-overview endpoint returns rich family profile."""
 
     @pytest.fixture
-    def supervisor(self, db):
-        from apps.accounts.models import UserRole
-        return UserFactory(email='sup_ov@test.rw', role=UserRole.SUPERVISOR)
+    def fam_camp(self, db):
+        return CampFactory(name='FamCamp')
 
     @pytest.fixture
-    def family(self, db):
+    def supervisor(self, db, fam_camp):
+        from apps.accounts.models import UserRole
+        return UserFactory(email='sup_ov@test.rw', role=UserRole.SUPERVISOR, camp=fam_camp)
+
+    @pytest.fixture
+    def family(self, db, fam_camp):
         guardian = GuardianFactory()
-        camp = CampFactory(name='FamCamp')
+        camp = fam_camp
         ChildFactory(camp=camp, guardian=guardian)
         ChildFactory(camp=camp, guardian=guardian)
         return guardian
@@ -282,3 +286,40 @@ class TestFamilyOverview:
         assert str(resp.data['birth_weight']) == '3.25'
         assert resp.data['gestational_age'] == 38
         assert resp.data['feeding_type'] == 'BREAST'
+
+
+@pytest.mark.django_db
+class TestPhotoAccess:
+    """Child photos are only reachable through short-lived signed links."""
+
+    def _child_with_photo(self, tmp_path, settings):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        settings.MEDIA_ROOT = tmp_path
+        camp = CampFactory(name='PhotoCamp')
+        child = ChildFactory(camp=camp)
+        child.photo = SimpleUploadedFile('kid.jpg', b'\xff\xd8\xff\xe0fakejpeg', content_type='image/jpeg')
+        child.save()
+        return camp, child
+
+    def test_serializer_returns_signed_link_that_serves_file(self, tmp_path, settings, client):
+        camp, child = self._child_with_photo(tmp_path, settings)
+        nurse = NurseFactory(email='photo_nurse@test.rw', camp=camp)
+        client.force_authenticate(user=nurse)
+        url = client.get(reverse('child-detail', kwargs={'pk': child.id})).data['photo']
+        assert '/api/v1/media/' in url and '/media/children' not in url
+        client.force_authenticate(user=None)  # works in a plain <img>, no auth header
+        resp = client.get(url)
+        assert resp.status_code == 200
+        assert b''.join(resp.streaming_content).startswith(b'\xff\xd8')
+
+    def test_tampered_or_raw_paths_are_rejected(self, tmp_path, settings, client):
+        _, child = self._child_with_photo(tmp_path, settings)
+        assert client.get('/api/v1/media/not-a-valid-token/').status_code == 404
+        assert client.get(f'/media/{child.photo.name}').status_code == 404
+
+    def test_link_expires(self, tmp_path, settings, client, monkeypatch):
+        from apps.core import media
+        camp, child = self._child_with_photo(tmp_path, settings)
+        url = media.signed_media_url(None, child.photo)
+        monkeypatch.setattr(media, 'LINK_MAX_AGE', -1)
+        assert client.get(url).status_code == 404

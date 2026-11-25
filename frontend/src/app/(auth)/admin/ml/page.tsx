@@ -135,7 +135,7 @@ function PredictPanel() {
 
       <form onSubmit={handleSubmit}>
         {/* Anthropometrics */}
-        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
           Anthropometrics
         </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
@@ -165,7 +165,7 @@ function PredictPanel() {
         </div>
 
         {/* Vitals */}
-        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
           Vitals
         </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
@@ -176,7 +176,7 @@ function PredictPanel() {
         </div>
 
         {/* Symptoms */}
-        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
           Symptoms &amp; history
         </p>
         <div className="flex flex-wrap gap-4 mb-4">
@@ -209,7 +209,7 @@ function PredictPanel() {
         >
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Prediction result</p>
+              <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Prediction result</p>
               <Badge variant={riskVariant(result.risk_level)} className="text-base px-3 py-1">
                 {result.risk_level} risk
               </Badge>
@@ -228,7 +228,7 @@ function PredictPanel() {
           {/* SHAP factors */}
           {factorEntries.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
                 Top contributing factors (SHAP)
               </p>
               <div className="flex flex-col gap-2">
@@ -295,7 +295,7 @@ function PredictionHistory() {
               {['Child', 'Risk level', 'Confidence', 'Model version', 'Date'].map((h) => (
                 <th
                   key={h}
-                  className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap"
+                  className="text-left px-4 py-2.5 text-xs font-semibold whitespace-nowrap"
                   style={{ color: 'var(--text-muted)' }}
                 >
                   {h}
@@ -534,7 +534,7 @@ function ModelRegistry() {
         <div className="flex flex-col gap-6">
           {Object.entries(grouped).map(([modelName, vers]) => (
             <div key={modelName}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>
                 {MODEL_NAME_OPTIONS.find((o) => o.value === modelName)?.label ?? modelName}
               </p>
               <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
@@ -674,7 +674,7 @@ export default function MLModelPage() {
             {/* Accuracy metrics */}
             {(info!.macro_f1 != null || info!.high_recall != null) && (
               <div className="flex flex-col gap-4">
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                   Performance metrics
                 </p>
                 {info!.macro_f1 != null && (
@@ -699,7 +699,7 @@ export default function MLModelPage() {
             {/* Secondary model statuses */}
             {info!.models && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
                   Secondary models (ModelLoader)
                 </p>
                 <div className="flex flex-col gap-2">

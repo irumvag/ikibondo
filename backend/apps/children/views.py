@@ -14,6 +14,7 @@ from django.utils import timezone as tz
 from .models import Child, Guardian, VisitRequest, VisitRequestStatus, VisitUrgency, ChildClosure, ChildZoneTransfer
 from .serializers import ChildSerializer, ChildCreateSerializer, GuardianSerializer, VisitRequestSerializer
 from .filters import ChildFilter
+from apps.core.scoping import scope_children, can_access_child
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.openapi import OpenApiTypes
 
@@ -31,9 +32,9 @@ class GuardianViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_permissions(self):
-        # link-account is callable by any authenticated user (NURSE creates parent links)
+        # link-account is restricted to clinical/management staff (NURSE creates parent links)
         if self.action == 'link_account':
-            return [IsAuthenticated()]
+            return [IsNurseOrSupervisorOrAdmin()]
         # assign-chw restricted to supervisor/admin
         if self.action == 'assign_chw':
             from apps.accounts.permissions import IsSupervisorOrAdmin as _SA
@@ -48,10 +49,17 @@ class GuardianViewSet(viewsets.ModelViewSet):
             children_count=Count('children', filter=Q(children__is_active=True), distinct=True)
         )
         user = self.request.user
-        if user.role == UserRole.NURSE and user.camp_id:
-            qs = qs.filter(children__camp_id=user.camp_id).distinct()
+        if user.role in (UserRole.NURSE, UserRole.SUPERVISOR):
+            # Camp staff see guardians with children in their camp, plus orphans they can relink
+            if not user.camp_id:
+                return qs.none()
+            qs = qs.filter(Q(children__camp_id=user.camp_id) | Q(children__isnull=True)).distinct()
         elif user.role == UserRole.CHW:
             qs = qs.filter(assigned_chw=user)
+        elif user.role == UserRole.PARENT:
+            qs = qs.filter(user=user)
+        elif user.role != UserRole.ADMIN:
+            return qs.none()
         # Exclude orphan guardians (no active children AND no linked user) by default
         if self.request.query_params.get('include_orphans') != 'true':
             qs = qs.filter(Q(children_count__gt=0) | Q(user__isnull=False))
@@ -325,12 +333,7 @@ class ChildViewSet(viewsets.ModelViewSet):
         qs = Child.objects.filter(is_active=True).select_related(
             'camp', 'zone', 'guardian', 'guardian__user', 'registered_by'
         )
-        role = self.request.user.role
-        if role == UserRole.CHW:
-            qs = qs.filter(guardian__assigned_chw=self.request.user)
-        elif role == UserRole.PARENT:
-            qs = qs.filter(guardian__user=self.request.user)
-        return qs
+        return scope_children(qs, self.request.user)
 
     @action(detail=False, methods=['get'], url_path='closed',
             permission_classes=[IsNurseOrSupervisorOrAdmin])
@@ -754,7 +757,7 @@ def _notify_transfer(child, from_zone, to_zone):
 
 @extend_schema(exclude=True)
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsNurseOrSupervisorOrAdmin])
 def duplicate_check_view(request):
     """
     GET /api/v1/children/duplicate-check/?dob=YYYY-MM-DD&guardian_phone=&full_name=
@@ -798,7 +801,9 @@ def guardian_lookup_view(request):
     qs = Guardian.objects.filter(phone_number__endswith=suffix).select_related('user')
 
     # Scope to the requesting user's camp so cross-camp enumeration is impossible
-    if request.user.camp_id:
+    if request.user.role != UserRole.ADMIN:
+        if not request.user.camp_id:
+            return success_response(data=None, message='No guardian found with this phone number.')
         qs = qs.filter(children__camp_id=request.user.camp_id).distinct()
 
     guardian = qs.first()
@@ -825,6 +830,14 @@ def scan_qr_view(request, qr_code):
     try:
         child = Child.objects.get(qr_code=qr_code, is_active=True)
     except Child.DoesNotExist:
+        return error_response('Child not found.', 'NOT_FOUND', status_code=404)
+    # CHWs may identify any child in their camp in the field; everyone else follows normal scoping
+    same_camp_chw = (
+        request.user.role == UserRole.CHW
+        and request.user.camp_id is not None
+        and child.camp_id == request.user.camp_id
+    )
+    if not (same_camp_chw or can_access_child(request.user, child)):
         return error_response('Child not found.', 'NOT_FOUND', status_code=404)
     return success_response(data=ChildSerializer(child).data)
 
@@ -856,9 +869,9 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
         elif user.role == UserRole.CHW:
             qs = qs.filter(child__guardian__assigned_chw=user)
         elif user.role in (UserRole.NURSE, UserRole.SUPERVISOR):
-            if user.camp_id:
-                qs = qs.filter(child__camp_id=user.camp_id)
-        # ADMIN sees all
+            qs = scope_children(qs, user, prefix='child__')
+        elif user.role != UserRole.ADMIN:
+            return qs.none()
         return qs.order_by('-created_at')
 
     def create(self, request, *args, **kwargs):

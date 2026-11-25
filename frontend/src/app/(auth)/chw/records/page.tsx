@@ -128,7 +128,7 @@ export default function CHWRecordsPage() {
         <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
           {/* Table header */}
           <div
-            className="grid grid-cols-[1fr_100px_90px_80px_80px] gap-3 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider"
+            className="grid grid-cols-[1fr_100px_90px_80px_80px] gap-3 px-4 py-2.5 text-xs font-semibold"
             style={{ background: 'var(--bg-elev)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}
           >
             <span>Child</span>
@@ -312,7 +312,7 @@ function RecordDetailDrawer({ rec, onClose, onAmend }: {
           {/* Risk + nutrition */}
           <div className="rounded-xl border p-4 flex flex-col gap-2.5" style={{ borderColor: 'var(--border)', background: 'var(--card)' }}>
             <div className="flex justify-between items-center">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Assessment</span>
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Assessment</span>
               <Badge variant={RISK_VARIANT[rec.risk_level] ?? 'default'}>{rec.risk_level} risk</Badge>
             </div>
             <Row label="Nutrition status" value={rec.nutrition_status_display} />
@@ -323,7 +323,7 @@ function RecordDetailDrawer({ rec, onClose, onAmend }: {
 
           {/* Measurements */}
           <div className="rounded-xl border p-4 flex flex-col gap-2.5" style={{ borderColor: 'var(--border)', background: 'var(--card)' }}>
-            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Measurements</span>
+            <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Measurements</span>
             <div className="grid grid-cols-2 gap-y-2">
               <Row label="Weight" value={rec.weight_kg ? `${rec.weight_kg} kg` : '—'} />
               <Row label="Height" value={rec.height_cm ? `${rec.height_cm} cm` : '—'} />
@@ -338,7 +338,7 @@ function RecordDetailDrawer({ rec, onClose, onAmend }: {
           {/* Symptoms */}
           {rec.symptom_flags?.length > 0 && (
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Symptoms</span>
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Symptoms</span>
               <div className="flex flex-wrap gap-1.5">
                 {rec.symptom_flags.map((s) => (
                   <span key={s} className="text-xs px-2.5 py-1 rounded-full border" style={{ borderColor: 'var(--danger)', color: 'var(--danger)', background: '#fef2f2' }}>
@@ -360,7 +360,7 @@ function RecordDetailDrawer({ rec, onClose, onAmend }: {
           {/* SHAP factors */}
           {factorEntries.length > 0 && (
             <div className="rounded-xl border p-4 flex flex-col gap-3" style={{ borderColor: 'var(--border)', background: 'var(--card)' }}>
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Risk factors (AI)</span>
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Risk factors (AI)</span>
               {factorEntries.map(([name, val]) => (
                 <div key={name}>
                   <div className="flex justify-between mb-1">
@@ -380,7 +380,7 @@ function RecordDetailDrawer({ rec, onClose, onAmend }: {
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <MessageSquare size={14} style={{ color: 'var(--primary)' }} />
-                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                   Nurse notes & advice
                 </span>
               </div>

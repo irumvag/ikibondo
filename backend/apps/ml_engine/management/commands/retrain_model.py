@@ -1,110 +1,152 @@
 """
 python manage.py retrain_model
 
-Pulls HealthRecords with a confirmed risk_level, retrains the classifier,
-compares metrics against the previous model, and replaces saved_models/ files
-if the new model is at least as good.
+Trains a risk model on real Ikibondo visits and registers it as a *shadow*
+version (not deployed). An admin reviews the metrics and promotes it.
+
+What is learned
+---------------
+Each training example is one visit's features, labelled with the child's
+WHO-based nutrition status at their NEXT visit 21–120 days later
+(SAM → HIGH, MAM → MEDIUM, NORMAL/OVERWEIGHT → LOW).
+
+This deliberately avoids two traps in the previous version:
+  * Training on HealthRecord.risk_level — the model's own predictions — which
+    only teaches the model to agree with itself.
+  * Labelling a visit with its own z-score status, which the features already
+    contain (the model just relearns the WHO cut-offs; see docs/ml-model-card.md).
+
+Children, not visits, are split between train and test so the score reflects
+how the model does on children it has never seen.
 """
+import json
 import logging
+from datetime import datetime, timedelta
+
 from django.core.management.base import BaseCommand
 
 logger = logging.getLogger(__name__)
 
+LABEL_FROM_STATUS = {'SAM': 'HIGH', 'MAM': 'MEDIUM', 'NORMAL': 'LOW', 'OVERWEIGHT': 'LOW'}
+MIN_GAP = timedelta(days=21)
+MAX_GAP = timedelta(days=120)
+
+
+def build_outcome_dataset():
+    """
+    Returns (rows, labels, groups): feature dicts for visit t, the status at visit t+1,
+    and the child id for each row (used to split by child).
+    """
+    from apps.health_records.models import HealthRecord
+    from apps.ml_engine.features import build_feature_vector
+
+    records = (
+        HealthRecord.objects.filter(is_active=True)
+        .exclude(nutrition_status='')
+        .select_related('child')
+        .order_by('child_id', 'measurement_date')
+    )
+    rows, labels, groups = [], [], []
+    previous = None
+    for rec in records.iterator():
+        if previous is not None and previous.child_id == rec.child_id:
+            gap = rec.measurement_date - previous.measurement_date
+            label = LABEL_FROM_STATUS.get(rec.nutrition_status)
+            if label and MIN_GAP <= gap <= MAX_GAP:
+                features = build_feature_vector(previous)
+                if features is not None:
+                    rows.append(features)
+                    labels.append(label)
+                    groups.append(str(rec.child_id))
+        previous = rec
+    return rows, labels, groups
+
 
 class Command(BaseCommand):
-    help = 'Retrain the risk classifier using confirmed health record data'
+    help = 'Train a next-visit risk model on real records and register it as a shadow version'
 
     def add_arguments(self, parser):
-        parser.add_argument('--min-records', type=int, default=500,
-                            help='Minimum records needed before retraining (default 500)')
-        parser.add_argument('--force', action='store_true',
-                            help='Retrain even if record count is below minimum')
+        parser.add_argument('--min-examples', type=int, default=500,
+                            help='Minimum visit pairs needed (default 500)')
+        parser.add_argument('--force', action='store_true', help='Train even below the minimum')
 
     def handle(self, *args, **options):
-        from apps.health_records.models import HealthRecord
-        from apps.ml_engine.features import FEATURE_NAMES, build_feature_vector
-
-        qs = HealthRecord.objects.filter(risk_level__isnull=False, is_active=True).select_related('child')
-        count = qs.count()
-        self.stdout.write(f'Found {count} labelled health records.')
-
-        if count < options['min_records'] and not options['force']:
-            self.stdout.write(self.style.WARNING(
-                f'Not enough records ({count} < {options["min_records"]}). '
-                'Use --force to retrain anyway.'
-            ))
-            return
-
-        # Build feature matrix from real records
         import numpy as np
-        rows, labels = [], []
-        for record in qs:
-            fv = build_feature_vector(record)
-            if fv is None:
-                continue
-            rows.append([fv[f] for f in FEATURE_NAMES])
-            labels.append(record.risk_level)
-
-        if len(rows) < 50:
-            self.stdout.write(self.style.ERROR('Too few valid feature vectors. Aborting.'))
-            return
-
-        X = np.array(rows, dtype=np.float32)
-        y = np.array(labels)
-        self.stdout.write(f'Built feature matrix: {X.shape}')
-
-        # Load old metrics for comparison
-        import json
-        from pathlib import Path
-        saved_dir = Path(__file__).resolve().parents[4] / 'saved_models'
-        old_metrics = {}
-        meta_path = saved_dir / 'model_metadata.json'
-        if meta_path.exists():
-            with open(meta_path) as f:
-                old_metrics = json.load(f)
-            self.stdout.write(f'Old model: macro_f1={old_metrics.get("macro_f1")} high_recall={old_metrics.get("high_recall")}')
-
-        # Retrain
-        from sklearn.ensemble import RandomForestClassifier
-        from sklearn.model_selection import train_test_split
-        from sklearn.metrics import f1_score, recall_score
-        from datetime import datetime
-
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, stratify=y, random_state=42)
-        rf = RandomForestClassifier(n_estimators=300, max_depth=20, min_samples_leaf=5,
-                                    class_weight='balanced_subsample', random_state=42, n_jobs=-1)
-        rf.fit(X_train, y_train)
-
-        y_pred = rf.predict(X_test)
-        macro_f1 = f1_score(y_test, y_pred, average='macro')
-        high_recall = recall_score(y_test, y_pred, labels=['HIGH'], average='macro', zero_division=0)
-
-        self.stdout.write(f'New model: macro_f1={macro_f1:.3f} high_recall={high_recall:.3f}')
-
-        old_f1 = float(old_metrics.get('macro_f1', 0))
-        if macro_f1 < old_f1 - 0.05:
-            self.stdout.write(self.style.WARNING(
-                f'New model is worse (F1 {macro_f1:.3f} vs {old_f1:.3f}). Not replacing.'
-            ))
-            return
-
+        import pandas as pd
         import joblib
-        version = f'v{datetime.now().strftime("%Y%m%d-%H%M")}'
-        joblib.dump(rf, saved_dir / 'ikibondo_rf_pipeline.joblib')
+        from sklearn.ensemble import RandomForestClassifier
+        from sklearn.metrics import average_precision_score, classification_report, f1_score, recall_score
+        from sklearn.model_selection import GroupShuffleSplit
+
+        from apps.ml_engine.features import FEATURE_NAMES
+        from apps.ml_engine.models import MLModelVersion
+        from apps.ml_engine.prediction_service import PredictionService
+
+        rows, labels, groups = build_outcome_dataset()
+        n = len(rows)
+        self.stdout.write(f'Found {n} visit pairs (visit → next visit within 21–120 days).')
+        if n < options['min_examples'] and not options['force']:
+            self.stdout.write(self.style.WARNING(
+                f'Not enough data ({n} < {options["min_examples"]}). Use --force to train anyway.'))
+            return
+        if len(set(labels)) < 2:
+            self.stdout.write(self.style.ERROR('Every example has the same outcome; nothing to learn yet.'))
+            return
+
+        X = pd.DataFrame(rows)[FEATURE_NAMES].astype('float32')
+        y = np.array(labels)
+        split = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+        train_idx, test_idx = next(split.split(X, y, groups=groups))
+
+        model = RandomForestClassifier(
+            n_estimators=300, max_depth=12, min_samples_leaf=5,
+            class_weight='balanced_subsample', random_state=42, n_jobs=-1,
+        )
+        model.fit(X.iloc[train_idx], y[train_idx])
+        y_test = y[test_idx]
+        y_pred = model.predict(X.iloc[test_idx])
+
+        # Missing a child who will be severely malnourished is the costly error
+        high_recall = recall_score(y_test, y_pred, labels=['HIGH'], average='macro', zero_division=0)
+        if 'HIGH' in model.classes_ and (y_test == 'HIGH').any():
+            proba_high = model.predict_proba(X.iloc[test_idx])[:, list(model.classes_).index('HIGH')]
+            pr_auc_high = float(average_precision_score(y_test == 'HIGH', proba_high))
+        else:
+            pr_auc_high = None
+        macro_f1 = float(f1_score(y_test, y_pred, average='macro', zero_division=0))
+
+        version = datetime.now().strftime('v%Y%m%d-%H%M')
+        models_dir = PredictionService._models_dir()
+        model_file = f'risk_{version}.joblib'
+        joblib.dump(model, models_dir / model_file)
         metadata = {
             'version': version,
             'trained_at': datetime.now().isoformat(),
-            'n_train': int(len(X_train)),
-            'macro_f1': round(float(macro_f1), 4),
+            'task': 'next-visit nutrition status (21–120 days ahead)',
+            'n_train': int(len(train_idx)),
+            'n_test': int(len(test_idx)),
+            'n_children': len(set(groups)),
+            'macro_f1': round(macro_f1, 4),
             'high_recall': round(float(high_recall), 4),
+            'pr_auc_high': None if pr_auc_high is None else round(pr_auc_high, 4),
+            'class_report': classification_report(y_test, y_pred, output_dict=True, zero_division=0),
+            'feature_names': FEATURE_NAMES,
+            'thresholds': {'HIGH': 0.3, 'MEDIUM': 0.5, 'LOW': 0.5},
             'source': 'real_records',
         }
-        with open(meta_path, 'w') as f:
+        with open(models_dir / f'risk_{version}.json', 'w') as f:
             json.dump(metadata, f, indent=2)
 
-        # Reload the singleton
-        from apps.ml_engine.prediction_service import PredictionService
-        PredictionService._loaded = False
-        PredictionService.load()
-
-        self.stdout.write(self.style.SUCCESS(f'Model retrained and loaded (version: {version})'))
+        MLModelVersion.objects.create(
+            model_name='malnutrition',
+            version=version,
+            file_path=model_file,
+            f1_score=round(macro_f1, 4),
+            recall=round(float(high_recall), 4),
+            deployed=False,
+            notes=(f'Shadow model trained on {n} real visit pairs from {len(set(groups))} children. '
+                   f'HIGH recall {high_recall:.2f}, PR-AUC(HIGH) {pr_auc_high}. Review before promoting.'),
+        )
+        self.stdout.write(self.style.SUCCESS(
+            f'Registered {version} as a shadow model: macro F1 {macro_f1:.3f}, HIGH recall {high_recall:.3f}, '
+            f'PR-AUC(HIGH) {pr_auc_high}. Promote it from the admin ML page once reviewed.'))

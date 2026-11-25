@@ -46,8 +46,12 @@ def supervisor(db, camp):
 
 
 @pytest.fixture
-def child(db, camp):
-    return ChildFactory(camp=camp)
+def child(db, camp, chw):
+    child = ChildFactory(camp=camp)
+    # The CHW's caseload is the families assigned to them
+    child.guardian.assigned_chw = chw
+    child.guardian.save(update_fields=['assigned_chw'])
+    return child
 
 
 @pytest.fixture

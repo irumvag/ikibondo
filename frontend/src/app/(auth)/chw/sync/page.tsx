@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { RefreshCw, CheckCircle, XCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import { useSyncStore, type PendingOp, type SyncResultEntry } from '@/store/syncStore';
-import { syncBatch } from '@/lib/api/chw';
+import { flushQueue } from '@/lib/offline/queue';
+import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -17,6 +18,7 @@ const STATUS_ICON = {
   ok:       <CheckCircle  size={16} style={{ color: 'var(--success)' }} aria-hidden="true" />,
   error:    <XCircle      size={16} style={{ color: 'var(--danger)'  }} aria-hidden="true" />,
   conflict: <AlertTriangle size={16} style={{ color: 'var(--warn)'   }} aria-hidden="true" />,
+  forbidden: <XCircle     size={16} style={{ color: 'var(--danger)'  }} aria-hidden="true" />,
 };
 
 function fmtDate(iso: string) {
@@ -33,12 +35,13 @@ function fmtDate(iso: string) {
 }
 
 export default function SyncPage() {
-  const pending         = useSyncStore((s) => s.pending);
+  const userId          = useAuthStore((s) => s.user?.id);
+  const allPending      = useSyncStore((s) => s.pending);
+  // Only this account's work is shown and uploaded on a shared phone
+  const pending         = allPending.filter((p) => !p.userId || p.userId === userId);
   const lastSyncAt      = useSyncStore((s) => s.lastSyncAt);
   const lastSyncResults = useSyncStore((s) => s.lastSyncResults);
   const removeOperation = useSyncStore((s) => s.removeOperation);
-  const clearPending    = useSyncStore((s) => s.clearPending);
-  const recordSync      = useSyncStore((s) => s.recordSync);
 
   const [syncing,  setSyncing]  = useState(false);
   const [error,    setError]    = useState('');
@@ -50,12 +53,7 @@ export default function SyncPage() {
     setError('');
     setResults([]);
     try {
-      const ops = pending.map(({ id, op, payload }) => ({ id, op, payload }));
-      const res = await syncBatch(ops);
-      recordSync(res);
-      setResults(res);
-      // Remove successfully synced operations
-      res.forEach((r) => { if (r.status === 'ok') removeOperation(r.id); });
+      setResults(await flushQueue());
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setError(msg ?? 'Sync failed. Check your connection and try again.');
@@ -65,7 +63,7 @@ export default function SyncPage() {
   };
 
   const okCount      = results.filter((r) => r.status === 'ok').length;
-  const errorCount   = results.filter((r) => r.status === 'error').length;
+  const errorCount   = results.filter((r) => r.status === 'error' || r.status === 'forbidden').length;
   const conflictCount = results.filter((r) => r.status === 'conflict').length;
 
   return (
@@ -119,7 +117,7 @@ export default function SyncPage() {
           className="rounded-2xl border p-5 flex flex-col gap-3"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
         >
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
             Last sync results
           </p>
           <div className="flex gap-4 text-sm">
@@ -179,12 +177,16 @@ export default function SyncPage() {
             </p>
             <button
               type="button"
-              onClick={clearPending}
+              onClick={() => {
+                if (window.confirm(`Discard ${pending.length} unsynced record(s)? They have not reached the server and cannot be recovered.`)) {
+                  pending.forEach((p) => removeOperation(p.id));
+                }
+              }}
               className="flex items-center gap-1.5 text-xs transition-opacity hover:opacity-70"
               style={{ color: 'var(--danger)' }}
             >
               <Trash2 size={12} aria-hidden="true" />
-              Clear all
+              Discard all
             </button>
           </div>
 
@@ -207,8 +209,13 @@ export default function SyncPage() {
                       {OP_LABEL[op.op]}
                     </p>
                     <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                      {op.label} &middot; {fmtDate(op.createdAt)}
+                      {op.label}, saved {fmtDate(op.createdAt)}
                     </p>
+                    {op.lastError && (
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--danger)' }}>
+                        Not accepted: {op.lastError}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <button
@@ -232,7 +239,7 @@ export default function SyncPage() {
           className="rounded-2xl border p-5 flex flex-col gap-3"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
         >
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
             Previous sync results
           </p>
           <div className="flex gap-4 text-sm">

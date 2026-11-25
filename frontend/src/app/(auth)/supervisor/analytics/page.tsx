@@ -124,7 +124,7 @@ export default function SupervisorAnalyticsPage() {
             >
               <div className="flex items-center gap-2 mb-2">
                 <Baby size={14} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                   Total children
                 </span>
               </div>
@@ -139,7 +139,7 @@ export default function SupervisorAnalyticsPage() {
             >
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle size={14} style={{ color: 'var(--danger)' }} aria-hidden="true" />
-                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                   High risk
                 </span>
               </div>
@@ -155,7 +155,7 @@ export default function SupervisorAnalyticsPage() {
             >
               <div className="flex items-center gap-2 mb-2">
                 <Activity size={14} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                   Active zones
                 </span>
               </div>
@@ -171,7 +171,7 @@ export default function SupervisorAnalyticsPage() {
             >
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp size={14} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                   Est. population
                 </span>
               </div>

@@ -100,13 +100,13 @@ export default function TransferZonePage({ params }: { params: Promise<{ id: str
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
         >
           <div className="flex-1 text-center">
-            <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Current</p>
+            <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Current</p>
             <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{child.camp_name}</p>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{child.zone_name ?? 'No zone'}</p>
           </div>
           <ArrowRight size={20} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <div className="flex-1 text-center">
-            <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Destination</p>
+            <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Destination</p>
             <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
               {camps.find((c) => c.id === toCamp)?.name ?? child.camp_name}
             </p>

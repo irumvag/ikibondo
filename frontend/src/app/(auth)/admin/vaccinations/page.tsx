@@ -331,7 +331,7 @@ export default function AdminVaccinationsPage() {
                 {['Child', 'Vaccine', 'Dose', 'Scheduled', 'Status', 'Dropout risk', 'Actions'].map((h) => (
                   <th
                     key={h}
-                    className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap"
+                    className="text-left px-4 py-3 text-xs font-semibold whitespace-nowrap"
                     style={{ color: 'var(--text-muted)' }}
                   >
                     {h}

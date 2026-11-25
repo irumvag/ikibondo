@@ -9,6 +9,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         data = super().validate(attrs)
+        # Same approval gate as IdentifierAuthSerializer — both login payload shapes must enforce it
+        if not self.user.is_approved and self.user.role != 'ADMIN':
+            from rest_framework.exceptions import AuthenticationFailed
+            raise AuthenticationFailed('Account pending approval. Please contact your manager.', code='not_approved')
         data['user'] = UserProfileSerializer(self.user).data
         return data
 
@@ -68,7 +72,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'notification_prefs', 'onboarded_at', 'has_guardian_record', 'guardian_id', 'date_joined',
             'suspended_at', 'suspension_reason',
         ]
-        read_only_fields = ['id', 'email', 'date_joined', 'is_approved', 'must_change_password', 'role', 'camp']
+        read_only_fields = [
+            'id', 'email', 'date_joined', 'is_approved', 'must_change_password', 'role', 'camp',
+            'is_active', 'suspended_at', 'suspension_reason',
+        ]
 
     def get_has_guardian_record(self, obj) -> bool:
         from apps.children.models import Guardian
@@ -84,24 +91,35 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    """Public registration — creates an unapproved account."""
+    """
+    Public registration — creates an unapproved account.
+    Guardian linking is deliberately not accepted here: an anonymous registrant could
+    otherwise claim any family's records. Nurses link the account via
+    /children/guardians/<id>/link-account/ after verifying the parent in person.
+    """
     password = serializers.CharField(write_only=True, min_length=8)
-    guardian_id = serializers.UUIDField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = CustomUser
-        fields = ['email', 'full_name', 'role', 'phone_number', 'camp', 'password', 'guardian_id', 'preferred_language']
+        fields = ['email', 'full_name', 'role', 'phone_number', 'camp', 'password', 'preferred_language']
+
+    def validate(self, attrs):
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        # Check strength against the would-be user so passwords resembling the name/email are rejected
+        candidate = CustomUser(email=attrs.get('email', ''), full_name=attrs.get('full_name', ''))
+        try:
+            validate_password(attrs['password'], user=candidate)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({'password': list(exc.messages)})
+        return attrs
 
     def create(self, validated_data):
-        guardian_id = validated_data.pop('guardian_id', None)
         password = validated_data.pop('password')
         validated_data['is_approved'] = False
         user = CustomUser(**validated_data)
         user.set_password(password)
         user.save()
-        if guardian_id and validated_data.get('role') == 'PARENT':
-            from apps.children.models import Guardian
-            Guardian.objects.filter(id=guardian_id).update(user=user)
         return user
 
 

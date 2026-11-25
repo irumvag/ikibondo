@@ -81,7 +81,7 @@ function VisitHistory({ requests, onWithdraw }: {
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <History size={15} style={{ color: 'var(--text-muted)' }} />
-        <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+        <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
           Your visit requests
         </h3>
       </div>
@@ -292,7 +292,7 @@ function RequestVisitForm() {
           className="rounded-2xl border p-5 flex flex-col gap-3"
           style={{ background: 'var(--bg-elev)', borderColor: 'var(--border)' }}
         >
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Request summary</p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Request summary</p>
           {([
             ['Child',   submitted.child_name],
             ['Urgency', `${cfg.icon} ${cfg.label}`],
@@ -430,7 +430,7 @@ function RequestVisitForm() {
 
             {/* Step 1: child */}
             <section className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
                 1 · Which child?
               </h3>
               {childrenLoading ? (
@@ -491,7 +491,7 @@ function RequestVisitForm() {
 
             {/* Step 2: urgency */}
             <section className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
                 2 · How urgent?
               </h3>
               <Controller
@@ -533,7 +533,7 @@ function RequestVisitForm() {
             {/* Step 3: symptoms */}
             <section className="flex flex-col gap-3">
               <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
                   3 · Symptoms noticed
                 </h3>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Select all that apply (optional)</p>
@@ -563,7 +563,7 @@ function RequestVisitForm() {
 
             {/* Step 4: details */}
             <section className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
                 4 · Additional details
                 <span className="normal-case ml-1 font-normal" style={{ color: 'var(--text-muted)' }}>(optional)</span>
               </h3>

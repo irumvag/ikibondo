@@ -11,7 +11,7 @@ def client():
 
 @pytest.fixture
 def user(db):
-    return UserFactory(email='chw@ikibondo.rw', password='testpass123')
+    return UserFactory(email='chw@ikibondo.rw', password='testpass123', is_approved=True)
 
 
 @pytest.mark.django_db
@@ -27,6 +27,13 @@ class TestLogin:
     def test_login_wrong_password(self, client, user):
         resp = client.post(reverse('auth-login'), {'email': 'chw@ikibondo.rw', 'password': 'wrongpass'})
         assert resp.status_code == 401
+
+    def test_login_unapproved_rejected(self, client, db):
+        # Regression: the {email, password} payload used to skip the approval gate
+        UserFactory(email='pending@ikibondo.rw', password='testpass123', is_approved=False)
+        resp = client.post(reverse('auth-login'), {'email': 'pending@ikibondo.rw', 'password': 'testpass123'})
+        assert resp.status_code == 401
+        assert 'access' not in str(resp.data)
 
     def test_login_unknown_email(self, client):
         resp = client.post(reverse('auth-login'), {'email': 'nobody@ikibondo.rw', 'password': 'anything'})

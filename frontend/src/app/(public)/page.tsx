@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { HeroSection } from '@/components/public/HeroSection';
-import { StatsSection } from '@/components/public/StatsSection';
+import { MuacExplainer } from '@/components/public/MuacExplainer';
 import { HowItWorks } from '@/components/public/HowItWorks';
 import { RoleHighlights } from '@/components/public/RoleHighlights';
 import { CampsSection } from '@/components/public/CampsSection';
@@ -16,7 +16,7 @@ export default function HomePage() {
   return (
     <>
       <HeroSection />
-      <StatsSection />
+      <MuacExplainer />
       <HowItWorks />
       <RoleHighlights />
       <CampsSection />

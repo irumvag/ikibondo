@@ -23,6 +23,21 @@ SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+# nginx terminates TLS; trust its header so SECURE_SSL_REDIRECT doesn't loop
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
+
+# nginx serves child photos from an internal location once Django has checked the signed link
+MEDIA_USE_X_ACCEL = True
+
+# Shared cache so login lockout counts hold across all workers (see apps/accounts/security.py)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': config('REDIS_URL', default='redis://redis:6379/1'),
+    }
+}
 
 # Sentry error tracking
 import sentry_sdk

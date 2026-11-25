@@ -4,10 +4,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.responses import success_response, error_response
-from apps.accounts.permissions import IsSupervisorOrAdmin
+from apps.accounts.models import UserRole
+from apps.accounts.permissions import IsSupervisorOrAdmin, IsAdminUser
 from .models import Camp, CampZone, ZoneCoordinatorAssignment, CHWZoneAssignment
 from .serializers import (
-    CampSerializer, CampStatsSerializer, CampZoneSerializer,
+    CampSerializer, CampPublicSerializer, CampStatsSerializer, CampZoneSerializer,
     ZoneCoordinatorAssignmentSerializer, CHWZoneAssignmentSerializer,
     ZoneStatsSerializer,
 )
@@ -23,9 +24,24 @@ class CampViewSet(viewsets.ModelViewSet):
         # Public read access so the homepage can list camps without authentication
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.action in ['create', 'destroy']:
+            return [IsAdminUser()]
+        if self.action in ['update', 'partial_update']:
             return [IsSupervisorOrAdmin()]
         return [permissions.IsAuthenticated()]
+
+    def get_serializer_class(self):
+        if not self.request.user.is_authenticated:
+            return CampPublicSerializer
+        return super().get_serializer_class()
+
+    def check_object_permissions(self, request, obj):
+        super().check_object_permissions(request, obj)
+        # Supervisors may only edit their own camp
+        if (self.action in ('update', 'partial_update')
+                and request.user.role == UserRole.SUPERVISOR
+                and request.user.camp_id != obj.id):
+            self.permission_denied(request, message='You can only manage your own camp.')
 
     @action(detail=True, methods=['get'], url_path='stats')
     def stats(self, request, pk=None):
@@ -90,10 +106,21 @@ class CampZoneViewSet(viewsets.ModelViewSet):
             return CampZone.objects.none()
         return CampZone.objects.filter(camp_id=self.kwargs['camp_pk'], is_active=True)
 
+    _MANAGE_ACTIONS = ('create', 'update', 'partial_update', 'destroy',
+                       'assign_coordinator', 'assign_chw', 'chw_activity')
+
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy', 'chw_activity']:
+        if self.action in self._MANAGE_ACTIONS:
             return [IsSupervisorOrAdmin()]
         return [permissions.IsAuthenticated()]
+
+    def check_permissions(self, request):
+        super().check_permissions(request)
+        # Supervisors may only manage zones of their own camp
+        if (self.action in self._MANAGE_ACTIONS
+                and request.user.role == UserRole.SUPERVISOR
+                and str(request.user.camp_id) != str(self.kwargs.get('camp_pk'))):
+            self.permission_denied(request, message='You can only manage zones in your own camp.')
 
     def perform_create(self, serializer):
         camp = Camp.objects.get(pk=self.kwargs['camp_pk'])

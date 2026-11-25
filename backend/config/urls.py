@@ -1,12 +1,11 @@
 """Root URL configuration for Ikibondo backend."""
 from django.contrib import admin
 from django.urls import path, include
-from django.conf import settings
-from django.conf.urls.static import static
 from apps.health_records.views import growth_data_view
 from apps.children.views import daily_plan_view, chw_families_view
-from apps.core.views import health_check, landing_stats_view, stats_trend_view, audit_log_view
-from apps.core.sync_views import batch_sync_view
+from apps.core.views import health_check, landing_stats_view, stats_trend_view, audit_log_view, app_config_view
+from apps.core.sync_views import batch_sync_view, pull_sync_view
+from apps.core.media import protected_media_view
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
@@ -52,6 +51,9 @@ urlpatterns = [
 
     # Offline CHW batch sync
     path('api/v1/sync/batch/', batch_sync_view, name='sync-batch'),
+    path('api/v1/sync/pull/', pull_sync_view, name='sync-pull'),
+    path('api/v1/app/config/', app_config_view, name='app-config'),
+    path('api/v1/media/<str:token>/', protected_media_view, name='protected-media'),
 
     # Audit log (admin only)
     path('api/v1/audit/log/', audit_log_view, name='audit-log'),
@@ -67,5 +69,5 @@ urlpatterns = [
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Uploaded files (child photos) are deliberately not served from MEDIA_URL, even in DEBUG:
+# they are only reachable through signed links from apps.core.media.

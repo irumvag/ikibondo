@@ -123,7 +123,7 @@ function ChildDrawer({ child, onClose }: { child: CHWChildSummary; onClose: () =
 
           {/* Latest measurement */}
           <section>
-            <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+            <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
               Latest health record
             </h4>
             {histLoading ? (
@@ -169,7 +169,7 @@ function ChildDrawer({ child, onClose }: { child: CHWChildSummary; onClose: () =
           {/* Visit history */}
           {history.length > 1 && (
             <section>
-              <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+              <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
                 Visit history
               </h4>
               <div className="flex flex-col gap-2">
@@ -194,7 +194,7 @@ function ChildDrawer({ child, onClose }: { child: CHWChildSummary; onClose: () =
 
           {/* Nurse notes */}
           <section>
-            <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+            <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
               Nurse notes &amp; advice
             </h4>
             {notesLoading ? (

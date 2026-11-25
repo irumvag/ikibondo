@@ -11,14 +11,12 @@ export interface LandingStats {
   risk_distribution: { LOW: number; MEDIUM: number; HIGH: number };
 }
 
+/** Public camp listing — the API returns only these fields to anonymous visitors. */
 export interface Camp {
   id: string;
   name: string;
   code: string;
   district: string | null;
-  country: string;
-  status: string;
-  estimated_population: number | null;
 }
 
 export interface FAQItem {

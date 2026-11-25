@@ -6,6 +6,7 @@ GET  /api/v1/integrations/dhis2/status/ — connection info + last sync stats
 """
 from django.conf import settings
 from django.core.cache import cache
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 
 from apps.accounts.permissions import IsAdminUser
@@ -22,10 +23,11 @@ LAST_SYNC_CACHE_KEY = 'dhis2_last_sync_summary'
 @permission_classes([IsAdminUser])
 def dhis2_status_view(request):
     """GET /api/v1/integrations/dhis2/status/ — connection config + last sync stats."""
-    configured = dhis2_module.is_configured()
+    problems = dhis2_module.configuration_problems()
     last_sync = cache.get(LAST_SYNC_CACHE_KEY)
     return success_response(data={
-        'configured': configured,
+        'configured': not problems,
+        'problems': problems,
         'dhis2_url': getattr(settings, 'DHIS2_URL', None) or None,
         'last_sync': last_sync,
     })
@@ -43,8 +45,7 @@ def dhis2_sync_view(request):
     """
     if not dhis2_module.is_configured():
         return error_response(
-            'DHIS2 credentials are not configured. '
-            'Set DHIS2_URL, DHIS2_USERNAME, and DHIS2_PASSWORD environment variables.',
+            'DHIS2 is not ready: ' + ' '.join(dhis2_module.configuration_problems()),
             'NOT_CONFIGURED',
             status_code=503,
         )
@@ -73,17 +74,59 @@ def dhis2_sync_view(request):
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def dhis2_conflicts_view(request):
-    """GET /api/v1/integrations/dhis2/conflicts/ — stub; returns empty list."""
-    return success_response(data={'count': 0, 'results': []})
+    """GET /api/v1/integrations/dhis2/conflicts/ — records that failed to reach DHIS2 and are still unresolved."""
+    from apps.integrations.models import DHIS2SyncFailure
+    failures = DHIS2SyncFailure.objects.filter(resolved_at__isnull=True)
+    results = [
+        {
+            'id': str(f.id),
+            'object_type': f.object_type,
+            'object_id': str(f.object_id),
+            'label': f.label,
+            'error': f.error,
+            'attempts': f.attempts,
+            'last_attempt_at': f.last_attempt_at.isoformat(),
+        }
+        for f in failures[:200]
+    ]
+    return success_response(data={'count': failures.count(), 'results': results})
 
 
 @extend_schema(exclude=True)
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def dhis2_conflict_retry_view(request, conflict_id):
-    """POST /api/v1/integrations/dhis2/conflicts/<id>/retry/ — stub."""
-    return error_response(
-        'Conflict retry not yet implemented.',
-        'NOT_IMPLEMENTED',
-        status_code=501,
-    )
+    """POST /api/v1/integrations/dhis2/conflicts/<id>/retry/ — push that one record again now."""
+    from apps.integrations.models import DHIS2SyncFailure
+
+    failure = DHIS2SyncFailure.objects.filter(id=conflict_id, resolved_at__isnull=True).first()
+    if failure is None:
+        return error_response('No open sync failure with that id.', 'NOT_FOUND', status_code=404)
+    if not dhis2_module.is_configured():
+        return error_response('DHIS2 is not ready: ' + ' '.join(dhis2_module.configuration_problems()),
+                              'NOT_CONFIGURED', status_code=503)
+
+    if failure.object_type == DHIS2SyncFailure.OBJECT_CHILD:
+        from apps.children.models import Child
+        obj = Child.objects.filter(pk=failure.object_id).first()
+        push = dhis2_module.push_child_registration
+        uid_field, uid_key = 'dhis2_uid', 'dhis2_uid'
+    else:
+        from apps.vaccinations.models import VaccinationRecord
+        obj = VaccinationRecord.objects.select_related('child', 'vaccine').filter(pk=failure.object_id).first()
+        push = dhis2_module.push_vaccination_record
+        uid_field, uid_key = 'dhis2_event_uid', 'event_uid'
+
+    if obj is None:
+        # The record was deleted locally; nothing left to send
+        failure.resolved_at = timezone.now()
+        failure.save(update_fields=['resolved_at'])
+        return success_response(message='The record no longer exists; the failure was closed.')
+
+    result = push(obj)
+    dhis2_module.record_push_result(failure.object_type, obj, failure.label, result)
+    if result['status'] == 'ok':
+        if result.get(uid_key):
+            type(obj).objects.filter(pk=obj.pk).update(**{uid_field: result[uid_key]})
+        return success_response(message='Sent to DHIS2.')
+    return error_response(f'DHIS2 rejected it again: {result["detail"]}', 'DHIS2_ERROR', status_code=502)

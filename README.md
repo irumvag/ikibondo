@@ -1,6 +1,6 @@
 # Ikibondo — Child Nutrition Monitoring Platform
 
-> **Ikibondo** (Kinyarwanda: *growth*) is a full-stack digital health platform for tracking child nutrition and health outcomes in refugee camps and underserved communities. Built for community health workers, nurses, supervisors, parents, and administrators — with offline support, ML risk scoring, and DHIS2 integration.
+> **Ikibondo** (Kinyarwanda: *baby*) is a full-stack digital health platform for tracking child nutrition and health outcomes in refugee camps and underserved communities. Built for community health workers, nurses, supervisors, parents, and administrators — with offline support, ML risk scoring, and DHIS2 integration.
 
 ---
 
@@ -43,7 +43,7 @@ Ikibondo addresses the challenge of tracking child nutrition in resource-limited
 ┌──────────────────────────────┐   ┌──────────────────────────────┐
 │      Next.js 16 Frontend     │   │     Flutter Mobile (CHW/     │
 │  React Query · Zustand ·     │   │     Nurse/Parent)            │
-│  Recharts · Dexie (IndexedDB)│   │  Riverpod 3 · Drift+SQLCipher│
+│  Recharts · offline PWA queue│   │  Riverpod 3 · Drift+SQLCipher│
 └──────────────┬───────────────┘   │  · TLS cert pinning · offline│
                │                   │  batch sync                  │
                │                   └──────────────┬───────────────┘
@@ -92,7 +92,7 @@ Ikibondo addresses the challenge of tracking child nutrition in resource-limited
 | Data fetching | TanStack React Query v5 |
 | Forms | React Hook Form + Zod validation |
 | Charts | Recharts |
-| Offline DB | Dexie (IndexedDB wrapper) |
+| Offline writes | Persisted queue replayed via `POST /sync/batch/` (`src/lib/offline/queue.ts`) |
 | QR scan | `@zxing/browser` |
 | QR generate | `qrcode.react` |
 | Icons | Lucide React |
@@ -252,29 +252,24 @@ GET    /api/docs/                Swagger UI (interactive API explorer)
 
 ## ML Engine
 
-The risk prediction model classifies each child visit into one of four nutrition status categories: **SAM** (Severe Acute Malnutrition), **MAM** (Moderate Acute Malnutrition), **MAD** (Moderate Acute Deficiency), or **Normal**.
+> Read **[docs/ml-model-card.md](docs/ml-model-card.md)** before relying on risk scores.
 
-### Model Details
+After each visit a random forest (`backend/apps/ml_engine/`) assigns **LOW / MEDIUM / HIGH** risk
+and SHAP lists the five strongest factors. The model shipped today was trained on **synthetic**
+data whose labels are WHO cut-offs on the same z-scores it sees, so its 99% score only means it
+reproduces the WHO classification. Treat it as such until it is retrained on real visits.
 
-| Property | Value |
-|----------|-------|
-| Algorithm | Random Forest (scikit-learn) |
-| Imbalance handling | SMOTE-Tomek resampling |
-| Explainability | SHAP values (per-prediction feature contributions) |
-| Serving | Loaded at startup via `ml_engine/loader.py` |
+| | |
+|---|---|
+| Features | 25, defined once in `apps/ml_engine/features.py` |
+| Serving | `apps/ml_engine/prediction_service.py`; the deployed `MLModelVersion` decides which file loads |
+| Retraining | `python manage.py retrain_model` — learns the WHO status at the **next** visit (21–120 days ahead) from real records, splits by child, registers a *shadow* version for an admin to promote |
+| Research export | `python manage.py export_training_data --out visits.csv --salt …` — consented, de-identified |
+| Legacy models | `ml/models/*.pkl` (growth, vaccination dropout) via `apps/ml_engine/loader.py`; also synthetic |
 
-### Input Features
+Real-data sources and governance: **[docs/research.md](docs/research.md)**.
 
-- Weight-for-age Z-score (WAZ)
-- Height-for-age Z-score (HAZ)
-- Weight-for-height Z-score (WHZ)
-- MUAC (mid-upper arm circumference, cm)
-- Age in months
-- Oedema flag (binary)
-- Sex
-- Symptom flags (fever, diarrhoea, vomiting, etc.)
-
-### Training Pipeline
+### Model artifacts
 
 ```
 ml/
@@ -317,6 +312,14 @@ python scripts/evaluate_all.py               # verify metrics
 After retraining, upload the new binaries as a new release
 (`gh release create ml-models-v2 ...`) and update `RELEASE` in
 `fetch_models.py`.
+
+---
+
+## Mobile App
+
+`mobile/` is a Flutter app for iOS and Android — full offline field work for CHWs, a family view
+for parents, and a light companion for nurses (scanning, vaccination sessions, approvals,
+referrals). Build, TestFlight and Play Console steps are in **[mobile/README.md](mobile/README.md)**.
 
 ---
 
@@ -472,6 +475,29 @@ REFRESH_TOKEN_LIFETIME_DAYS=7
 DHIS2_BASE_URL=https://your-dhis2-instance/api
 DHIS2_USERNAME=
 DHIS2_PASSWORD=
+
+# SMS via Africa's Talking (optional — reset codes and reminders fall back to email / are skipped)
+AFRICASTALKING_USERNAME=
+AFRICASTALKING_API_KEY=
+
+# Push notifications via Firebase Cloud Messaging HTTP v1 (optional — push is skipped when unset).
+# Path to a Firebase service-account JSON. Upload your APNs key in Firebase for iOS delivery.
+FIREBASE_CREDENTIALS_FILE=
+
+# Mobile app version gate (served at /api/v1/app/config/)
+MOBILE_MIN_VERSION=1.0.0
+MOBILE_LATEST_VERSION=1.0.0
+```
+
+### Deployment — `infra/docker/.env`
+
+`infra/docker/docker-compose.yml` runs nginx (the only service with public ports), Next.js, Django,
+Celery, Postgres and Redis. Put TLS certificates in `infra/nginx/certs/` (`fullchain.pem`, `privkey.pem`).
+
+```env
+POSTGRES_PASSWORD=long-random-value
+REDIS_PASSWORD=long-random-value
+PUBLIC_API_URL=https://your-domain/api/v1
 ```
 
 ### Frontend — `.env.local`

@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from apps.core.responses import success_response, created_response, error_response
 from apps.accounts.models import UserRole
+from apps.core.scoping import scope_children, can_access_child
 from .models import Consultation, ConsultationMessage, ConsultationStatus
 from .serializers import ConsultationSerializer, ConsultationMessageSerializer
 
@@ -35,9 +36,8 @@ class ConsultationViewSet(viewsets.ModelViewSet):
         if user.role == UserRole.CHW:
             qs = qs.filter(opened_by=user)
         elif user.role in (UserRole.NURSE, UserRole.SUPERVISOR):
-            if user.camp_id:
-                qs = qs.filter(child__camp_id=user.camp_id)
-        elif user.role == UserRole.PARENT:
+            qs = scope_children(qs, user, prefix='child__')
+        elif user.role != UserRole.ADMIN:
             return qs.none()
         return qs.order_by('-created_at')
 
@@ -46,6 +46,9 @@ class ConsultationViewSet(viewsets.ModelViewSet):
             return error_response('Not permitted to open consultations.', 'FORBIDDEN', status_code=403)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        child = serializer.validated_data.get('child')
+        if child is not None and not can_access_child(request.user, child):
+            return error_response('Child not found.', 'NOT_FOUND', status_code=404)
         consultation = serializer.save(opened_by=request.user)
         return created_response(
             data=ConsultationSerializer(consultation).data,

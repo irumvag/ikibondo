@@ -165,7 +165,7 @@ export default function CHWConsultationsPage() {
             <>
               {openList.length > 0 && (
                 <>
-                  <p className="text-xs font-semibold uppercase tracking-wider px-4 pt-2 pb-1" style={{ color: 'var(--text-muted)' }}>
+                  <p className="text-xs font-semibold px-4 pt-2 pb-1" style={{ color: 'var(--text-muted)' }}>
                     Open · {openList.length}
                   </p>
                   {openList.map((c) => (
@@ -181,7 +181,7 @@ export default function CHWConsultationsPage() {
               )}
               {doneList.length > 0 && (
                 <>
-                  <p className="text-xs font-semibold uppercase tracking-wider px-4 pt-3 pb-1" style={{ color: 'var(--text-muted)' }}>
+                  <p className="text-xs font-semibold px-4 pt-3 pb-1" style={{ color: 'var(--text-muted)' }}>
                     Resolved · {doneList.length}
                   </p>
                   {doneList.map((c) => (

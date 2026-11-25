@@ -33,6 +33,7 @@ class NotificationStatus(models.TextChoices):
     PENDING = 'PENDING', 'Pending'
     SENT = 'SENT', 'Sent'
     FAILED = 'FAILED', 'Failed'
+    SKIPPED = 'SKIPPED', 'Skipped (no provider or device)'
 
 
 class Notification(BaseModel):
@@ -113,3 +114,23 @@ class BroadcastDelivery(BaseModel):
 
     def __str__(self):
         return f'BroadcastDelivery({self.recipient}, {self.status})'
+
+class DevicePlatform(models.TextChoices):
+    IOS = 'ios', 'iOS'
+    ANDROID = 'android', 'Android'
+    WEB = 'web', 'Web'
+
+
+class DeviceToken(BaseModel):
+    """
+    A Firebase Cloud Messaging registration token for one installed app.
+    The same token always belongs to whoever signed in on that device most recently.
+    """
+    user = models.ForeignKey('accounts.CustomUser', on_delete=models.CASCADE, related_name='device_tokens')
+    token = models.CharField(max_length=512, unique=True)
+    platform = models.CharField(max_length=10, choices=DevicePlatform.choices)
+    app_version = models.CharField(max_length=32, blank=True)
+    last_seen = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.platform} device for {self.user_id}'

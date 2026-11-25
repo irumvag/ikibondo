@@ -7,6 +7,7 @@ from apps.core.responses import success_response, created_response, error_respon
 from apps.accounts.models import UserRole
 from .models import Referral, ReferralStatus
 from .serializers import ReferralSerializer
+from apps.core.scoping import scope_children, can_access_child
 
 
 class ReferralViewSet(viewsets.ModelViewSet):
@@ -30,14 +31,8 @@ class ReferralViewSet(viewsets.ModelViewSet):
         qs = Referral.objects.select_related('child', 'referring_user')
         if user.role == UserRole.CHW:
             qs = qs.filter(referring_user=user)
-        elif user.role == UserRole.NURSE:
-            if user.camp_id:
-                qs = qs.filter(child__camp_id=user.camp_id)
-        elif user.role in (UserRole.SUPERVISOR, UserRole.ADMIN):
-            if user.camp_id and user.role == UserRole.SUPERVISOR:
-                qs = qs.filter(child__camp_id=user.camp_id)
-        elif user.role == UserRole.PARENT:
-            qs = qs.filter(child__guardian__user=user)
+        else:
+            qs = scope_children(qs, user, prefix='child__')
         return qs.order_by('-referred_at')
 
     def create(self, request, *args, **kwargs):
@@ -45,15 +40,24 @@ class ReferralViewSet(viewsets.ModelViewSet):
             return error_response('Parents cannot create referrals.', 'FORBIDDEN', status_code=403)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        if not can_access_child(request.user, serializer.validated_data['child']):
+            return error_response('Child not found.', 'NOT_FOUND', status_code=404)
         referral = serializer.save(referring_user=request.user)
         return created_response(
             data=ReferralSerializer(referral).data,
             message='Referral created.',
         )
 
+    def update(self, request, *args, **kwargs):
+        if request.user.role == UserRole.PARENT:
+            return error_response('Parents cannot edit referrals.', 'FORBIDDEN', status_code=403)
+        return super().update(request, *args, **kwargs)
+
     @action(detail=True, methods=['post'], url_path='complete')
     def complete(self, request, pk=None):
         """POST /referrals/<id>/complete/ — mark referral completed with outcome."""
+        if request.user.role not in (UserRole.NURSE, UserRole.SUPERVISOR, UserRole.ADMIN):
+            return error_response('Only nurses and above may complete referrals.', 'FORBIDDEN', status_code=403)
         referral = self.get_object()
         if referral.status == ReferralStatus.COMPLETED:
             return error_response('Already completed.', 'INVALID_STATE')

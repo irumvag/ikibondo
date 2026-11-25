@@ -103,7 +103,7 @@ export default function SystemLogsPage() {
                 {['Timestamp', 'User', 'Action', 'Status', 'Method', 'Path', 'IP', 'Body'].map((h) => (
                   <th
                     key={h}
-                    className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider whitespace-nowrap"
+                    className="text-left px-4 py-2.5 text-xs font-semibold whitespace-nowrap"
                     style={{ color: 'var(--text-muted)' }}
                   >
                     {h}

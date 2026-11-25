@@ -52,36 +52,31 @@ export function KPICard({
 
   return (
     <div
-      className={`flex flex-col gap-3 p-5 rounded-2xl ${className}`}
+      className={`flex flex-col gap-3 p-5 rounded-[var(--radius-sm)] ${className}`}
       style={{
         backgroundColor: 'var(--bg-elev)',
         border: '1px solid var(--border)',
-        boxShadow: 'var(--shadow-sm)',
+        // The left rule carries meaning: it is coloured only when the figure needs attention
+        borderLeft: `4px solid ${variant === 'default' ? 'var(--rule)' : accent}`,
       }}
     >
-      {/* Top row: icon + label */}
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-          {label}
-        </p>
+      {/* Label, with the icon inline as a small identifier rather than a decorative tile */}
+      <p className="flex items-center gap-2 text-sm font-bold" style={{ color: 'var(--text-muted)' }}>
         {icon && (
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{ backgroundColor: 'var(--bg-sand)', color: accent }}
-            aria-hidden="true"
-          >
+          <span className="shrink-0 [&>svg]:w-4 [&>svg]:h-4" style={{ color: accent }} aria-hidden="true">
             {icon}
-          </div>
+          </span>
         )}
-      </div>
+        {label}
+      </p>
 
       {/* Value */}
       {isLoading ? (
-        <Skeleton className="h-9 w-24 rounded-lg" />
+        <Skeleton className="h-10 w-24" />
       ) : (
         <p
-          className="text-3xl font-bold leading-none tracking-tight"
-          style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
+          className="text-4xl font-extrabold leading-none tabular-nums"
+          style={{ color: 'var(--ink)', letterSpacing: '-0.02em' }}
         >
           {value}
         </p>

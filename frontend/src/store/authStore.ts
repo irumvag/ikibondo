@@ -28,6 +28,8 @@ interface AuthState {
   accessToken: string | null;
   isLoading: boolean;
   setAuth: (user: AuthUser, accessToken: string, refreshToken: string) => void;
+  /** Replace the token pair without touching the user (e.g. after a password change revokes old sessions). */
+  setTokens: (accessToken: string, refreshToken: string) => void;
   clearAuth: () => void;
   setUser: (user: AuthUser) => void;
   setLoading: (v: boolean) => void;
@@ -69,6 +71,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user, accessToken, isLoading: false });
   },
 
+  setTokens: (accessToken, refreshToken) => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('access_token', accessToken);
+      localStorage.setItem('access_token', accessToken);
+      localStorage.setItem('refresh_token', refreshToken);
+    }
+    set({ accessToken });
+  },
+
   clearAuth: () => {
     if (typeof window !== 'undefined') {
       // Notify the service worker to clear its cache so that a subsequent user
@@ -79,6 +90,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       sessionStorage.clear();
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      // Per-person data a shared phone must not hand to the next user.
+      // The unsynced visit queue is kept: those records exist nowhere else and are tagged to their owner.
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith('ikibondo.caseload.') || key === 'ikibondo.local_notifs' || key === 'ikibondo.ble_devices') {
+          localStorage.removeItem(key);
+        }
+      }
       clearRoleCookie();
       clearMustChangePwCookie();
     }

@@ -56,7 +56,7 @@ class VaccinationRecordSerializer(serializers.ModelSerializer):
             'dropout_probability', 'dropout_risk_tier',
             'is_overdue', 'notes', 'created_at',
         ]
-        read_only_fields = ['id', 'dropout_probability', 'dropout_risk_tier', 'created_at']
+        read_only_fields = ['id', 'administered_by', 'dropout_probability', 'dropout_risk_tier', 'created_at']
         extra_kwargs = {
             'child': {'required': True},
             'vaccine': {'required': True},

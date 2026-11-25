@@ -46,3 +46,13 @@ export async function registerUser(
   const { data } = await apiClient.post('/auth/register/', payload);
   return unwrap(data);
 }
+
+// ── Forgotten password (one-time code) ─────────────────────────────────────────
+
+export async function requestPasswordReset(identifier: string): Promise<void> {
+  await apiClient.post('/auth/password-reset/request/', { identifier });
+}
+
+export async function confirmPasswordReset(identifier: string, code: string, newPassword: string): Promise<void> {
+  await apiClient.post('/auth/password-reset/confirm/', { identifier, code, new_password: newPassword });
+}

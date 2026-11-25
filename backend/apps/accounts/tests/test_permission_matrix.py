@@ -7,10 +7,10 @@ For each (endpoint, method) combination we specify which roles are FORBIDDEN
 but the empty/invalid body was rejected by validation.
 """
 import pytest
+from apps.camps.tests.factories import CampFactory
 from rest_framework.test import APIClient
 
 from apps.accounts.models import UserRole
-from apps.camps.tests.factories import CampFactory
 from .factories import UserFactory, NurseFactory, SupervisorFactory, AdminUserFactory
 
 

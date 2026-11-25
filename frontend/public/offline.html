@@ -3,21 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Offline — Ikibondo</title>
+  <title>No connection · Ikibondo</title>
   <style>
-    body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f9f6f0; color: #1a1a1a; }
-    .box { text-align: center; padding: 2rem; max-width: 360px; }
-    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-    p { color: #666; margin-bottom: 1.5rem; }
-    button { padding: 0.75rem 1.5rem; background: #1a1a1a; color: #fff; border: none; border-radius: 0.75rem; cursor: pointer; font-size: 1rem; }
-    button:hover { opacity: 0.85; }
+    :root { --bg: #F1F4F3; --ink: #16324F; --text: #18222C; --muted: #4D5B66; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #0E1620; --ink: #DCE7F3; --text: #E6ECF2; --muted: #9DAEBD; } }
+    body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center;
+           min-height: 100vh; margin: 0; padding: 0 16px; background: var(--bg); color: var(--text); }
+    .box { max-width: 380px; }
+    h1 { font-size: 1.6rem; font-weight: 800; color: var(--ink); margin: 0 0 .5rem; letter-spacing: -0.02em; }
+    p { color: var(--muted); line-height: 1.55; margin: 0 0 1rem; }
+    a, button { display: inline-block; padding: .75rem 1.25rem; border-radius: 8px; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; }
+    button { background: var(--ink); color: var(--bg); border: none; margin-right: .5rem; }
+    a { color: var(--ink); border: 2px solid var(--ink); }
   </style>
 </head>
 <body>
   <div class="box">
-    <h1>You're offline</h1>
-    <p>Ikibondo needs a connection for this page. Data recorded offline will sync when you reconnect.</p>
+    <h1>No connection</h1>
+    <p>This page needs the internet. You can still log visits from your caseload: they are saved on this phone and upload when the connection returns.</p>
     <button onclick="window.location.reload()">Try again</button>
+    <a href="/chw/visit">Open caseload</a>
   </div>
 </body>
 </html>

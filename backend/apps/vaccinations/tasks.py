@@ -67,16 +67,35 @@ def _days_since_last_visit(child) -> int:
     return (timezone.now().date() - last.measurement_date).days
 
 
+# Used only when the real value isn't recorded (the averages the model was trained around)
+DEFAULT_DISTANCE_KM = 3.5
+DEFAULT_GUARDIAN_AGE = 28
+
+
+def _haversine_km(lat1, lon1, lat2, lon2) -> float:
+    from math import asin, cos, radians, sin, sqrt
+    lat1, lon1, lat2, lon2 = map(lambda v: radians(float(v)), (lat1, lon1, lat2, lon2))
+    a = sin((lat2 - lat1) / 2) ** 2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2) ** 2
+    return 2 * 6371.0 * asin(sqrt(a))
+
+
 def _estimate_distance(child) -> float:
-    """Estimate distance to health facility. Default 3.5km (camp average)."""
-    # TODO: Replace with actual distance from Guardian/Camp data when available
-    return 3.5
+    """Distance from the child's zone centre to the camp's health post, in km."""
+    zone, camp = child.zone, child.camp
+    coords = [getattr(zone, 'latitude', None), getattr(zone, 'longitude', None),
+              getattr(camp, 'latitude', None), getattr(camp, 'longitude', None)]
+    if any(c is None for c in coords):
+        return DEFAULT_DISTANCE_KM
+    return round(_haversine_km(*coords), 2)
 
 
 def _guardian_age(child) -> int:
-    """Get guardian age estimate. Default 28 if not available."""
-    # TODO: Add date_of_birth to Guardian model for accurate calculation
-    return 28
+    """Guardian's age from their year of birth."""
+    from django.utils import timezone
+    year = getattr(child.guardian, 'year_of_birth', None) if child.guardian_id else None
+    if not year:
+        return DEFAULT_GUARDIAN_AGE
+    return max(12, timezone.now().year - year)
 
 
 def _num_siblings(child) -> int:

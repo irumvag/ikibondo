@@ -183,25 +183,25 @@ export default function ReportsPage() {
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
         >
           <div>
-            <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Camp</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Camp</p>
             <p className="font-bold text-lg" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>{camp.name}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Code</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Code</p>
             <p className="font-mono font-semibold" style={{ color: 'var(--ink)' }}>{camp.code}</p>
           </div>
           {camp.district && (
             <div>
-              <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>District</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>District</p>
               <p className="font-semibold" style={{ color: 'var(--ink)' }}>{camp.district}</p>
             </div>
           )}
           <div>
-            <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Children</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Children</p>
             <p className="font-semibold" style={{ color: 'var(--ink)' }}>{camp.active_children_count.toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Status</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Status</p>
             <Badge variant={camp.status === 'ACTIVE' ? 'success' : 'default'}>{camp.status}</Badge>
           </div>
         </div>

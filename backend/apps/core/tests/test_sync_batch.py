@@ -31,8 +31,16 @@ def chw(db, camp):
 
 
 @pytest.fixture
-def child(db, camp):
-    return ChildFactory(camp=camp)
+def child(db, camp, chw):
+    child = ChildFactory(camp=camp)
+    child.guardian.assigned_chw = chw
+    child.guardian.save(update_fields=['assigned_chw'])
+    return child
+
+
+@pytest.fixture
+def nurse(db, camp):
+    return UserFactory(role=UserRole.NURSE, camp=camp)
 
 
 def _op(op_name, payload, client_id=None):
@@ -85,8 +93,7 @@ class TestCreateVisitOp:
 
 
 class TestRegisterChildOp:
-    def test_nurse_can_register_child(self, client, camp):
-        nurse = UserFactory(role=UserRole.NURSE, camp=camp)
+    def test_registers_child(self, client, nurse, camp):
         client.force_authenticate(nurse)
         payload = {
             'full_name': 'Test Child',
@@ -104,38 +111,25 @@ class TestRegisterChildOp:
         assert result['status'] == 'ok'
         assert result['data']['full_name'] == 'Test Child'
 
-    def test_chw_cannot_register_child(self, client, chw, camp):
-        """CHWs must not be able to register children via batch sync (security fix)."""
-        client.force_authenticate(chw)
-        payload = {
-            'full_name': 'Unauthorized Child',
-            'date_of_birth': '2024-01-01',
-            'sex': 'M',
-            'camp': str(camp.id),
-            'guardian': {
-                'full_name': 'Some Guardian',
-                'phone_number': '+250789000002',
-                'relationship': 'mother',
-            },
-        }
-        res = client.post(BATCH_URL, {'operations': [_op('register_child', payload)]}, format='json')
-        result = res.json()['results'][0]
-        assert result['status'] == 'error'
-        assert 'nurses and supervisors' in result['error'].lower()
-
-    def test_invalid_child_payload_returns_error(self, client, camp):
-        nurse = UserFactory(role=UserRole.NURSE, camp=camp)
+    def test_invalid_child_payload_returns_error(self, client, nurse):
         client.force_authenticate(nurse)
         res = client.post(BATCH_URL, {'operations': [_op('register_child', {})]}, format='json')
         result = res.json()['results'][0]
         assert result['status'] == 'error'
 
+    def test_chw_cannot_register_child(self, client, chw, camp):
+        # Mirrors the REST rule: CHWs may not register children, even via offline sync
+        client.force_authenticate(chw)
+        payload = {'full_name': 'X', 'date_of_birth': '2024-01-01', 'sex': 'F', 'camp': str(camp.id)}
+        res = client.post(BATCH_URL, {'operations': [_op('register_child', payload)]}, format='json')
+        assert res.json()['results'][0]['status'] == 'forbidden'
+
 
 class TestAdministerVaccineOp:
-    def test_administers_vaccine(self, db, client, chw, child):
+    def test_administers_vaccine(self, db, client, nurse, child):
         vaccine = VaccineFactory()
         record = VaccinationRecordFactory(child=child, vaccine=vaccine, status=DoseStatus.SCHEDULED)
-        client.force_authenticate(chw)
+        client.force_authenticate(nurse)
         payload = {'record_id': str(record.id), 'administered_date': str(date.today())}
         res = client.post(BATCH_URL, {'operations': [_op('administer_vaccine', payload)]}, format='json')
         result = res.json()['results'][0]
@@ -143,10 +137,29 @@ class TestAdministerVaccineOp:
         record.refresh_from_db()
         assert record.status == DoseStatus.DONE
 
-    def test_already_done_returns_conflict(self, db, client, chw, child):
+    def test_chw_cannot_administer_vaccine(self, db, client, chw, child):
+        record = VaccinationRecordFactory(child=child, vaccine=VaccineFactory(), status=DoseStatus.SCHEDULED)
+        client.force_authenticate(chw)
+        payload = {'record_id': str(record.id)}
+        res = client.post(BATCH_URL, {'operations': [_op('administer_vaccine', payload)]}, format='json')
+        assert res.json()['results'][0]['status'] == 'forbidden'
+        record.refresh_from_db()
+        assert record.status == DoseStatus.SCHEDULED
+
+    def test_nurse_other_camp_cannot_administer(self, db, client, child):
+        outsider = UserFactory(role=UserRole.NURSE, camp=CampFactory(name='Elsewhere'))
+        record = VaccinationRecordFactory(child=child, vaccine=VaccineFactory(), status=DoseStatus.SCHEDULED)
+        client.force_authenticate(outsider)
+        res = client.post(BATCH_URL, {'operations': [_op('administer_vaccine', {'record_id': str(record.id)})]},
+                          format='json')
+        assert res.json()['results'][0]['status'] == 'error'
+        record.refresh_from_db()
+        assert record.status == DoseStatus.SCHEDULED
+
+    def test_already_done_returns_conflict(self, db, client, nurse, child):
         vaccine = VaccineFactory()
         record = VaccinationRecordFactory(child=child, vaccine=vaccine, status=DoseStatus.DONE)
-        client.force_authenticate(chw)
+        client.force_authenticate(nurse)
         payload = {'record_id': str(record.id), 'administered_date': str(date.today())}
         res = client.post(BATCH_URL, {'operations': [_op('administer_vaccine', payload)]}, format='json')
         result = res.json()['results'][0]
@@ -175,6 +188,25 @@ class TestIdempotency:
         from apps.health_records.models import HealthRecord
         count = HealthRecord.objects.filter(child=child).count()
         assert count == 1  # only one record created despite two submissions
+
+    def test_other_user_cannot_replay_client_id(self, client, chw, child, camp):
+        client.force_authenticate(chw)
+        client_id = uuid.uuid4()
+        payload = {'child': str(child.id), 'measurement_date': str(date.today()),
+                   'weight_kg': '8.5', 'height_cm': '72.0'}
+        client.post(BATCH_URL, {'operations': [_op('create_visit', payload, client_id=client_id)]}, format='json')
+        other = UserFactory(role=UserRole.CHW, camp=camp)
+        client.force_authenticate(other)
+        res = client.post(BATCH_URL, {'operations': [_op('create_visit', {}, client_id=client_id)]}, format='json')
+        result = res.json()['results'][0]
+        assert result['status'] == 'error'
+        assert 'data' not in result
+
+    def test_batch_size_capped(self, client, chw):
+        client.force_authenticate(chw)
+        ops = [_op('unknown_op', {}) for _ in range(201)]
+        res = client.post(BATCH_URL, {'operations': ops}, format='json')
+        assert res.status_code == 400
 
     def test_sync_operation_row_created(self, client, chw, child):
         client.force_authenticate(chw)
@@ -217,3 +249,50 @@ class TestMixedBatch:
         res = client.post(BATCH_URL, {'operations': [op]}, format='json')
         result = res.json()['results'][0]
         assert result['status'] == 'error'
+
+
+class TestRecordAttendanceOp:
+    """Offline clinic-session mode: nurses record attendance with no signal, synced later."""
+
+    def _session(self, camp, nurse, vaccine, closed=False):
+        from apps.vaccinations.models import ClinicSession, ClinicSessionStatus
+        return ClinicSession.objects.create(
+            camp=camp, vaccine=vaccine, session_date=date.today(), opened_by=nurse,
+            status=ClinicSessionStatus.CLOSED if closed else ClinicSessionStatus.OPEN,
+        )
+
+    def test_marks_dose_done(self, db, client, nurse, child, camp):
+        vaccine = VaccineFactory()
+        record = VaccinationRecordFactory(child=child, vaccine=vaccine, status=DoseStatus.SCHEDULED)
+        session = self._session(camp, nurse, vaccine)
+        client.force_authenticate(nurse)
+        payload = {'session': str(session.id), 'child': str(child.id), 'status': 'DONE', 'batch_number': 'B1'}
+        result = client.post(BATCH_URL, {'operations': [_op('record_attendance', payload)]}, format='json').json()['results'][0]
+        assert result['status'] == 'ok'
+        record.refresh_from_db()
+        assert record.status == DoseStatus.DONE and record.batch_number == 'B1'
+
+    def test_other_camp_session_rejected(self, db, client, child, camp):
+        outsider = UserFactory(role=UserRole.NURSE, camp=CampFactory(name='Far'))
+        vaccine = VaccineFactory()
+        session = self._session(camp, UserFactory(role=UserRole.NURSE, camp=camp), vaccine)
+        client.force_authenticate(outsider)
+        payload = {'session': str(session.id), 'child': str(child.id)}
+        result = client.post(BATCH_URL, {'operations': [_op('record_attendance', payload)]}, format='json').json()['results'][0]
+        assert result['status'] == 'error'
+
+    def test_closed_session_rejected(self, db, client, nurse, child, camp):
+        vaccine = VaccineFactory()
+        session = self._session(camp, nurse, vaccine, closed=True)
+        client.force_authenticate(nurse)
+        payload = {'session': str(session.id), 'child': str(child.id)}
+        result = client.post(BATCH_URL, {'operations': [_op('record_attendance', payload)]}, format='json').json()['results'][0]
+        assert result['status'] == 'error'
+
+    def test_chw_forbidden(self, db, client, chw, child, camp, nurse):
+        vaccine = VaccineFactory()
+        session = self._session(camp, nurse, vaccine)
+        client.force_authenticate(chw)
+        payload = {'session': str(session.id), 'child': str(child.id)}
+        result = client.post(BATCH_URL, {'operations': [_op('record_attendance', payload)]}, format='json').json()['results'][0]
+        assert result['status'] == 'forbidden'

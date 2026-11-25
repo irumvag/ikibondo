@@ -261,7 +261,7 @@ export default function ProfilePage() {
 
         {/* Account info */}
         <div className="rounded-2xl border p-5 flex flex-col gap-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Account info</p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Account info</p>
           {[
             ['Email',  user?.email        ?? '—'],
             ['Phone',  user?.phone_number ?? 'Not set'],

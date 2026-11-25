@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 
 logger = logging.getLogger(__name__)
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
@@ -38,6 +38,7 @@ from .serializers import (
 )
 from .permissions import IsAdminUser, IsSupervisorOrAdmin, IsStaffCreator, IsStaffCreatorOrNurse, IsNurseOrSupervisorOrAdmin
 from .models import CustomUser, UserRole, ConsentRecord
+from .security import revoke_user_tokens
 
 
 class LoginView(TokenObtainPairView):
@@ -46,6 +47,18 @@ class LoginView(TokenObtainPairView):
     throttle_classes = [LoginThrottle]
 
     def post(self, request, *args, **kwargs):
+        from rest_framework.exceptions import AuthenticationFailed, ValidationError
+        from .security import is_locked_out, record_failed_login, clear_failed_logins
+
+        login_id = request.data.get('identifier') or request.data.get('email') or ''
+        if is_locked_out(login_id):
+            return error_response(
+                'Too many failed sign-in attempts. Wait 15 minutes and try again, '
+                'or ask your supervisor to reset your password.',
+                'LOCKED_OUT',
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
         # Support both the standard email/password and identifier/password flows.
         # If 'identifier' is in the payload, authenticate via PhoneOrEmailBackend first.
         if 'identifier' in request.data:
@@ -53,7 +66,11 @@ class LoginView(TokenObtainPairView):
                 data=request.data, context={'request': request}
             )
             if not auth_serializer.is_valid():
-                return error_response(str(auth_serializer.errors), 'AUTH_FAILED', status_code=status.HTTP_401_UNAUTHORIZED)
+                record_failed_login(login_id)
+                errors = auth_serializer.errors
+                message = (errors.get('non_field_errors') or ['Enter your email or phone number and password.'])[0]
+                return error_response(str(message), 'AUTH_FAILED', status_code=status.HTTP_401_UNAUTHORIZED)
+            clear_failed_logins(login_id)
             user = auth_serializer.validated_data['user']
             token = CustomTokenObtainPairSerializer.get_token(user)
             data = {
@@ -63,7 +80,12 @@ class LoginView(TokenObtainPairView):
             }
             return success_response(data=data, message='Login successful.')
 
-        response = super().post(request, *args, **kwargs)
+        try:
+            response = super().post(request, *args, **kwargs)
+        except (AuthenticationFailed, ValidationError):
+            record_failed_login(login_id)
+            raise
+        clear_failed_logins(login_id)
         return success_response(data=response.data, message='Login successful.')
 
 
@@ -239,8 +261,12 @@ def create_user_view(request):
             qs = CustomUser.objects.filter(is_active=True).order_by('-date_joined')
         if request.user.role == UserRole.NURSE:
             # Nurses see PARENT accounts in their camp
+            if not request.user.camp_id:
+                return success_response(data=[])
             qs = qs.filter(role=UserRole.PARENT, camp=request.user.camp)
-        elif request.user.role == UserRole.SUPERVISOR and request.user.camp_id:
+        elif request.user.role == UserRole.SUPERVISOR:
+            if not request.user.camp_id:
+                return success_response(data=[])
             qs = qs.filter(camp=request.user.camp)
         role = request.query_params.get('role')
         if role:
@@ -267,9 +293,20 @@ def create_user_view(request):
                 'ROLE_FORBIDDEN',
                 status_code=status.HTTP_403_FORBIDDEN,
             )
+        if not request.user.camp_id:
+            return error_response('Your account has no camp assigned. Contact an admin.',
+                                  'FORBIDDEN', status_code=status.HTTP_403_FORBIDDEN)
         data = request.data.copy()
-        if request.user.camp_id:
-            data['camp'] = str(request.user.camp_id)
+        data['camp'] = str(request.user.camp_id)
+        # A nurse may only link a guardian whose children are in her camp
+        guardian_id = data.get('guardian_id')
+        if guardian_id:
+            from apps.children.models import Guardian
+            in_camp = Guardian.objects.filter(
+                id=guardian_id, children__camp_id=request.user.camp_id,
+            ).exists()
+            if not in_camp:
+                return error_response('Guardian not found.', 'NOT_FOUND', status_code=status.HTTP_404_NOT_FOUND)
         serializer = UserCreateSerializer(data=data)
         if serializer.is_valid():
             user = serializer.save(is_approved=True)
@@ -400,10 +437,24 @@ def change_password_view(request):
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
+    from django.contrib.auth.password_validation import validate_password
+    from django.core.exceptions import ValidationError as DjangoValidationError
+    try:
+        validate_password(serializer.validated_data['new_password'], user=user)
+    except DjangoValidationError as exc:
+        return error_response(' '.join(exc.messages), 'WEAK_PASSWORD')
+
     user.set_password(serializer.validated_data['new_password'])
     user.must_change_password = False
     user.save(update_fields=['password', 'must_change_password', 'updated_at'])
-    return success_response(message='Password changed successfully.')
+
+    # Sign out every other session, then hand this one a fresh pair so the user stays signed in
+    revoke_user_tokens(user)
+    token = CustomTokenObtainPairSerializer.get_token(user)
+    return success_response(
+        data={'access': str(token.access_token), 'refresh': str(token)},
+        message='Password changed successfully. Other devices have been signed out.',
+    )
 
 
 @extend_schema(exclude=True)
@@ -428,6 +479,7 @@ def manage_user_view(request, user_id):
             )
         user.is_active = False
         user.save(update_fields=['is_active', 'updated_at'])
+        revoke_user_tokens(user)
         return success_response(message=f'{user.full_name} has been deactivated.')
 
     serializer = UserAdminUpdateSerializer(user, data=request.data, partial=True)
@@ -509,6 +561,7 @@ def suspend_user_view(request, user_id):
         target.suspension_reason = request.data.get('reason', '')
         target.suspended_by = request.user
         target.is_active = False
+        revoke_user_tokens(target)
     else:
         target.suspended_at = None
         target.suspension_reason = ''
@@ -545,6 +598,7 @@ def bulk_suspend_view(request):
                 target.suspension_reason = reason
                 target.suspended_by = request.user
                 target.is_active = False
+                revoke_user_tokens(target)
             else:
                 target.suspended_at = None
                 target.suspension_reason = ''
@@ -647,3 +701,50 @@ def _send_account_approved_email(user):
         )
     except Exception:
         pass
+
+
+# ── Forgotten password ────────────────────────────────────────────────────────
+
+class PasswordResetRequestThrottle(ScopedRateThrottle):
+    scope = 'auth_otp'
+
+
+class PasswordResetConfirmThrottle(ScopedRateThrottle):
+    scope = 'auth_otp_confirm'
+
+
+@extend_schema(exclude=True)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([PasswordResetRequestThrottle])
+def password_reset_request_view(request):
+    """
+    POST /api/v1/auth/password-reset/request/  Body: {"identifier": "<email or phone>"}
+    Always answers the same way so the endpoint cannot be used to discover accounts.
+    """
+    from .password_reset import request_reset
+    request_reset(request.data.get('identifier', ''))
+    return success_response(
+        message='If an account matches, a reset code has been sent. It expires in 10 minutes.',
+    )
+
+
+@extend_schema(exclude=True)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([PasswordResetConfirmThrottle])
+def password_reset_confirm_view(request):
+    """
+    POST /api/v1/auth/password-reset/confirm/
+    Body: {"identifier": "...", "code": "123456", "new_password": "..."}
+    """
+    from .password_reset import ResetError, confirm_reset
+    try:
+        confirm_reset(
+            request.data.get('identifier', ''),
+            request.data.get('code', ''),
+            request.data.get('new_password', ''),
+        )
+    except ResetError as exc:
+        return error_response(str(exc), 'RESET_FAILED')
+    return success_response(message='Password updated. Sign in with your new password.')

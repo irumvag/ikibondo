@@ -99,7 +99,7 @@ def dhis2_push_high_risk(self, health_record_id: str):
     pushed = 0
     for vr in VaccinationRecord.objects.filter(
         child=child,
-        status='ADMINISTERED',
+        status='DONE',
         dhis2_event_uid__isnull=True,
     ).select_related('vaccine')[:20]:
         result = _push_vax(vr)

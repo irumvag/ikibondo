@@ -103,7 +103,7 @@ function ShapPanel({ record, onClose }: { record: HealthRecordDetail; onClose: (
             ['Confidence', record.ml_confidence ? `${Math.round(parseFloat(record.ml_confidence) * 100)}%` : '—'],
           ].map(([label, val]) => (
             <div key={label as string}>
-              <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{label}</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{label}</p>
               <div className="text-sm font-semibold mt-0.5" style={{ color: 'var(--ink)' }}>{val}</div>
             </div>
           ))}
@@ -111,7 +111,7 @@ function ShapPanel({ record, onClose }: { record: HealthRecordDetail; onClose: (
 
         {/* SHAP bars */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
             Feature contributions (SHAP)
           </p>
           {entries.length > 0 ? (
@@ -148,7 +148,7 @@ function ShapPanel({ record, onClose }: { record: HealthRecordDetail; onClose: (
         {/* Symptom flags */}
         {record.symptom_flags?.length > 0 && (
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>
               Symptom flags
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -162,7 +162,7 @@ function ShapPanel({ record, onClose }: { record: HealthRecordDetail; onClose: (
         {/* Z-scores */}
         {(record.weight_for_height_z || record.height_for_age_z || record.weight_for_age_z) && (
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>
               Z-scores
             </p>
             <div className="flex flex-col gap-1">

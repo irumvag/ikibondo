@@ -49,7 +49,7 @@ export function LoginForm() {
       const e = err as {
         response?: {
           data?: {
-            error?: { detail?: string };
+            error?: string | { detail?: string };
             detail?: string;
             non_field_errors?: string[];
           };
@@ -57,7 +57,7 @@ export function LoginForm() {
       };
       const d = e?.response?.data;
       const msg =
-        d?.error?.detail ??
+        (typeof d?.error === 'string' ? d.error : d?.error?.detail) ??
         d?.detail ??
         d?.non_field_errors?.[0] ??
         'Invalid credentials. Please try again.';
@@ -129,6 +129,14 @@ export function LoginForm() {
             {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
+
+        <Link
+          href="/forgot-password"
+          className="self-end -mt-2 text-sm font-bold underline-offset-2 hover:underline"
+          style={{ color: 'var(--ink)' }}
+        >
+          Forgot password?
+        </Link>
 
         <Button
           type="submit"

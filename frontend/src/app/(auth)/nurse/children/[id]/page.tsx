@@ -653,7 +653,7 @@ function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | 
       {/* Recent runs */}
       {runHistory.length > 0 && (
         <div className="flex flex-col gap-1">
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Recent runs</p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Recent runs</p>
           <div className="flex flex-wrap gap-2">
             {runHistory.map((entry, i) => (
               <span
@@ -676,7 +676,7 @@ function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | 
       {riskError && <p className="text-sm" style={{ color: 'var(--danger)' }}>{riskError}</p>}
       {riskResult && (
         <div className="rounded-xl border p-5 flex flex-col gap-4" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Risk assessment</p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Risk assessment</p>
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <Badge variant={riskResult.risk_level === 'HIGH' ? 'danger' : riskResult.risk_level === 'MEDIUM' ? 'warn' : 'success'} className="text-sm px-3 py-1">
@@ -711,7 +711,7 @@ function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | 
       {growthResult && (
         <div className="rounded-xl border p-5 flex flex-col gap-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Growth forecast</p>
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Growth forecast</p>
             {growthResult.risk_flag && (
               <Badge variant="warn">Growth risk flagged</Badge>
             )}
@@ -746,7 +746,7 @@ function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | 
       {vaxError && <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{vaxError}</p>}
       {vaxResult && (
         <div className="rounded-xl border p-5 flex flex-col gap-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Vaccination dropout</p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Vaccination dropout</p>
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex flex-col gap-1">
               <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Dropout probability</span>
@@ -1006,7 +1006,7 @@ function VaccinationsTab({
         <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}>
           {/* Header */}
           <div
-            className="grid text-xs font-semibold uppercase tracking-wider px-4 py-2.5 border-b"
+            className="grid text-xs font-semibold px-4 py-2.5 border-b"
             style={{
               gridTemplateColumns: '1fr 90px 100px 80px 1fr',
               color: 'var(--text-muted)',
@@ -1668,7 +1668,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
             {/* Details */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                   Parent / Guardian
                 </span>
                 {bool('guardian_has_account') && (
@@ -1717,7 +1717,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
           className="rounded-2xl border px-5 py-4 no-print"
           style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}
         >
-          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
             Neonatal details
           </p>
           <div className="flex flex-wrap gap-6">
@@ -1833,7 +1833,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* ── Danger zone ─── */}
       <div className="no-print mt-4 flex flex-col gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
           Danger zone
         </p>
         <DeletePanel

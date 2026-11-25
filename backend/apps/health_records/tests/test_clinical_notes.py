@@ -226,8 +226,9 @@ class TestClinicalNoteStandaloneViewSet:
         assert resp.data['data']['content'] == 'Updated content'
 
     def test_other_nurse_cannot_patch_note(self, client, health_record):
-        author  = NurseFactory(email='nurse_a@test.rw')
-        intruder = NurseFactory(email='nurse_b@test.rw')
+        camp = health_record.child.camp
+        author  = NurseFactory(email='nurse_a@test.rw', camp=camp)
+        intruder = NurseFactory(email='nurse_b@test.rw', camp=camp)
         note = ClinicalNoteFactory(author=author, health_record=health_record)
         client.force_authenticate(user=intruder)
         resp = client.patch(self._note_url(note.id), {'content': 'Hijacked'}, format='json')
@@ -248,8 +249,9 @@ class TestClinicalNoteStandaloneViewSet:
         assert note.is_active is False
 
     def test_other_user_cannot_delete_note(self, client, health_record):
-        author   = NurseFactory(email='owner@test.rw')
-        intruder = NurseFactory(email='thief@test.rw')
+        camp = health_record.child.camp
+        author   = NurseFactory(email='owner@test.rw', camp=camp)
+        intruder = NurseFactory(email='thief@test.rw', camp=camp)
         note = ClinicalNoteFactory(author=author, health_record=health_record)
         client.force_authenticate(user=intruder)
         resp = client.delete(self._note_url(note.id))
@@ -272,3 +274,14 @@ class TestClinicalNoteStandaloneViewSet:
         notes = resp.data['data']
         assert notes[0]['is_pinned'] is True
         assert notes[0]['content'] == 'Pinned note'
+
+
+@pytest.mark.django_db
+def test_nurse_in_other_camp_cannot_read_note(client, health_record):
+    # Regression: the standalone note endpoint used to return any note by id
+    author = NurseFactory(email='author_x@test.rw', camp=health_record.child.camp)
+    outsider = NurseFactory(email='outsider_x@test.rw', camp=CampFactory(name='OtherCamp'))
+    note = ClinicalNoteFactory(author=author, health_record=health_record)
+    client.force_authenticate(user=outsider)
+    resp = client.get(reverse('clinical-note-detail', kwargs={'pk': note.id}))
+    assert resp.status_code == 404

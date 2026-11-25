@@ -203,10 +203,10 @@ function NavLeafItem({
         aria-current={active ? 'page' : undefined}
         title={collapsed ? label : undefined}
         className={[
-          'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors',
+          'flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] text-sm transition-colors border-l-[3px]',
           active
-            ? 'text-[var(--ink)] bg-[var(--bg-sand)]'
-            : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-sand)]',
+            ? 'font-bold text-[var(--ink)] bg-[var(--bg-sand)] border-[var(--ink)]'
+            : 'font-medium border-transparent text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-sand)]',
         ].join(' ')}
       >
         <Icon
@@ -218,13 +218,6 @@ function NavLeafItem({
         {!collapsed && (
           <>
             <span className="flex-1 truncate">{label}</span>
-            {active && (
-              <span
-                className="w-1.5 h-1.5 rounded-full shrink-0"
-                style={{ backgroundColor: 'var(--ink)' }}
-                aria-hidden="true"
-              />
-            )}
           </>
         )}
       </Link>

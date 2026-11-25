@@ -87,7 +87,7 @@ export default function NotificationPreferencesPage() {
       {/* Category toggles */}
       <div className="rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_60px_60px] gap-2 px-4 py-2.5 bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        <div className="grid grid-cols-[1fr_60px_60px] gap-2 px-4 py-2.5 bg-gray-50 text-xs font-semibold text-gray-500">
           <span>Alert type</span>
           <span className="text-center">SMS</span>
           <span className="text-center">Push</span>

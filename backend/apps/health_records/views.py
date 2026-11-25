@@ -10,8 +10,37 @@ from apps.core.responses import success_response, created_response, error_respon
 from apps.accounts.models import UserRole
 from .models import HealthRecord, ClinicalNote, AmendmentLog
 from .serializers import HealthRecordSerializer, ClinicalNoteSerializer
+from apps.core.scoping import scope_children, can_access_child
 
 logger = logging.getLogger(__name__)
+
+
+def run_risk_prediction(record):
+    """Build feature vector, call prediction service, persist results on record."""
+    try:
+        from apps.ml_engine.features import build_feature_vector
+        from apps.ml_engine.prediction_service import PredictionService
+
+        features = build_feature_vector(record)
+        if features is None:
+            return
+
+        result = PredictionService.predict(features)
+        if result is None:
+            # Model not loaded yet — keep risk_level null, schedule async fallback
+            try:
+                from apps.health_records.tasks import run_malnutrition_prediction
+                run_malnutrition_prediction.delay(str(record.id))
+            except Exception:
+                pass
+            return
+
+        record.risk_level = result['risk_level']
+        record.risk_factors = result.get('top_factors', [])
+        record.model_version = result.get('model_version', '')
+        record.save(update_fields=['risk_level', 'risk_factors', 'model_version', 'updated_at'])
+    except Exception as e:
+        logger.warning('Prediction failed for record %s: %s', record.id, e)
 
 
 class HealthRecordViewSet(viewsets.ModelViewSet):
@@ -26,14 +55,7 @@ class HealthRecordViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = HealthRecord.objects.select_related('child', 'recorded_by', 'zone').filter(is_active=True)
-        # Scope by camp for nurses and supervisors
-        if user.role in (UserRole.NURSE, UserRole.SUPERVISOR) and user.camp_id:
-            qs = qs.filter(child__camp_id=user.camp_id)
-        elif user.role == UserRole.CHW:
-            qs = qs.filter(child__guardian__assigned_chw=user)
-        elif user.role == UserRole.PARENT:
-            qs = qs.filter(child__guardian__user=user)
-        return qs.order_by('-measurement_date')
+        return scope_children(qs, user, prefix='child__').order_by('-measurement_date')
 
     def list(self, request, *args, **kwargs):
         """Override list to return the standard {data, pagination} envelope."""
@@ -50,8 +72,12 @@ class HealthRecordViewSet(viewsets.ModelViewSet):
         })
 
     def create(self, request, *args, **kwargs):
+        if request.user.role not in (UserRole.CHW, UserRole.NURSE):
+            return error_response('Only CHWs and nurses can record measurements.', 'FORBIDDEN', status_code=403)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        if not can_access_child(request.user, serializer.validated_data['child']):
+            return error_response('Child not found.', 'NOT_FOUND', status_code=404)
         record = serializer.save(recorded_by=request.user)
 
         # Run ML prediction synchronously so the response includes risk_level + risk_factors
@@ -74,31 +100,7 @@ class HealthRecordViewSet(viewsets.ModelViewSet):
         )
 
     def _run_prediction(self, record):
-        """Build feature vector, call prediction service, persist results on record."""
-        try:
-            from apps.ml_engine.features import build_feature_vector
-            from apps.ml_engine.prediction_service import PredictionService
-
-            features = build_feature_vector(record)
-            if features is None:
-                return
-
-            result = PredictionService.predict(features)
-            if result is None:
-                # Model not loaded yet — keep risk_level null, schedule async fallback
-                try:
-                    from apps.health_records.tasks import run_malnutrition_prediction
-                    run_malnutrition_prediction.delay(str(record.id))
-                except Exception:
-                    pass
-                return
-
-            record.risk_level = result['risk_level']
-            record.risk_factors = result.get('top_factors', [])
-            record.model_version = result.get('model_version', '')
-            record.save(update_fields=['risk_level', 'risk_factors', 'model_version', 'updated_at'])
-        except Exception as e:
-            logger.warning('Prediction failed for record %s: %s', record.id, e)
+        run_risk_prediction(record)
 
     @action(detail=True, methods=['get', 'post'], url_path='notes',
             permission_classes=[IsAuthenticated])
@@ -190,14 +192,21 @@ class HealthRecordViewSet(viewsets.ModelViewSet):
             message='Record amended and logged.',
         )
 
+    def update(self, request, *args, **kwargs):
+        # Generic PUT/PATCH would bypass the AmendmentLog audit trail — use /amend/ instead.
+        return error_response('Use PATCH /health-records/<id>/amend/ to change a record.',
+                              'METHOD_NOT_ALLOWED', status_code=405)
+
     @action(detail=False, methods=['get'], url_path='zone-summary')
     def zone_summary(self, request):
         """GET /api/v1/health-records/zone-summary/?zone=<id>"""
+        if request.user.role == UserRole.PARENT:
+            return error_response('Permission denied.', 'FORBIDDEN', status_code=403)
         zone_id = request.query_params.get('zone')
         if not zone_id:
             return error_response('zone query param required.', 'VALIDATION_ERROR')
         dist = {'LOW': 0, 'MEDIUM': 0, 'HIGH': 0, 'UNKNOWN': 0}
-        records = HealthRecord.objects.filter(zone_id=zone_id, is_active=True)
+        records = self.get_queryset().filter(zone_id=zone_id)
         for r in records:
             dist[r.risk_level or 'UNKNOWN'] = dist.get(r.risk_level or 'UNKNOWN', 0) + 1
         return success_response(data={'zone_id': zone_id, 'risk_distribution': dist, 'total': records.count()})
@@ -226,7 +235,13 @@ class ClinicalNoteViewSet(
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return ClinicalNote.objects.filter(is_active=True).select_related('author')
+        qs = ClinicalNote.objects.filter(is_active=True).select_related('author')
+        # A note targets either a child directly or a child's health record
+        user = self.request.user
+        if user.role == UserRole.ADMIN:
+            return qs
+        from apps.core.scoping import child_scope_q
+        return qs.filter(child_scope_q(user, 'child__') | child_scope_q(user, 'health_record__child__'))
 
     def _check_ownership(self, note):
         u = self.request.user
@@ -277,6 +292,8 @@ def growth_data_view(request, child_id):
     try:
         child = Child.objects.get(id=child_id)
     except Child.DoesNotExist:
+        return error_response('Child not found.', 'NOT_FOUND', status_code=404)
+    if not can_access_child(request.user, child):
         return error_response('Child not found.', 'NOT_FOUND', status_code=404)
 
     is_parent = request.user.role == UserRole.PARENT

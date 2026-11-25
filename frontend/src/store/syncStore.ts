@@ -7,11 +7,15 @@ export interface PendingOp {
   payload: Record<string, unknown>;
   createdAt: string;
   label: string;
+  /** Who queued it; only that user's session uploads it */
+  userId?: string;
+  /** Set when the server rejected the operation (kept so it can be fixed or discarded) */
+  lastError?: string;
 }
 
 export interface SyncResultEntry {
   id: string;
-  status: 'ok' | 'error' | 'conflict';
+  status: 'ok' | 'error' | 'conflict' | 'forbidden';
   error?: string;
 }
 
@@ -22,6 +26,7 @@ interface SyncState {
 
   addOperation:    (op: Omit<PendingOp, 'id' | 'createdAt'>) => void;
   removeOperation: (id: string) => void;
+  markFailed:      (id: string, error: string) => void;
   clearPending:    () => void;
   recordSync:      (results: SyncResultEntry[]) => void;
 }
@@ -47,6 +52,9 @@ export const useSyncStore = create<SyncState>()(
 
       removeOperation: (id) =>
         set((s) => ({ pending: s.pending.filter((p) => p.id !== id) })),
+
+      markFailed: (id, error) =>
+        set((s) => ({ pending: s.pending.map((p) => (p.id === id ? { ...p, lastError: error } : p)) })),
 
       clearPending: () => set({ pending: [] }),
 

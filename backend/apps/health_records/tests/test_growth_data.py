@@ -30,8 +30,11 @@ def nurse(db, camp):
 
 
 @pytest.fixture
-def parent(db):
-    return UserFactory(role=UserRole.PARENT, preferred_language='en')
+def parent(db, child):
+    user = UserFactory(role=UserRole.PARENT, preferred_language='en')
+    child.guardian.user = user
+    child.guardian.save(update_fields=['user'])
+    return user
 
 
 def _url(child):
@@ -105,6 +108,8 @@ class TestGrowthDataParent:
             weight_kg=9.5, height_cm=75.0,  # normal for ~10mo child
         )
         parent = UserFactory(role=UserRole.PARENT, preferred_language='en')
+        child.guardian.user = parent
+        child.guardian.save(update_fields=['user'])
         client.force_authenticate(parent)
         # Just verify the field exists and has a valid status
         ps = client.get(_url(child)).json()['data']['parent_summary']
@@ -115,10 +120,14 @@ class TestGrowthDataParent:
         HealthRecordFactory(child=child)
 
         parent_rw = UserFactory(role=UserRole.PARENT, preferred_language='rw')
+        child.guardian.user = parent_rw
+        child.guardian.save(update_fields=['user'])
         client.force_authenticate(parent_rw)
         ps_rw = client.get(_url(child)).json()['data']['parent_summary']
 
         parent_fr = UserFactory(role=UserRole.PARENT, preferred_language='fr')
+        child.guardian.user = parent_fr
+        child.guardian.save(update_fields=['user'])
         client.force_authenticate(parent_fr)
         ps_fr = client.get(_url(child)).json()['data']['parent_summary']
 
@@ -136,3 +145,12 @@ class TestGrowthDataParent:
         client.force_authenticate(parent)
         res = client.get(f'/api/v1/growth-data/{uuid.uuid4()}/')
         assert res.status_code == 404
+
+
+@pytest.mark.django_db
+def test_unlinked_parent_cannot_read_growth_data(client, child):
+    # Regression: growth data used to be readable for any child id
+    stranger = UserFactory(role=UserRole.PARENT)
+    client.force_authenticate(user=stranger)
+    resp = client.get(_url(child))
+    assert resp.status_code == 404

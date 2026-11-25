@@ -15,8 +15,8 @@ def client():
 
 
 @pytest.fixture
-def nurse(db):
-    return NurseFactory(email='nurse@test.rw', password='testpass')
+def nurse(db, camp):
+    return NurseFactory(email='nurse@test.rw', password='testpass', camp=camp)
 
 
 @pytest.fixture
@@ -65,8 +65,8 @@ class TestVaccinationAPI:
         resp = client.get(reverse('vaccination-list'))
         assert resp.status_code == 200
 
-    def test_mark_as_done(self, client, nurse):
-        record = VaccinationRecordFactory()
+    def test_mark_as_done(self, client, nurse, child):
+        record = VaccinationRecordFactory(child=child)
         client.force_authenticate(user=nurse)
         resp = client.patch(
             reverse('vaccination-detail', kwargs={'pk': record.id}),
@@ -77,8 +77,8 @@ class TestVaccinationAPI:
         record.refresh_from_db()
         assert record.status == DoseStatus.DONE
 
-    def test_mark_as_missed(self, client, nurse):
-        record = VaccinationRecordFactory()
+    def test_mark_as_missed(self, client, nurse, child):
+        record = VaccinationRecordFactory(child=child)
         client.force_authenticate(user=nurse)
         resp = client.patch(
             reverse('vaccination-detail', kwargs={'pk': record.id}),
@@ -111,3 +111,47 @@ class TestVaccinationRecordModel:
             status=DoseStatus.DONE
         )
         assert done_record.is_overdue is False
+
+
+@pytest.mark.django_db
+def test_parent_cannot_mark_dose_done(client, child):
+    # Regression: any role used to be able to PATCH dose status
+    from apps.accounts.models import UserRole
+    from apps.accounts.tests.factories import UserFactory
+    parent = UserFactory(role=UserRole.PARENT)
+    child.guardian.user = parent
+    child.guardian.save(update_fields=['user'])
+    record = VaccinationRecordFactory(child=child)
+    client.force_authenticate(user=parent)
+    resp = client.patch(reverse('vaccination-detail', kwargs={'pk': record.id}),
+                        {'status': 'DONE'}, format='json')
+    assert resp.status_code == 403
+    record.refresh_from_db()
+    assert record.status != DoseStatus.DONE
+
+
+@pytest.mark.django_db
+class TestDropoutFeatures:
+    """Distance and guardian age use real data when recorded, defaults otherwise."""
+
+    def test_distance_from_zone_centre_to_camp(self):
+        from apps.camps.tests.factories import ZoneFactory
+        from apps.vaccinations.tasks import _estimate_distance
+        camp = CampFactory(latitude='-2.0000', longitude='30.0000')
+        zone = ZoneFactory(camp=camp, latitude='-2.0270', longitude='30.0000')  # ~3 km south
+        child = ChildFactory(camp=camp, zone=zone)
+        assert 2.9 < _estimate_distance(child) < 3.1
+
+    def test_distance_falls_back_without_coordinates(self):
+        from apps.vaccinations.tasks import DEFAULT_DISTANCE_KM, _estimate_distance
+        child = ChildFactory(camp=CampFactory())
+        assert _estimate_distance(child) == DEFAULT_DISTANCE_KM
+
+    def test_guardian_age_from_year_of_birth(self):
+        from django.utils import timezone
+        from apps.vaccinations.tasks import DEFAULT_GUARDIAN_AGE, _guardian_age
+        child = ChildFactory(camp=CampFactory())
+        assert _guardian_age(child) == DEFAULT_GUARDIAN_AGE
+        child.guardian.year_of_birth = timezone.now().year - 34
+        child.guardian.save(update_fields=['year_of_birth'])
+        assert _guardian_age(child) == 34

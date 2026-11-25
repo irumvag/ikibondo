@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { enqueue, isNetworkError } from '@/lib/offline/queue';
+import { useAuthStore } from '@/store/authStore';
 
 // ── constants ──────────────────────────────────────────────────────────────────
 
@@ -82,10 +84,25 @@ function CaseloadInner() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [result, setResult]       = useState<VisitResult | null>(null);
+  const [queued, setQueued]       = useState(false);
 
+  // Keep the last caseload on the phone so visits can be logged with no signal
+  const userId = useAuthStore((s) => s.user?.id);
+  const cacheKey = userId ? `ikibondo.caseload.${userId}` : null;
   const { data: families = [], isLoading } = useQuery({
     queryKey: ['chw-families'],
-    queryFn: listCHWFamilies,
+    queryFn: async () => {
+      const fresh = await listCHWFamilies();
+      try { if (cacheKey) localStorage.setItem(cacheKey, JSON.stringify(fresh)); } catch { /* storage full or blocked */ }
+      return fresh;
+    },
+    initialData: () => {
+      try {
+        const raw = cacheKey ? localStorage.getItem(cacheKey) : null;
+        return raw ? (JSON.parse(raw) as Awaited<ReturnType<typeof listCHWFamilies>>) : undefined;
+      } catch { return undefined; }
+    },
+    initialDataUpdatedAt: 0, // cached copy is always refreshed when online
     staleTime: 2 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000,
   });
@@ -121,6 +138,7 @@ function CaseloadInner() {
   const closeVisit = () => {
     setVisitChild(null);
     setResult(null);
+    setQueued(false);
     setFormError('');
   };
 
@@ -128,8 +146,7 @@ function CaseloadInner() {
     if (!visitChild) return;
     setSubmitting(true);
     setFormError('');
-    try {
-      const res = await createVisit({
+    const payload = {
         child: visitChild.id,
         measurement_date: form.measurement_date,
         weight_kg: num(form.weight_kg),
@@ -143,11 +160,19 @@ function CaseloadInner() {
         symptom_flags: form.symptom_flags.length > 0 ? form.symptom_flags : undefined,
         notes: form.notes || undefined,
         data_source: 'CHW',
-      });
+    } as const;
+    try {
+      const res = await createVisit(payload);
       setResult(res);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setFormError(msg ?? 'Failed to save visit. Please try again.');
+      if (isNetworkError(err)) {
+        // No signal: keep the visit on this phone; it uploads automatically when the connection returns
+        enqueue('create_visit', payload as unknown as Record<string, unknown>, `${visitChild.full_name}, ${form.measurement_date}`);
+        setQueued(true);
+      } else {
+        const msg = (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data;
+        setFormError(msg?.error ?? msg?.message ?? 'Failed to save visit. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -317,9 +342,10 @@ function CaseloadInner() {
           submitting={submitting}
           error={formError}
           result={result}
+          queued={queued}
           onSubmit={handleSubmit}
           onClose={closeVisit}
-          onAnother={() => { setResult(null); setForm({ ...EMPTY_FORM, measurement_date: todayStr() }); setFormError(''); }}
+          onAnother={() => { setResult(null); setQueued(false); setForm({ ...EMPTY_FORM, measurement_date: todayStr() }); setFormError(''); }}
         />
       )}
     </div>
@@ -418,7 +444,7 @@ function ChildRow({ child, onLogVisit }: { child: CHWChildSummary; onLogVisit: (
 // ── VisitModal ────────────────────────────────────────────────────────────────
 
 function VisitModal({
-  child, form, setF, toggleSymptom, submitting, error, result,
+  child, form, setF, toggleSymptom, submitting, error, result, queued,
   onSubmit, onClose, onAnother,
 }: {
   child: CHWChildSummary;
@@ -428,6 +454,7 @@ function VisitModal({
   submitting: boolean;
   error: string;
   result: VisitResult | null;
+  queued: boolean;
   onSubmit: () => void;
   onClose: () => void;
   onAnother: () => void;
@@ -470,7 +497,10 @@ function VisitModal({
 
         {/* Scrollable body */}
         <div className="overflow-y-auto flex-1 px-5 py-5 flex flex-col gap-5">
-          {result ? (
+          {queued ? (
+            /* ── Saved offline ── */
+            <OfflineSaved form={form} childName={child.full_name} onAnother={onAnother} onClose={onClose} />
+          ) : result ? (
             /* ── Result screen ── */
             <div className="flex flex-col gap-4">
               <div className="flex flex-col items-center gap-3 text-center py-2">
@@ -627,7 +657,7 @@ function VisitModal({
         </div>
 
         {/* Footer (submit) */}
-        {!result && (
+        {!result && !queued && (
           <div className="px-5 py-4 border-t shrink-0 flex gap-2" style={{ borderColor: 'var(--border)' }}>
             <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
             <Button
@@ -641,6 +671,52 @@ function VisitModal({
             </Button>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+
+// ── Saved-offline screen ─────────────────────────────────────────────────────
+// Field triage can't wait for signal: MUAC and oedema are classified on the phone with the
+// WHO cut-offs (6–59 months). The full risk score is calculated once the visit uploads.
+
+function muacBand(form: FormState): { label: string; color: string; action: string } | null {
+  if (form.oedema) {
+    return { label: 'Oedema present: severe acute malnutrition', color: 'var(--muac-red)',
+             action: 'Refer to the health centre today.' };
+  }
+  const muac = form.muac_cm.trim() === '' ? null : parseFloat(form.muac_cm);
+  if (muac === null || Number.isNaN(muac)) return null;
+  if (muac < 11.5) return { label: `MUAC ${muac} cm: red band`, color: 'var(--muac-red)', action: 'Refer to the health centre today.' };
+  if (muac < 12.5) return { label: `MUAC ${muac} cm: yellow band`, color: 'var(--muac-yellow)', action: 'Enrol in supplementary feeding and re-measure at the next visit.' };
+  return { label: `MUAC ${muac} cm: green band`, color: 'var(--muac-green)', action: 'No acute malnutrition by MUAC.' };
+}
+
+function OfflineSaved({ form, childName, onAnother, onClose }: {
+  form: FormState; childName: string; onAnother: () => void; onClose: () => void;
+}) {
+  const band = muacBand(form);
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <p className="font-extrabold text-lg" style={{ color: 'var(--ink)' }}>Saved on this phone</p>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+          There&apos;s no connection right now. {childName}&apos;s visit will upload automatically when the phone is back online.
+        </p>
+      </div>
+      {band && (
+        <div className="pl-3 border-l-4" style={{ borderColor: band.color }}>
+          <p className="text-sm font-bold" style={{ color: 'var(--ink)' }}>{band.label}</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text)' }}>{band.action}</p>
+        </div>
+      )}
+      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+        The full risk assessment appears once the visit has uploaded.
+      </p>
+      <div className="flex gap-2">
+        <Button variant="secondary" className="flex-1" onClick={onAnother}>Log another visit</Button>
+        <Button className="flex-1" onClick={onClose}>Done</Button>
       </div>
     </div>
   );

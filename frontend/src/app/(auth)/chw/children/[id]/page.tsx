@@ -145,7 +145,7 @@ export default function CHWChildDetail({ params }: { params: Promise<{ id: strin
       {/* ── Latest health record ── */}
       <div className="rounded-2xl border p-5 flex flex-col gap-4" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
             Latest health record
           </p>
           {latest && (
@@ -210,7 +210,7 @@ export default function CHWChildDetail({ params }: { params: Promise<{ id: strin
       <div className="rounded-2xl border p-5 flex flex-col items-center gap-4" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
         <div className="w-full flex items-center gap-2">
           <QrCode size={16} style={{ color: 'var(--ink)' }} />
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
             Child QR card
           </p>
         </div>
@@ -233,7 +233,7 @@ export default function CHWChildDetail({ params }: { params: Promise<{ id: strin
 
       {/* ── Recent notes ── */}
       <div className="rounded-2xl border p-5 flex flex-col gap-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
           Clinical notes
         </p>
 

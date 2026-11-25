@@ -1,87 +1,71 @@
 /**
- * Ikibondo Service Worker — cache-first for static, network-first for API.
- * Security: sensitive health-data API paths are never cached. On logout the
- * entire cache is cleared via a postMessage({ type: 'LOGOUT' }) from the app.
+ * Ikibondo service worker.
+ *
+ * - Only same-origin GET requests are handled. API calls (another origin) and all
+ *   writes pass straight through, so health data is never stored by the worker and
+ *   requests can't be held up by it.
+ * - Hashed Next.js assets (/_next/static) are immutable: cache-first.
+ * - Page navigations are network-first. The field-workflow pages are kept so a
+ *   health worker can open them with no signal; anything else falls back to offline.html.
+ * - On logout the app posts { type: 'LOGOUT' } and every cache is deleted.
  */
-const CACHE_NAME = 'ikibondo-v1';
-const API_PREFIX = '/api/v1/';
+const CACHE = 'ikibondo-v2';
+const OFFLINE_URL = '/offline.html';
 
-// Paths that must NEVER be stored in the cache — they contain patient/family PII.
-// Any user-specific health data could otherwise leak to the next person on a shared device.
-const SENSITIVE_API_PATHS = [
-  '/api/v1/children',
-  '/api/v1/health-records',
-  '/api/v1/vaccinations',
-  '/api/v1/guardians',
-  '/api/v1/notifications',
-  '/api/v1/ml',
-  '/api/v1/referrals',
-  '/api/v1/consultations',
-  '/api/v1/auth',
-];
-
-// Static assets to pre-cache on install
-const PRECACHE_URLS = ['/', '/offline.html'];
+// Pages that must open offline. Their HTML is an app shell; records are fetched client-side.
+const OFFLINE_PAGES = ['/chw', '/chw/visit', '/chw/sync', '/chw/today', '/nurse/vaccines/session'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)).then(() => self.skipWaiting())
+    caches.open(CACHE).then((cache) => cache.addAll([OFFLINE_URL])).then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  if (request.method !== 'GET') return;
   const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
 
-  // Network-first for API calls
-  if (url.pathname.startsWith(API_PREFIX)) {
+  if (url.pathname.startsWith('/_next/static/')) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache successful GETs — but never cache sensitive health/auth data
-          if (request.method === 'GET' && response.ok) {
-            const isSensitive = SENSITIVE_API_PATHS.some((p) => url.pathname.startsWith(p));
-            if (!isSensitive) {
-              const clone = response.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-            }
-          }
-          return response;
-        })
-        .catch(() => caches.match(request).then((cached) => cached || Response.error()))
+      caches.match(request).then((hit) => hit || fetch(request).then((res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(request, copy));
+        }
+        return res;
+      }))
     );
     return;
   }
 
-  // Cache-first for everything else (Next.js static)
-  event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request))
-  );
-});
-
-// Logout — clear entire cache so the next user on a shared device cannot access
-// the previous user's cached health records or family data.
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'LOGOUT') {
-    caches.delete(CACHE_NAME);
+  if (request.mode === 'navigate') {
+    const keep = OFFLINE_PAGES.includes(url.pathname.replace(/\/$/, ''));
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (keep && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(url.pathname, copy));
+          }
+          return res;
+        })
+        .catch(async () => (keep && (await caches.match(url.pathname))) || caches.match(OFFLINE_URL))
+    );
   }
 });
 
-// Background sync
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'ikibondo-sync') {
-    event.waitUntil(
-      self.clients.matchAll().then((clients) =>
-        clients.forEach((client) => client.postMessage({ type: 'SYNC_REQUESTED' }))
-      )
-    );
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'LOGOUT') {
+    event.waitUntil(caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))));
   }
 });

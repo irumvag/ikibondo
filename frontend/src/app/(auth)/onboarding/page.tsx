@@ -100,7 +100,7 @@ export default function OnboardingPage() {
         {/* Header */}
         <div>
           <p
-            className="text-xs font-semibold uppercase tracking-wider mb-2"
+            className="text-xs font-semibold mb-2"
             style={{ color: 'var(--brand)' }}
           >
             Welcome to Ikibondo

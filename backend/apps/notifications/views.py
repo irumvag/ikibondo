@@ -74,6 +74,19 @@ class BroadcastViewSet(viewsets.ModelViewSet):
         if serializer.validated_data.get('scope_type') == BroadcastScope.GLOBAL and request.user.role != UserRole.ADMIN:
             return error_response('Only admins can send global broadcasts.', 'FORBIDDEN', status_code=403)
 
+        # Supervisors may only address their own camp, or a zone inside it
+        if request.user.role == UserRole.SUPERVISOR:
+            scope_type = serializer.validated_data.get('scope_type')
+            scope_id = serializer.validated_data.get('scope_id')
+            if not request.user.camp_id:
+                return error_response('Your account has no camp assigned.', 'FORBIDDEN', status_code=403)
+            if scope_type == BroadcastScope.CAMP and str(scope_id) != str(request.user.camp_id):
+                return error_response('You can only broadcast to your own camp.', 'FORBIDDEN', status_code=403)
+            if scope_type == BroadcastScope.ZONE:
+                from apps.camps.models import CampZone
+                if not CampZone.objects.filter(id=scope_id, camp_id=request.user.camp_id).exists():
+                    return error_response('You can only broadcast to zones in your own camp.', 'FORBIDDEN', status_code=403)
+
         broadcast = serializer.save(created_by=request.user, sent_at=timezone.now())
 
         # Fan out to recipients
@@ -128,6 +141,9 @@ class BroadcastViewSet(viewsets.ModelViewSet):
     def _resolve_recipients(self, broadcast, requesting_user):
         from apps.accounts.models import CustomUser
         qs = CustomUser.objects.filter(is_active=True)
+        # Defence in depth: whatever the scope, a supervisor's message never leaves their camp
+        if requesting_user.role != UserRole.ADMIN:
+            qs = qs.filter(camp_id=requesting_user.camp_id)
         if broadcast.scope_type == BroadcastScope.GLOBAL:
             return list(qs.exclude(id=requesting_user.id)[:500])
         if broadcast.scope_type == BroadcastScope.CAMP and broadcast.scope_id:
@@ -141,3 +157,49 @@ class BroadcastViewSet(viewsets.ModelViewSet):
         if broadcast.scope_type == BroadcastScope.ROLE and broadcast.scope_id:
             return list(qs.filter(role=broadcast.scope_id).exclude(id=requesting_user.id))
         return []
+
+
+# ── Push device registration (mobile app) ────────────────────────────────────
+
+from rest_framework.decorators import api_view, permission_classes  # noqa: E402
+from drf_spectacular.utils import extend_schema  # noqa: E402
+
+
+@extend_schema(exclude=True)
+@api_view(['POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def devices_view(request):
+    """
+    POST   /api/v1/notifications/devices/  {"token": "...", "platform": "ios|android|web", "app_version": "1.0.0"}
+           Register (or re-claim) this device for the signed-in user. Call after every sign-in and token refresh.
+    DELETE /api/v1/notifications/devices/  {"token": "..."}
+           Stop pushing to this device. Call on sign-out.
+    """
+    from .models import DeviceToken, DevicePlatform
+
+    token = (request.data.get('token') or '').strip()
+    if not token or len(token) > 512:
+        return error_response('A device token is required.', 'VALIDATION_ERROR')
+
+    if request.method == 'DELETE':
+        # Only the owner can unregister, so one user can't silence another's alerts
+        DeviceToken.objects.filter(token=token, user=request.user).delete()
+        return success_response(message='Device removed.')
+
+    platform = request.data.get('platform', '')
+    if platform not in DevicePlatform.values:
+        return error_response(f'platform must be one of: {", ".join(DevicePlatform.values)}.', 'VALIDATION_ERROR')
+
+    # A token identifies one app install; whoever signed in there last owns it
+    device, created = DeviceToken.objects.update_or_create(
+        token=token,
+        defaults={
+            'user': request.user,
+            'platform': platform,
+            'app_version': (request.data.get('app_version') or '')[:32],
+        },
+    )
+    return (created_response if created else success_response)(
+        data={'id': str(device.id), 'platform': device.platform},
+        message='Device registered.',
+    )

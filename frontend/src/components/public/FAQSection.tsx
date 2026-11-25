@@ -5,7 +5,6 @@ import { ChevronDown } from 'lucide-react';
 import { FAQ_DATA } from '@/data/faq';
 import type { FAQItem } from '@/lib/api/public';
 import { useFaq } from '@/lib/api/queries';
-import { useIntersection } from '@/hooks/useIntersection';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 type Lang = 'en' | 'rw' | 'fr';
@@ -37,7 +36,7 @@ function FAQRow({
   const { question, answer } = getLocalised(item, lang);
 
   return (
-    <div className="border-b last:border-0" style={{ borderColor: 'var(--border)' }}>
+    <div className="border-b" style={{ borderColor: 'var(--rule)' }}>
       <button
         type="button"
         className="w-full flex items-center justify-between gap-4 py-5 text-left group"
@@ -46,7 +45,7 @@ function FAQRow({
         aria-controls={`faq-answer-${item.id}`}
         id={`faq-btn-${item.id}`}
       >
-        <span className="text-sm sm:text-base font-semibold leading-snug" style={{ color: 'var(--ink)' }}>
+        <span className="text-base sm:text-lg font-bold leading-snug" style={{ color: 'var(--ink)' }}>
           {question}
         </span>
         <ChevronDown
@@ -72,7 +71,7 @@ function FAQRow({
         }}
       >
         <div style={{ overflow: 'hidden' }}>
-          <p className="pb-5 text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+          <p className="pb-6 text-base leading-relaxed max-w-prose" style={{ color: 'var(--text)' }}>
             {answer}
           </p>
         </div>
@@ -109,7 +108,7 @@ function LangSwitcher({
 
   return (
     <div
-      className="flex gap-1 p-1 rounded-xl self-center"
+      className="flex gap-1 p-1 rounded-[var(--radius-md)] self-start"
       style={{ backgroundColor: 'var(--bg-sand)', border: '1px solid var(--border)' }}
       role="group"
       aria-label="Language"
@@ -148,9 +147,6 @@ export function FAQSection({ variant = 'standalone' }: FAQSectionProps) {
     .sort((a, b) => a.order - b.order);
 
   const [openId, setOpenId] = useState<string | null>(null);
-  const { ref, visible } = useIntersection<HTMLElement>(0.08);
-  const reduced = useReducedMotion();
-
   const toggle = (id: string) => setOpenId((prev) => (prev === id ? null : id));
 
   const inner = isLoading ? (
@@ -158,15 +154,8 @@ export function FAQSection({ variant = 'standalone' }: FAQSectionProps) {
   ) : (
     <div className="flex flex-col gap-4">
       <LangSwitcher lang={lang} onChange={setLang} items={published} />
-      <div
-        className="rounded-2xl overflow-hidden"
-        style={{
-          backgroundColor: 'var(--bg-elev)',
-          border: '1px solid var(--border)',
-          boxShadow: 'var(--shadow-sm)',
-        }}
-      >
-        <div className="px-6">
+      <div className="border-t-2" style={{ borderColor: 'var(--ink)' }}>
+        <div>
           {published.map((item) => (
             <FAQRow
               key={item.id}
@@ -186,47 +175,24 @@ export function FAQSection({ variant = 'standalone' }: FAQSectionProps) {
   return (
     <section
       id="faq"
-      ref={ref}
-      className="py-20 sm:py-28"
-      style={{ background: 'var(--bg)' }}
+      className="py-20 sm:py-28 border-t"
+      style={{ background: 'var(--bg)', borderColor: 'var(--rule)' }}
       aria-labelledby="faq-heading"
     >
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div
-          className="text-center mb-12"
-          style={{
-            opacity: visible || reduced ? 1 : 0,
-            transform: visible || reduced ? 'none' : 'translateY(20px)',
-            transition: reduced ? 'none' : 'opacity 0.5s ease, transform 0.5s ease',
-          }}
+      {/* Same left edge as every other section; the accordion keeps a readable measure */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl">
+        <h2
+          id="faq-heading"
+          className="text-3xl sm:text-4xl font-extrabold text-balance mb-3"
+          style={{ color: 'var(--ink)', letterSpacing: '-0.02em' }}
         >
-          <div
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest mb-5"
-            style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)', border: '1px solid var(--border)' }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--accent)' }} aria-hidden="true" />
-            FAQ
-          </div>
-          <h2
-            id="faq-heading"
-            className="text-3xl sm:text-4xl font-bold mb-4"
-            style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            Frequently asked questions
-          </h2>
-          <p className="text-base" style={{ color: 'var(--text-muted)' }}>
-            Can&apos;t find what you&apos;re looking for? Reach out to your camp supervisor.
-          </p>
-        </div>
-
-        <div
-          style={{
-            opacity: visible || reduced ? 1 : 0,
-            transform: visible || reduced ? 'none' : 'translateY(20px)',
-            transition: reduced ? 'none' : 'opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s',
-          }}
-        >
-          {inner}
+          Questions people ask
+        </h2>
+        <p className="text-base mb-10" style={{ color: 'var(--text-muted)' }}>
+          If your question isn&apos;t here, ask your camp supervisor.
+        </p>
+        {inner}
         </div>
       </div>
     </section>

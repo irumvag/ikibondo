@@ -24,8 +24,12 @@ def clear_cache():
 
 
 @pytest.fixture
-def client():
-    return APIClient()
+def client(db):
+    # Platform-wide figures describe real children, so the endpoint is admin-only
+    from apps.accounts.tests.factories import AdminUserFactory
+    c = APIClient()
+    c.force_authenticate(user=AdminUserFactory())
+    return c
 
 
 @pytest.fixture
@@ -39,9 +43,18 @@ def child(db, camp):
 
 
 class TestLandingStatsEndpoint:
-    def test_returns_200_unauthenticated(self, client, db):
+    def test_returns_200_for_admin(self, client, db):
         res = client.get(LANDING_URL)
         assert res.status_code == 200
+
+    def test_anonymous_cannot_read_stats(self, db):
+        assert APIClient().get(LANDING_URL).status_code == 401
+        assert APIClient().get('/api/v1/stats/trend/').status_code == 401
+
+    def test_non_admin_cannot_read_stats(self, db):
+        c = APIClient()
+        c.force_authenticate(user=UserFactory(role=UserRole.PARENT, is_approved=True))
+        assert c.get(LANDING_URL).status_code == 403
 
     def test_response_shape(self, client, db):
         res = client.get(LANDING_URL)

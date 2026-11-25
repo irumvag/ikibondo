@@ -125,7 +125,7 @@ export default function CHWDashboard() {
 
       {/* Quick actions */}
       <div>
-        <h3 className="text-sm font-semibold mb-3 uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
           Quick actions
         </h3>
         <div className="grid sm:grid-cols-2 gap-3">

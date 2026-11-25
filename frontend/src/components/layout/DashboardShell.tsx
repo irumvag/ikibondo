@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { startAutoSync } from '@/lib/offline/queue';
 
 const STORAGE_COLLAPSED = 'ikibondo.sidebar.collapsed';
 
@@ -24,6 +25,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       return next;
     });
   };
+
+  // Upload visits saved while offline as soon as the connection or the user returns
+  useEffect(() => startAutoSync(), []);
 
   // Keyboard shortcuts
   useEffect(() => {

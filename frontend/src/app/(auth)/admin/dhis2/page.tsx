@@ -276,7 +276,7 @@ export default function DHIS2Page() {
         ) : (
           <div className="grid sm:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                 Status
               </span>
               <div className="flex items-center gap-2">
@@ -291,7 +291,7 @@ export default function DHIS2Page() {
             </div>
 
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                 DHIS2 URL
               </span>
               <span className="text-sm font-mono truncate" style={{ color: 'var(--ink)' }}>
@@ -300,7 +300,7 @@ export default function DHIS2Page() {
             </div>
 
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                 Last batch sync
               </span>
               <span className="text-sm" style={{ color: 'var(--ink)' }}>

@@ -19,9 +19,12 @@ def chw(db):
 
 
 @pytest.fixture
-def child(db):
+def child(db, chw):
     camp = CampFactory()
-    return ChildFactory(camp=camp)
+    child = ChildFactory(camp=camp)
+    child.guardian.assigned_chw = chw
+    child.guardian.save(update_fields=['assigned_chw'])
+    return child
 
 
 @pytest.mark.django_db

@@ -24,6 +24,15 @@ from apps.vaccinations.models import VaccinationRecord
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
 
+@pytest.fixture(autouse=True)
+def real_dhis2_metadata(settings):
+    # Placeholder metadata IDs count as "not configured"; tests use real-looking ones
+    settings.DHIS2_PROGRAM_UID = 'IpHINAT79UW'
+    settings.DHIS2_TE_TYPE_UID = 'nEenWmSyUEp'
+    settings.DHIS2_ORG_UNIT_UID = 'DiszpKrYNg8'
+    settings.DHIS2_ATTR_REG_NUMBER = 'lZGmxYbs97q'
+
+
 @pytest.fixture
 def client():
     return APIClient()
@@ -254,3 +263,64 @@ class TestDHIS2Signals:
         with patch('apps.integrations.tasks.dhis2_push_high_risk.apply_async') as mock_task:
             HealthRecordFactory(child=child, risk_level='LOW')
         mock_task.assert_not_called()
+
+
+
+# ── configuration checks, failure log, pull mapping ───────────────────────────
+
+def test_placeholder_metadata_counts_as_not_configured(settings):
+    from apps.integrations import dhis2
+    settings.DHIS2_PROGRAM_UID = 'ikibondoEPI01'
+    with patch('apps.integrations.dhis2._creds', return_value=('https://dhis2', 'u', 'p')):
+        assert dhis2.is_configured() is False
+        assert any('DHIS2_PROGRAM_UID' in p for p in dhis2.configuration_problems())
+
+
+@pytest.mark.django_db
+class TestFailureLog:
+    def test_failed_push_is_listed_then_retry_resolves_it(self, client, admin, child):
+        from apps.integrations import dhis2
+        from apps.integrations.models import DHIS2SyncFailure
+
+        dhis2.record_push_result('child', child, child.registration_number, {'status': 'error', 'detail': 'E1005 orgUnit'})
+        dhis2.record_push_result('child', child, child.registration_number, {'status': 'error', 'detail': 'E1005 orgUnit'})
+        failure = DHIS2SyncFailure.objects.get()
+        assert failure.attempts == 2
+
+        client.force_authenticate(admin)
+        listing = client.get('/api/v1/integrations/dhis2/conflicts/').json()['data']
+        assert listing['count'] == 1 and listing['results'][0]['error'] == 'E1005 orgUnit'
+
+        ok = {'status': 'ok', 'dhis2_uid': 'TEI12345678', 'detail': 'created=1'}
+        with patch('apps.integrations.dhis2._creds', return_value=('https://dhis2', 'u', 'p')), \
+             patch('apps.integrations.dhis2.push_child_registration', return_value=ok):
+            res = client.post(f'/api/v1/integrations/dhis2/conflicts/{failure.id}/retry/')
+        assert res.status_code == 200
+        failure.refresh_from_db()
+        assert failure.resolved_at is not None
+        child.refresh_from_db()
+        assert child.dhis2_uid == 'TEI12345678'
+
+    def test_retry_requires_admin(self, client, child):
+        nurse = NurseFactory(camp=child.camp)
+        client.force_authenticate(nurse)
+        assert client.post('/api/v1/integrations/dhis2/conflicts/00000000-0000-0000-0000-000000000000/retry/').status_code == 403
+
+
+@pytest.mark.django_db
+def test_pulled_event_is_stored_as_done_with_its_dhis2_id(child, settings):
+    """Pulled events must be valid local records and must never be pushed back as duplicates."""
+    from apps.integrations import dhis2
+    tei = {
+        'attributes': [{'attribute': dhis2.ATTR_REG_NUMBER, 'value': child.registration_number}],
+        'enrollments': [{'events': [{
+            'event': 'EVT00000001',
+            'occurredAt': '2026-03-02T00:00:00',
+            'dataValues': [{'dataElement': dhis2.DATA_ELEM_VACCINE, 'value': 'Measles-Rubella 1'}],
+        }]}],
+    }
+    assert dhis2._upsert_vaccination_from_tei(tei) == 1
+    vr = VaccinationRecord.objects.get(child=child, vaccine__name='Measles-Rubella 1')
+    assert vr.status == 'DONE'
+    assert str(vr.administered_date) == '2026-03-02'
+    assert vr.dhis2_event_uid == 'EVT00000001'

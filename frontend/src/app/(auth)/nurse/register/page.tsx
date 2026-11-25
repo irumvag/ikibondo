@@ -171,7 +171,7 @@ function SuccessScreen({
         className="rounded-2xl border px-5 py-4"
         style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
       >
-        <p className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
+        <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>
           Registration number
         </p>
         <p className="text-2xl font-mono font-bold" style={{ color: 'var(--ink)' }}>{result.reg_number}</p>
@@ -199,7 +199,7 @@ function SuccessScreen({
 
           {/* Login ID */}
           <div className="flex flex-col gap-1">
-            <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
               Login (phone or email)
             </p>
             <div className="flex items-center gap-2">
@@ -225,7 +225,7 @@ function SuccessScreen({
           {/* Temp password */}
           {result.temp_password && (
             <div className="flex flex-col gap-1">
-              <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
                 Temporary password
               </p>
               <div className="flex items-center gap-2">
@@ -705,7 +705,7 @@ export default function NurseRegisterPage() {
               </div>
             </div>
           )}
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
             {regMode === 'newborn' ? 'Newborn' : 'Child'}
           </p>
           <Input
@@ -745,7 +745,7 @@ export default function NurseRegisterPage() {
           </div>
 
           {/* ── Neonatal clinical details (optional) ─────────────────────── */}
-          <p className="text-xs font-semibold uppercase tracking-wider mt-1" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-xs font-semibold mt-1" style={{ color: 'var(--text-muted)' }}>
             Clinical details <span className="font-normal normal-case">(optional)</span>
           </p>
           <div className="flex gap-3">
@@ -814,7 +814,7 @@ export default function NurseRegisterPage() {
             onChange={(e) => setN('notes', e.target.value)}
           />
 
-          <p className="text-xs font-semibold uppercase tracking-wider mt-2" style={{ color: 'var(--text-muted)' }}>Guardian</p>
+          <p className="text-xs font-semibold mt-2" style={{ color: 'var(--text-muted)' }}>Guardian</p>
 
           {/* When an existing parent is selected, name/phone are pre-filled and read-only */}
           {selectedParent ? (
@@ -930,7 +930,7 @@ export default function NurseRegisterPage() {
             className="rounded-2xl border p-5 flex flex-col gap-3"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
           >
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Parent account</p>
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Parent account</p>
             {[
               ['Name',  selectedParent?.full_name ?? parentForm.full_name],
               ['Email', selectedParent?.email ?? parentForm.email],
@@ -943,7 +943,7 @@ export default function NurseRegisterPage() {
               </div>
             ))}
 
-            <p className="text-xs font-semibold uppercase tracking-wider mt-2" style={{ color: 'var(--text-muted)' }}>Newborn</p>
+            <p className="text-xs font-semibold mt-2" style={{ color: 'var(--text-muted)' }}>Newborn</p>
             {[
               ['Name',             newbornForm.full_name],
               ['DOB',              newbornForm.date_of_birth],
@@ -959,7 +959,7 @@ export default function NurseRegisterPage() {
               </div>
             ))}
 
-            <p className="text-xs font-semibold uppercase tracking-wider mt-2" style={{ color: 'var(--text-muted)' }}>Guardian</p>
+            <p className="text-xs font-semibold mt-2" style={{ color: 'var(--text-muted)' }}>Guardian</p>
             {[
               ['Name',         newbornForm.guardian_full_name],
               ['Phone',        newbornForm.guardian_phone],

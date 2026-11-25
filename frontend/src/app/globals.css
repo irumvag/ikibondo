@@ -1,62 +1,92 @@
 @import "tailwindcss";
 
-/* ── Light theme (default) ─────────────────────────────────────────────── */
-:root,
-[data-theme="light"] {
-  --bg:        #FFFDF7;
-  --bg-elev:   #FFFFFF;
-  --bg-sand:   #F2EDE3;
-  --ink:       #085041;
-  --ink-soft:  #0a6352;
-  --accent:    #FBC800;
-  --accent-fg: #1A1200;
-  --text:      #1A1F2E;
-  --text-muted:#4B5563;
-  --border:    rgba(8,80,65,.10);
-
-  --success:   #16A34A;
-  --warn:      #D97706;
-  --danger:    #B91C1C;
-
-  --low-bg:    #F0FDF4;
-  --med-bg:    #FFFBEB;
-  --high-bg:   #FEF2F2;
-
-  --shadow-sm: 0 1px 3px rgba(8,80,65,.08);
-  --shadow-md: 0 4px 12px rgba(8,80,65,.12);
-  --shadow-lg: 0 8px 24px rgba(8,80,65,.16);
-  --shadow-xl: 0 16px 40px rgba(8,80,65,.18);
-
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+/* Tighter corners product-wide: pages use rounded-xl / rounded-2xl heavily,
+   which produced the soft "card kit" look. Remapping the scale restyles all of them. */
+@theme {
+  --radius-xl:  0.625rem;
+  --radius-2xl: 0.75rem;
+  --radius-3xl: 1rem;
 }
 
-/* ── Dark theme (night / low-light) ────────────────────────────────────── */
+/* ── Light theme (default) ─────────────────────────────────────────────
+   "Growth-chart paper": cool chart-paper grey, ballpoint-navy ink, and a
+   raspberry accent taken from the WHO girls' growth chart. Risk colours
+   follow the MUAC tape (green / yellow / red) and stay semantic only.     */
+:root,
+[data-theme="light"] {
+  --bg:        #F1F4F3;
+  --bg-elev:   #FFFFFF;
+  --bg-sand:   #E3EAE8;
+  --ink:       #16324F;
+  --ink-soft:  #24496E;
+  --accent:    #C2185B;
+  --accent-fg: #FFFFFF;
+  --text:      #18222C;
+  --text-muted:#4D5B66;
+  --border:    rgba(22,50,79,.13);
+  --rule:      #C7D3D0;
+
+  --success:   #1E7A46;
+  --warn:      #B7791F;
+  --danger:    #C62828;
+
+  --low-bg:    #E5F3EA;
+  --med-bg:    #FBF1DC;
+  --high-bg:   #FBE6E6;
+
+  /* MUAC tape bands (cm thresholds 11.5 / 12.5) */
+  --muac-red:    #D32F2F;
+  --muac-yellow: #F2C230;
+  --muac-green:  #2E8B57;
+
+  --shadow-sm: 0 1px 2px rgba(22,50,79,.08);
+  --shadow-md: 0 3px 10px rgba(22,50,79,.10);
+  --shadow-lg: 0 8px 24px rgba(22,50,79,.14);
+  --shadow-xl: 0 16px 40px rgba(22,50,79,.16);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+}
+
+/* ── Dark theme (night / low-light) ──────────────────────────────────── */
 [data-theme="dark"] {
-  --bg:        #0F1A17;
-  --bg-elev:   #16241F;
-  --bg-sand:   #1B2C26;
-  --ink:       #FFFDF7;
-  --ink-soft:  #E5E2DA;
-  --accent:    #FBC800;
-  --accent-fg: #1A1200;
-  --text:      #F1EFE8;
-  --text-muted:#A6B0AC;
-  --border:    rgba(255,253,247,.08);
+  --bg:        #0E1620;
+  --bg-elev:   #15202C;
+  --bg-sand:   #1C2A38;
+  --ink:       #DCE7F3;
+  --ink-soft:  #B9CBDD;
+  --accent:    #F0628F;
+  --accent-fg: #1A0710;
+  --text:      #E6ECF2;
+  --text-muted:#9DAEBD;
+  --border:    rgba(220,231,243,.10);
+  --rule:      #2A3A4A;
 
-  --success:   #4ADE80;
-  --warn:      #FBBF24;
-  --danger:    #F87171;
+  --success:   #5CC98A;
+  --warn:      #E8B44C;
+  --danger:    #F27474;
 
-  --low-bg:    rgba(74,222,128,.10);
-  --med-bg:    rgba(251,191,36,.10);
-  --high-bg:   rgba(248,113,113,.10);
+  --low-bg:    rgba(92,201,138,.12);
+  --med-bg:    rgba(232,180,76,.12);
+  --high-bg:   rgba(242,116,116,.12);
+
+  --muac-red:    #E35D5D;
+  --muac-yellow: #E8C14F;
+  --muac-green:  #4CB37A;
 
   --shadow-sm: 0 1px 3px rgba(0,0,0,.30);
   --shadow-md: 0 4px 12px rgba(0,0,0,.40);
   --shadow-lg: 0 8px 24px rgba(0,0,0,.50);
   --shadow-xl: 0 16px 40px rgba(0,0,0,.55);
+}
+
+/* Legacy font variables — 100+ components still reference these names.
+   Both now resolve to the single product typeface. */
+html {
+  --font-fraunces: var(--font-atkinson), system-ui, sans-serif;
+  --font-inter:    var(--font-atkinson), system-ui, sans-serif;
+  --font-serif:    var(--font-atkinson), system-ui, sans-serif;
 }
 
 /* ── Base reset ─────────────────────────────────────────────────────────── */
@@ -137,47 +167,24 @@ body {
   --transition-slow: 320ms ease;
 }
 
-/* ── Hero animations ────────────────────────────────────────────────────── */
-@keyframes hero-fade-up {
-  from { opacity: 0; transform: translateY(22px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes hero-slide-right {
-  from { opacity: 0; transform: translateX(-24px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-@keyframes hero-slide-left {
-  from { opacity: 0; transform: translateX(24px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-@keyframes hero-bar-grow {
-  from { transform: scaleY(0); }
-  to   { transform: scaleY(1); }
-}
-@keyframes hero-live-pulse {
-  0%, 100% { opacity: 1;   transform: scale(1); }
-  50%       { opacity: 0.3; transform: scale(0.65); }
-}
-@keyframes hero-float {
-  0%, 100% { transform: translateY(0px); }
-  50%       { transform: translateY(-7px); }
-}
-@keyframes hero-blob-pulse {
-  0%, 100% { transform: scale(1)   rotate(0deg); }
-  50%       { transform: scale(1.06) rotate(4deg); }
-}
-@keyframes hero-line-draw {
-  from { stroke-dashoffset: 300; }
+/* ── Hero: the one orchestrated moment — a child's growth line draws in ── */
+@keyframes plot-draw {
+  from { stroke-dashoffset: var(--plot-length, 600); }
   to   { stroke-dashoffset: 0; }
 }
-@keyframes hero-dot-pop {
-  0%   { opacity: 0; transform: scale(0); }
-  60%  { opacity: 1; transform: scale(1.3); }
-  100% { opacity: 1; transform: scale(1); }
+@keyframes plot-point {
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: scale(1); }
 }
-.hero-fade-up    { animation: hero-fade-up    0.7s cubic-bezier(.22,1,.36,1) both; }
-.hero-slide-left { animation: hero-slide-left 0.7s cubic-bezier(.22,1,.36,1) both; }
-.hero-float      { animation: hero-float 4s ease-in-out infinite; }
+.plot-line {
+  stroke-dasharray: var(--plot-length, 600);
+  animation: plot-draw 1.6s cubic-bezier(.45,.05,.25,1) 0.3s both;
+}
+.plot-point {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: plot-point 0.35s ease-out both;
+}
 
 /* ── Print: growth chart only ───────────────────────────────────────────── */
 @media print {

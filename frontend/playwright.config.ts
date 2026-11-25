@@ -14,7 +14,13 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      // Uses the Chrome already on the machine, so no browser download is needed
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+    },
+    {
+      // Field health workers mostly use Android phones
+      name: 'mobile',
+      use: { ...devices['Pixel 7'], channel: 'chrome' },
     },
   ],
 });

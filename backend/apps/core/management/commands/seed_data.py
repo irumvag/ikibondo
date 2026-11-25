@@ -34,6 +34,11 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        from django.conf import settings
+        from django.core.management.base import CommandError
+        # Demo accounts use well-known passwords and --reset deletes real records: development only
+        if not settings.DEBUG:
+            raise CommandError('seed_data only runs with DEBUG on. Never seed a production database.')
         if options['reset']:
             self._reset()
 

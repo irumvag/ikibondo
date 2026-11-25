@@ -90,7 +90,9 @@ def list_predictions(request):
         from apps.core.responses import error_response
         return error_response('Forbidden', 'FORBIDDEN', status_code=http_status.HTTP_403_FORBIDDEN)
 
+    from apps.core.scoping import scope_children
     qs = MLPredictionLog.objects.select_related('child').order_by('-created_at')
+    qs = scope_children(qs, request.user, prefix='child__')
     model_filter = request.query_params.get('model')
     if model_filter:
         qs = qs.filter(model_name=model_filter)

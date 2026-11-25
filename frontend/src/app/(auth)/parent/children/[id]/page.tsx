@@ -244,7 +244,7 @@ function GrowthSparkline({ data }: { data: Array<{ measurement_date: string; wei
       style={{ background: 'var(--bg-elev)', borderColor: 'var(--border)' }}
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+        <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
           Weight trend
         </span>
         <span className="text-sm font-bold" style={{ color: trendColor }}>
@@ -496,7 +496,7 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
               className="rounded-2xl border p-5"
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
             >
-              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
                 Why this assessment?
               </p>
               <RiskExplainer
@@ -514,7 +514,7 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
               className="rounded-2xl border p-5 flex flex-col gap-3"
               style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}
             >
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                 Latest visit — {fmtDate(latestRecord.measurement_date)}
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -557,7 +557,7 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
               className="rounded-2xl border p-4 flex flex-col gap-3"
               style={{ background: 'var(--bg-elev)', borderColor: 'var(--border)' }}
             >
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
                 Your care team
               </p>
               <div className="flex items-center gap-3">
@@ -642,7 +642,7 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
 
               <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
                 <div
-                  className="grid grid-cols-[1fr_auto_auto] gap-4 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider"
+                  className="grid grid-cols-[1fr_auto_auto] gap-4 px-4 py-2.5 text-xs font-semibold"
                   style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-elev)', borderBottom: '1px solid var(--border)' }}
                 >
                   <span>Vaccine</span>
@@ -691,7 +691,7 @@ export default function ParentChildDetail({ params }: { params: Promise<{ id: st
           style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}
         >
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
               WHO Growth Chart
             </p>
             <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>

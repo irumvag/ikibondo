@@ -323,7 +323,7 @@ export default function ParentDashboard() {
 
       {/* Quick actions */}
       <div>
-        <h3 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
           Quick actions
         </h3>
         <div className="grid grid-cols-2 gap-3">

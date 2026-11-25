@@ -65,6 +65,8 @@ class Guardian(BaseModel):
         help_text='e.g. mother, father, grandmother, uncle'
     )
     national_id = models.CharField(max_length=50, blank=True)
+    # Year only: enough for the dropout model without storing a full birth date
+    year_of_birth = models.PositiveSmallIntegerField(null=True, blank=True)
     user = models.OneToOneField(
         'accounts.CustomUser',
         on_delete=models.SET_NULL,

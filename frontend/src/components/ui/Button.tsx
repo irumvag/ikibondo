@@ -20,20 +20,20 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const base =
-      'inline-flex items-center justify-center font-semibold rounded-xl ' +
+      'inline-flex items-center justify-center font-bold rounded-[var(--radius-md)] ' +
       'transition-all select-none ' +
       'focus-visible:outline-none focus-visible:ring-2 ' +
       'focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2';
 
     const variantClass: Record<NonNullable<ButtonProps['variant']>, string> = {
       primary:
-        'bg-[var(--ink)] text-[var(--bg)] hover:opacity-90 active:scale-[.98]',
+        'bg-[var(--ink)] text-[var(--bg)] hover:bg-[var(--ink-soft)]',
       secondary:
-        'bg-[var(--bg-sand)] text-[var(--ink)] border border-[var(--border)] hover:bg-[var(--bg-elev)]',
+        'bg-[var(--bg-elev)] text-[var(--ink)] border-2 border-[var(--ink)] hover:bg-[var(--bg-sand)]',
       ghost:
         'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-sand)]',
       danger:
-        'bg-[var(--danger)] text-white hover:opacity-90 active:scale-[.98]',
+        'bg-[var(--danger)] text-white hover:opacity-90',
     };
 
     const sizeClass: Record<NonNullable<ButtonProps['size']>, string> = {

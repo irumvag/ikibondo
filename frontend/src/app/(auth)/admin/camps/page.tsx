@@ -512,7 +512,7 @@ export default function CampsPage() {
               {/* Zones panel */}
               {expanded === camp.id && (
                 <div className="px-6 pb-5 pt-3" style={{ backgroundColor: 'var(--bg-sand)' }}>
-                  <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+                  <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
                     Zones in {camp.name}
                   </p>
                   <ZonesPanel campId={camp.id} />

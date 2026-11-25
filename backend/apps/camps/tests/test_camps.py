@@ -36,19 +36,25 @@ class TestCampList:
         assert isinstance(results, list)
 
     def test_list_camps_unauthenticated(self, client, camp):
-        # Camp list is intentionally public (used by landing page stats)
+        # Camp names stay public for the registration camp picker
         resp = client.get(reverse('camp-list'))
         assert resp.status_code == 200
+
+    def test_anonymous_camp_list_hides_population(self, client, camp):
+        resp = client.get(reverse('camp-list'))
+        results = resp.data.get('results', resp.data)
+        assert set(results[0].keys()) == {'id', 'name', 'code', 'district'}
 
 
 @pytest.mark.django_db
 class TestCampCreate:
-    def test_create_camp_supervisor(self, client, supervisor):
+    def test_create_camp_supervisor_forbidden(self, client, supervisor):
+        # Camp creation is admin-only; supervisors manage their own camp's zones
         client.force_authenticate(user=supervisor)
         resp = client.post(reverse('camp-list'), {
             'name': 'Kiziba', 'district': 'Karongi', 'province': 'Western', 'capacity': 10000
         })
-        assert resp.status_code == 201
+        assert resp.status_code == 403
 
     def test_create_camp_chw_forbidden(self, client, chw):
         client.force_authenticate(user=chw)

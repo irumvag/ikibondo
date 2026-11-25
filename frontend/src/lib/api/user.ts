@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { AuthUser } from '@/store/authStore';
+import { useAuthStore, type AuthUser } from '@/store/authStore';
 
 // AppNotification type lives in notifications.ts — re-exported for consumers
 export type { AppNotification } from './notifications';
@@ -19,10 +19,15 @@ export async function patchMe(
 }
 
 export async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
-  await apiClient.post('/auth/change-password/', {
+  const { data } = await apiClient.post('/auth/change-password/', {
     old_password: oldPassword,
     new_password: newPassword,
   });
+  // The server signs out every existing session and returns a fresh pair for this one
+  const tokens = data?.data;
+  if (tokens?.access && tokens?.refresh) {
+    useAuthStore.getState().setTokens(tokens.access, tokens.refresh);
+  }
 }
 
 // ── Notifications (re-exported from notifications.ts for backwards compat) ─────

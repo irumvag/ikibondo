@@ -51,6 +51,7 @@ LOCAL_APPS = [
     'apps.notifications',
     'apps.consultations',
     'apps.referrals',
+    'apps.integrations',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -177,6 +178,7 @@ REST_FRAMEWORK = {
         'auth_login': '10/minute',
         'auth_otp': '3/hour',
         'auth_register': '10/hour',
+        'auth_otp_confirm': '10/hour',
     },
 }
 
@@ -270,7 +272,13 @@ DHIS2_DE_VACCINE      = config('DHIS2_DE_VACCINE',      default='ikibondoVaccine
 DHIS2_DE_VAX_STATUS   = config('DHIS2_DE_VAX_STATUS',   default='ikibondoVaxStat')
 DHIS2_DE_BATCH        = config('DHIS2_DE_BATCH',        default='ikibondoBatch')
 AFRICASTALKING_API_KEY = config('AFRICASTALKING_API_KEY', default='')
-FCM_SERVER_KEY = config('FCM_SERVER_KEY', default='')
+# Firebase Cloud Messaging (HTTP v1). Path to a service-account JSON file; push is skipped when unset.
+# The legacy FCM_SERVER_KEY API was shut down by Google in 2024 and is no longer used.
+FIREBASE_CREDENTIALS_FILE = config('FIREBASE_CREDENTIALS_FILE', default='')
+
+# Mobile app: builds older than MOBILE_MIN_VERSION are told to update before signing in
+MOBILE_MIN_VERSION = config('MOBILE_MIN_VERSION', default='1.0.0')
+MOBILE_LATEST_VERSION = config('MOBILE_LATEST_VERSION', default='1.0.0')
 
 # ---------------------------------------------------------------------------
 # Email

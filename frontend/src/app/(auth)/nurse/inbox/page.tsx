@@ -82,7 +82,7 @@ export default function NurseInboxPage() {
           }}
         >
           <p
-            className="text-xs font-semibold uppercase tracking-wider px-1 mb-1"
+            className="text-xs font-semibold px-1 mb-1"
             style={{ color: 'var(--text-muted)' }}
           >
             Open ({open.length})
@@ -109,7 +109,7 @@ export default function NurseInboxPage() {
 
               {others.length > 0 && (
                 <p
-                  className="text-xs font-semibold uppercase tracking-wider px-1 mt-3 mb-1"
+                  className="text-xs font-semibold px-1 mt-3 mb-1"
                   style={{ color: 'var(--text-muted)' }}
                 >
                   Resolved ({others.length})

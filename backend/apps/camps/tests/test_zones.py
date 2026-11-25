@@ -26,8 +26,13 @@ def chw(db):
 
 
 @pytest.fixture
-def supervisor(db):
-    return SupervisorFactory(email='super@test.rw', password='testpass')
+def supervisor(db, camp):
+    return SupervisorFactory(email='super@test.rw', password='testpass', camp=camp)
+
+
+@pytest.fixture
+def other_supervisor(db):
+    return SupervisorFactory(email='other@test.rw', password='testpass', camp=CampFactory(name='Kigeme'))
 
 
 @pytest.fixture
@@ -168,3 +173,18 @@ class TestZoneDelete:
         url = reverse('camp-zone-detail', kwargs={'camp_pk': camp.pk, 'pk': zone.pk})
         resp = client.delete(url)
         assert resp.status_code == 401
+
+
+@pytest.mark.django_db
+class TestZoneCampIsolation:
+    def test_supervisor_cannot_create_zone_in_other_camp(self, client, other_supervisor, camp):
+        client.force_authenticate(user=other_supervisor)
+        url = reverse('camp-zone-list', kwargs={'camp_pk': camp.pk})
+        resp = client.post(url, {'name': 'Zone X', 'code': 'ZNX'})
+        assert resp.status_code == 403
+
+    def test_chw_cannot_assign_self_to_zone(self, client, chw, camp, zone):
+        client.force_authenticate(user=chw)
+        url = reverse('camp-zone-assign-chw', kwargs={'camp_pk': camp.pk, 'pk': zone.pk})
+        resp = client.post(url, {'chw_user': str(chw.id)})
+        assert resp.status_code == 403

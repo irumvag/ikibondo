@@ -38,12 +38,57 @@ class _PredictionServiceImpl:
                 return
             self._do_load()
 
+    def reload(self):
+        """Drop the loaded model and load whatever is deployed now (after promote / rollback)."""
+        with self._lock:
+            self._model = None
+            self._explainer = None
+            self._feature_names = []
+            self._thresholds = _DEFAULT_THRESHOLDS
+            self._model_version = 'unknown'
+            self._loaded = False
+            self._do_load()
+
+    def _deployed_artifact(self, models_dir: Path):
+        """
+        The model file chosen in the registry (MLModelVersion, model_name='malnutrition').
+        Returns (model_path, metadata_path, version) or None to use the bundled default.
+        """
+        try:
+            from .models import MLModelVersion
+            v = MLModelVersion.objects.filter(model_name='malnutrition', deployed=True, is_active=True).first()
+        except Exception:  # table missing during migrations / tests without DB
+            return None
+        if v is None or not v.file_path:
+            return None
+        model_path = (models_dir / v.file_path).resolve()
+        # Only files inside saved_models/ may be loaded
+        if models_dir.resolve() not in model_path.parents or not model_path.exists():
+            logger.error('Deployed model %s points at a missing or invalid file: %s', v.version, v.file_path)
+            return None
+        return model_path, model_path.with_suffix('.json'), v.version
+
     def _do_load(self):
         models_dir = self._models_dir()
         pipeline_path = models_dir / 'ikibondo_rf_pipeline.joblib'
         thresholds_path = models_dir / 'thresholds.joblib'
         feature_names_path = models_dir / 'feature_names.json'
         metadata_path = models_dir / 'model_metadata.json'
+
+        deployed = self._deployed_artifact(models_dir)
+        if deployed is not None:
+            pipeline_path, version_meta, self._model_version = deployed
+            if version_meta.exists():
+                # A registered model carries its own thresholds and column order
+                try:
+                    with open(version_meta) as f:
+                        meta = json.load(f)
+                    self._thresholds = meta.get('thresholds', _DEFAULT_THRESHOLDS)
+                    self._feature_names = meta.get('feature_names', [])
+                except Exception:
+                    pass
+            # Skip the bundled default's side files; the registered model's own metadata was read above
+            thresholds_path = feature_names_path = metadata_path = Path('/nonexistent')
 
         if not pipeline_path.exists():
             logger.warning(
@@ -167,12 +212,15 @@ class _PredictionServiceImpl:
                 reverse=True,
             )[:5]
 
+            # SHAP values are for the predicted class: a positive value pushes towards it.
+            # For HIGH/MEDIUM that means more risk; for LOW it means less.
+            towards_risk = risk_level in ('HIGH', 'MEDIUM')
             return [
                 {
                     'feature': name,
                     'value': float(val),
                     'impact': round(float(shap_val), 4),
-                    'direction': 'increases_risk' if shap_val < 0 else 'decreases_risk',
+                    'direction': 'increases_risk' if (shap_val > 0) == towards_risk else 'decreases_risk',
                 }
                 for name, shap_val, val in top_n
             ]

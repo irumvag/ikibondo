@@ -10,7 +10,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.core.responses import success_response, created_response, error_response
 from apps.accounts.models import UserRole
-from apps.accounts.permissions import IsSupervisorOrAdmin
+from apps.accounts.permissions import IsSupervisorOrAdmin, IsNurseOrSupervisorOrAdmin
+from apps.core.scoping import scope_children, scope_camp, can_access_child
 from .models import VaccinationRecord, Vaccine, DoseStatus, ClinicSession, ClinicSessionAttendance, ClinicSessionStatus
 from .serializers import VaccinationRecordSerializer, VaccineSerializer, AdministerSerializer, ClinicSessionSerializer
 from .filters import VaccineFilter, VaccinationRecordFilter
@@ -39,16 +40,24 @@ class VaccinationRecordViewSet(viewsets.ModelViewSet):
             'child', 'child__zone', 'child__guardian',
             'vaccine', 'administered_by',
         ).filter(is_active=True)
-        user = self.request.user
-        if user.role == UserRole.CHW:
-            # CHW sees only vaccinations for children whose guardian is assigned to them
-            qs = qs.filter(child__guardian__assigned_chw=user)
-        elif user.role == UserRole.PARENT:
-            qs = qs.filter(child__guardian__user=user)
-        elif user.role in (UserRole.NURSE, UserRole.SUPERVISOR):
-            if user.camp_id:
-                qs = qs.filter(child__camp_id=user.camp_id)
-        return qs
+        return scope_children(qs, self.request.user, prefix='child__')
+
+    def get_permissions(self):
+        # Only clinical staff may create or edit dose records; reads follow queryset scoping
+        if self.action in ('create', 'update', 'partial_update'):
+            return [IsNurseOrSupervisorOrAdmin()]
+        return super().get_permissions()
+
+    def perform_create(self, serializer):
+        from rest_framework.exceptions import NotFound
+        if not can_access_child(self.request.user, serializer.validated_data['child']):
+            raise NotFound('Child not found.')
+        serializer.save()
+
+    def update(self, request, *args, **kwargs):
+        if 'child' in request.data:
+            return error_response('A dose record cannot be moved to another child.', 'VALIDATION_ERROR')
+        return super().update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
         """When marking a dose DONE, record administered_by and date."""
@@ -128,7 +137,11 @@ class VaccinationRecordViewSet(viewsets.ModelViewSet):
             return error_response('Only nurses and above may send bulk reminders.', 'FORBIDDEN', status_code=403)
 
         from datetime import date
-        camp_id = request.data.get('camp_id') or getattr(request.user, 'camp_id', None)
+        if request.user.role == UserRole.ADMIN:
+            camp_id = request.data.get('camp_id') or getattr(request.user, 'camp_id', None)
+        else:
+            # Non-admins may only remind families in their own camp
+            camp_id = getattr(request.user, 'camp_id', None)
         if not camp_id:
             return error_response('camp_id is required.', 'VALIDATION_ERROR', status_code=400)
 
@@ -170,6 +183,57 @@ class VaccinationRecordViewSet(viewsets.ModelViewSet):
         )
 
 
+def record_session_attendance(session, child_id, status, batch, user):
+    """
+    Record one child's attendance in a clinic session and, when DONE, mark the matching
+    scheduled dose as administered. Shared by the REST action and offline sync.
+    Returns False (and records nothing) when the child is not active in the session's camp.
+    """
+    from apps.children.models import Child
+
+    if not child_id:
+        return False
+    # Security: verify child belongs to this session's camp (prevents cross-camp IDOR)
+    if not Child.objects.filter(id=child_id, camp=session.camp, is_active=True).exists():
+        return False
+
+    # Find matching VaccinationRecord for this session's vaccine + child
+    vax_record = VaccinationRecord.objects.filter(
+        child_id=child_id,
+        vaccine=session.vaccine,
+        status=DoseStatus.SCHEDULED,
+    ).first()
+
+    ClinicSessionAttendance.objects.update_or_create(
+        session=session,
+        child_id=child_id,
+        defaults={
+            'status': status,
+            'batch_number': batch or '',
+            'vaccination_record': vax_record,
+        },
+    )
+
+    if vax_record and status == DoseStatus.DONE:
+        vax_record.status = DoseStatus.DONE
+        vax_record.administered_date = session.session_date
+        vax_record.administered_by = user
+        if batch:
+            vax_record.batch_number = batch
+        vax_record.save(update_fields=['status', 'administered_date', 'administered_by', 'batch_number', 'updated_at'])
+
+        # Notify parent
+        from apps.notifications.tasks import notify_vaccination_administered
+        try:
+            notify_vaccination_administered.delay(str(vax_record.id))
+        except Exception:
+            try:
+                notify_vaccination_administered(str(vax_record.id))
+            except Exception:
+                pass
+    return True
+
+
 class ClinicSessionViewSet(viewsets.ModelViewSet):
     """
     Manage vaccination clinic sessions.
@@ -204,12 +268,8 @@ class ClinicSessionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return ClinicSession.objects.none()
-        user = self.request.user
         qs = ClinicSession.objects.select_related('camp', 'vaccine', 'opened_by').prefetch_related('attendances')
-        if user.role in (UserRole.NURSE, UserRole.SUPERVISOR):
-            if user.camp_id:
-                qs = qs.filter(camp_id=user.camp_id)
-        return qs.order_by('-session_date')
+        return scope_camp(qs, self.request.user).order_by('-session_date')
 
     def create(self, request, *args, **kwargs):
         if request.user.role not in (UserRole.NURSE, UserRole.SUPERVISOR, UserRole.ADMIN):
@@ -233,65 +293,19 @@ class ClinicSessionViewSet(viewsets.ModelViewSet):
         Marks each listed child as DONE/MISSED/SKIPPED in this session.
         Also updates the corresponding VaccinationRecord if one exists.
         """
+        if request.user.role not in (UserRole.NURSE, UserRole.SUPERVISOR, UserRole.ADMIN):
+            return error_response('Only nurses and above may record attendance.', 'FORBIDDEN', status_code=403)
         session = self.get_object()
         if session.status == ClinicSessionStatus.CLOSED:
             return error_response('Session is closed.', 'INVALID_STATE')
 
         attendances_data = request.data.get('attendances', [])
-        from .serializers import ClinicSessionAttendanceSerializer
         created_count = 0
 
-        from apps.children.models import Child as _Child
-
         for item in attendances_data:
-            child_id = item.get('child')
-            status = item.get('status', 'DONE')
-            batch = item.get('batch_number', '')
-
-            if not child_id:
-                continue
-
-            # Security: verify child belongs to this session's camp (prevents cross-camp IDOR)
-            if not _Child.objects.filter(id=child_id, camp=session.camp, is_active=True).exists():
-                continue
-
-            # Find matching VaccinationRecord for this session's vaccine + child
-            vax_record = VaccinationRecord.objects.filter(
-                child_id=child_id,
-                vaccine=session.vaccine,
-                status=DoseStatus.SCHEDULED,
-            ).first()
-
-            attendance, _ = ClinicSessionAttendance.objects.update_or_create(
-                session=session,
-                child_id=child_id,
-                defaults={
-                    'status': status,
-                    'batch_number': batch,
-                    'vaccination_record': vax_record,
-                },
-            )
-
-            # Update the vaccination record too
-            if vax_record and status == DoseStatus.DONE:
-                vax_record.status = DoseStatus.DONE
-                vax_record.administered_date = session.session_date
-                vax_record.administered_by = request.user
-                if batch:
-                    vax_record.batch_number = batch
-                vax_record.save(update_fields=['status', 'administered_date', 'administered_by', 'batch_number', 'updated_at'])
-
-                # Notify parent
-                from apps.notifications.tasks import notify_vaccination_administered
-                try:
-                    notify_vaccination_administered.delay(str(vax_record.id))
-                except Exception:
-                    try:
-                        notify_vaccination_administered(str(vax_record.id))
-                    except Exception:
-                        pass
-
-            created_count += 1
+            if record_session_attendance(session, item.get('child'), item.get('status', 'DONE'),
+                                         item.get('batch_number', ''), request.user):
+                created_count += 1
 
         return success_response(
             data={'recorded': created_count},
@@ -301,6 +315,8 @@ class ClinicSessionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='close')
     def close_session(self, request, pk=None):
         """POST /vaccinations/clinic-sessions/<id>/close/ — close the session."""
+        if request.user.role not in (UserRole.NURSE, UserRole.SUPERVISOR, UserRole.ADMIN):
+            return error_response('Only nurses and above may close sessions.', 'FORBIDDEN', status_code=403)
         session = self.get_object()
         if session.status == ClinicSessionStatus.CLOSED:
             return error_response('Already closed.', 'INVALID_STATE')

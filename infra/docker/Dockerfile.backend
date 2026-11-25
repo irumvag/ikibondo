@@ -1,40 +1,31 @@
-FROM python:3.11-slim
+# ── Build stage: compile wheels with the toolchain ────────────────────────────
+FROM python:3.12-slim AS build
 
-# Prevent Python from writing .pyc files and buffer stdout/stderr
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-WORKDIR /app
-
-# Install system dependencies required by psycopg2 and Pillow
+ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    libjpeg-dev \
-    zlib1g-dev \
+        build-essential libpq-dev libjpeg-dev zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies. Copy the whole requirements/ dir so prod.txt's
-# `-r base.txt` include resolves.
 COPY backend/requirements/ /tmp/requirements/
-RUN pip install --upgrade pip && pip install -r /tmp/requirements/prod.txt
+RUN pip wheel --wheel-dir /wheels -r /tmp/requirements/prod.txt
 
-# Create an unprivileged user to run the app (avoid running as root)
-RUN useradd --create-home --uid 1000 appuser
+# ── Runtime stage: no compilers, runs as an unprivileged user ─────────────────
+FROM python:3.12-slim
 
-# Copy backend source
-COPY backend/ /app/
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+RUN apt-get update && apt-get install -y --no-install-recommends libpq5 libjpeg62-turbo zlib1g \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system app && useradd --system --gid app --home /app app
 
-# Copy ML model artifacts so Django can load them at runtime.
-# settings.ML_MODELS_DIR resolves to /ml/models (BASE_DIR=/app, so BASE_DIR.parent/ml/models).
-COPY ml/models/ /ml/models/
+COPY --from=build /wheels /wheels
+RUN pip install --no-index --find-links=/wheels /wheels/* && rm -rf /wheels
 
-# Ensure runtime-writable dirs exist and are owned by the non-root user
-RUN mkdir -p /app/staticfiles /app/media \
-    && chown -R appuser:appuser /app /ml
+WORKDIR /app
+COPY --chown=app:app backend/ /app/
+# ML artifacts live beside the app; settings resolve ML_MODELS_DIR to /ml/models
+COPY --chown=app:app ml/models/ /ml/models/
+RUN mkdir -p /app/media /app/staticfiles && chown -R app:app /app/media /app/staticfiles
 
-USER appuser
-
+USER app
 EXPOSE 8000
-
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]

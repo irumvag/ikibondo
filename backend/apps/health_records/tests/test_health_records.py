@@ -14,8 +14,8 @@ def client():
 
 
 @pytest.fixture
-def nurse(db):
-    return NurseFactory(email='nurse@test.rw', password='testpass')
+def nurse(db, camp):
+    return NurseFactory(email='nurse@test.rw', password='testpass', camp=camp)
 
 
 @pytest.fixture
@@ -73,8 +73,8 @@ class TestHealthRecordList:
         resp = client.get(reverse('health-record-list'))
         assert resp.status_code == 200
 
-    def test_get_record_detail(self, client, nurse):
-        record = HealthRecordFactory(recorded_by=nurse)
+    def test_get_record_detail(self, client, nurse, child):
+        record = HealthRecordFactory(child=child, recorded_by=nurse)
         client.force_authenticate(user=nurse)
         resp = client.get(reverse('health-record-detail', kwargs={'pk': record.id}))
         assert resp.status_code == 200

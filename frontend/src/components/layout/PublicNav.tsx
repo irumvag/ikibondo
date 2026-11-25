@@ -37,10 +37,8 @@ export function PublicNav() {
     <header
       className="sticky top-0 z-40 border-b"
       style={{
-        backgroundColor: 'color-mix(in srgb, var(--bg) 92%, transparent)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderColor: 'var(--border)',
+        backgroundColor: 'var(--bg)',
+        borderColor: 'var(--rule)',
       }}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -49,8 +47,8 @@ export function PublicNav() {
           {/* Logo */}
           <Link
             href="/"
-            className="shrink-0 text-xl font-bold tracking-tight transition-opacity hover:opacity-75"
-            style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
+            className="shrink-0 text-xl font-extrabold transition-opacity hover:opacity-75"
+            style={{ color: 'var(--ink)', letterSpacing: '-0.02em' }}
             onClick={closeMobile}
           >
             Ikibondo
@@ -95,10 +93,10 @@ export function PublicNav() {
 
             <Link
               href="/login"
-              className="inline-flex items-center px-4 h-8 rounded-lg text-sm font-semibold transition-opacity hover:opacity-85"
-              style={{ backgroundColor: 'var(--ink)', color: 'var(--bg)' }}
+              className="inline-flex items-center px-4 h-9 rounded-[var(--radius-sm)] text-sm font-bold transition-colors bg-[var(--ink)] hover:bg-[var(--ink-soft)]"
+              style={{ color: 'var(--bg)' }}
             >
-              Login
+              Sign in
             </Link>
 
             {/* Mobile menu toggle */}
