@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Routes anyone can visit without a session
-const PUBLIC_PATHS = ['/', '/about', '/login', '/register', '/forgot-password'];
+const PUBLIC_PATHS = ['/', '/about', '/login', '/register', '/forgot-password', '/set-password'];
 
 // Routes available to any authenticated user regardless of role
 const SHARED_AUTH_PATHS = ['/profile', '/notifications', '/onboarding'];

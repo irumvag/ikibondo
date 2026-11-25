@@ -44,6 +44,9 @@ Records outside a user's scope return **404**, not 403, so ids can't be probed.
 - JWT access 60 min, refresh 7 days with rotation and blacklist. Changing or resetting a password,
   suspending or deactivating an account revokes every refresh token for that user.
 - Users cannot edit their own role, camp, approval, active or suspension fields.
+- Parent accounts a nurse creates have no usable password. The parent gets a single-use link by SMS
+  and/or email (valid 3 days, dead once used) and chooses their own; the nurse never sees a password.
+  When neither channel works, the nurse is shown the link as a QR code for the parent to scan.
 
 ## Data in transit and at rest
 
@@ -60,5 +63,4 @@ Records outside a user's scope return **404**, not 403, so ids can't be probed.
 
 - Web tokens live in `localStorage`; moving the refresh token to an httpOnly cookie with a nonce-based
   CSP is the next hardening step.
-- Nurse-created parent accounts still show a temporary password to the nurse.
 - Rate limiting and lockout depend on Redis being configured as the cache in production.

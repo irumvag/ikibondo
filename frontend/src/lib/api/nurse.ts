@@ -79,8 +79,17 @@ export interface ParentUser {
   camp: string | null;
   is_approved: boolean;
   guardian_id: string | null;   // UUID of their linked Guardian, if any
-  /** Only present on freshly-created accounts (one-time, from POST /auth/users/) */
-  temp_password?: string;
+  /** False until the parent opens their set-password link */
+  password_set?: boolean;
+  /** Present right after creating the account or resending the link */
+  setup_delivery?: SetupDelivery;
+  /** Only returned when neither SMS nor email went out — show it as a QR code */
+  setup_link?: string;
+}
+
+export interface SetupDelivery {
+  sms: boolean;
+  email: boolean;
 }
 
 export interface RegisteredChild {
@@ -97,6 +106,12 @@ export async function listCampParents(search?: string): Promise<ParentUser[]> {
     params: { role: 'PARENT', ...(search ? { search } : {}) },
   });
   return data.data ?? [];
+}
+
+/** Send a parent a fresh set-password link (only while they have not set one). */
+export async function resendSetupLink(userId: string): Promise<ParentUser> {
+  const { data } = await apiClient.post(`/auth/users/${userId}/setup-link/`);
+  return data.data;
 }
 
 export async function createParentAccount(payload: {

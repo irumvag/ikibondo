@@ -307,19 +307,20 @@ def create_user_view(request):
             ).exists()
             if not in_camp:
                 return error_response('Guardian not found.', 'NOT_FOUND', status_code=status.HTTP_404_NOT_FOUND)
+        # The nurse never chooses or sees the parent's password: the parent sets it from a link
+        data.pop('password', None)
+        if not (data.get('email') or '').strip():
+            from .account_setup import placeholder_email
+            data['email'] = placeholder_email()
         serializer = UserCreateSerializer(data=data)
         if serializer.is_valid():
             user = serializer.save(is_approved=True)
-            temp_password = getattr(user, '_generated_password', None)
-            _send_welcome_parent_email(user, temp_password, nurse=request.user)
-            response_data = UserProfileSerializer(user).data
-            # Include temp_password so the nurse can hand credentials to parents
-            # who have no email. Shown once — never stored or returned again.
-            if temp_password:
-                response_data['temp_password'] = temp_password
+            user.set_unusable_password()
+            user.must_change_password = False
+            user.save(update_fields=['password', 'must_change_password', 'updated_at'])
             return created_response(
-                data=response_data,
-                message='Parent account created and approved.',
+                data=_with_setup_delivery(user, request.user),
+                message='Parent account created. They will set their own password from the link.',
             )
         return error_response(str(serializer.errors), 'VALIDATION_ERROR')
 
@@ -378,46 +379,20 @@ def _send_welcome_staff_email(user, temp_password: str):
         pass
 
 
-def _send_welcome_parent_email(user, temp_password: str, nurse=None):
-    """Send welcome email to a parent account created by a nurse."""
-    # Only send if the parent has an email address
-    if not user.email:
-        return
-    try:
-        from apps.notifications.tasks import send_email_task
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-        lang = user.preferred_language or 'en'
-
-        # Determine what identifier to show (email preferred, fall back to phone)
-        email_or_phone = user.email or user.phone_number or '(contact your nurse)'
-
-        # Camp name from nurse's camp, or user's own camp
-        camp = getattr(nurse, 'camp', None) or getattr(user, 'camp', None)
-        camp_name = getattr(camp, 'name', 'your camp') if camp else 'your camp'
-
-        SUBJECTS = {
-            'en': 'Your Ikibondo account is ready',
-            'fr': 'Votre compte Ikibondo est prêt',
-            'rw': 'Konti yawe ya Ikibondo irateguye',
-        }
-
-        send_email_task.delay(
-            to=user.email,
-            template='welcome_parent',
-            subject=SUBJECTS.get(lang, SUBJECTS['en']),
-            context={
-                'full_name': user.full_name,
-                'email_or_phone': email_or_phone,
-                'phone': user.phone_number or '',
-                'temp_password': temp_password or '(ask the nurse at your camp)',
-                'camp_name': camp_name,
-                'login_url': f'{frontend_url}/login',
-                'frontend_url': frontend_url,
-            },
-            language=lang,
-        )
-    except Exception:
-        pass
+def _with_setup_delivery(user, nurse):
+    """
+    Send the parent's set-password link and describe the outcome for the nurse.
+    The link itself is only returned when neither SMS nor email went out, so the
+    nurse can show it as a QR code for the parent to open on their own phone.
+    """
+    from .account_setup import send_setup_link, setup_link
+    camp = getattr(nurse, 'camp', None)
+    sent = send_setup_link(user, camp_name=getattr(camp, 'name', ''))
+    data = UserProfileSerializer(user).data
+    data['setup_delivery'] = sent
+    if not (sent['sms'] or sent['email']):
+        data['setup_link'] = setup_link(user)
+    return data
 
 
 @extend_schema(exclude=True)
@@ -748,3 +723,46 @@ def password_reset_confirm_view(request):
     except ResetError as exc:
         return error_response(str(exc), 'RESET_FAILED')
     return success_response(message='Password updated. Sign in with your new password.')
+
+
+@extend_schema(exclude=True)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsNurseOrSupervisorOrAdmin])
+def resend_setup_link_view(request, user_id):
+    """
+    POST /api/v1/auth/users/<id>/setup-link/
+    Send a parent a new set-password link (only while they have not set one).
+    Nurses and supervisors may only do this for parents in their own camp.
+    """
+    from .account_setup import needs_setup
+    qs = CustomUser.objects.filter(pk=user_id, role=UserRole.PARENT)
+    if request.user.role != UserRole.ADMIN:
+        qs = qs.filter(camp_id=request.user.camp_id) if request.user.camp_id else qs.none()
+    user = qs.first()
+    if user is None:
+        return error_response('User not found.', 'NOT_FOUND', status_code=status.HTTP_404_NOT_FOUND)
+    if not needs_setup(user):
+        return error_response('This parent has already set a password. They can use "Forgot password".',
+                              'ALREADY_SET', status_code=status.HTTP_409_CONFLICT)
+    return success_response(data=_with_setup_delivery(user, request.user), message='Setup link sent.')
+
+
+@extend_schema(exclude=True)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([PasswordResetConfirmThrottle])
+def set_password_view(request):
+    """
+    POST /api/v1/auth/set-password/
+    Body: {"uid": "...", "token": "...", "new_password": "..."}
+    """
+    from .account_setup import SetupError, complete_setup
+    try:
+        complete_setup(
+            request.data.get('uid', ''),
+            request.data.get('token', ''),
+            request.data.get('new_password', ''),
+        )
+    except SetupError as exc:
+        return error_response(str(exc), 'SETUP_FAILED')
+    return success_response(message='Password set. You can sign in now.')

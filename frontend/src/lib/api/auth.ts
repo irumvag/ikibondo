@@ -56,3 +56,8 @@ export async function requestPasswordReset(identifier: string): Promise<void> {
 export async function confirmPasswordReset(identifier: string, code: string, newPassword: string): Promise<void> {
   await apiClient.post('/auth/password-reset/confirm/', { identifier, code, new_password: newPassword });
 }
+
+/** First password for a nurse-created parent account, from the link sent to them. */
+export async function setInitialPassword(uid: string, token: string, newPassword: string): Promise<void> {
+  await apiClient.post('/auth/set-password/', { uid, token, new_password: newPassword });
+}

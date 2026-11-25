@@ -1,0 +1,15 @@
+Your Ikibondo account is ready
+==============================
+
+Hello {{ full_name }},
+
+A nurse at {{ camp_name }} created an Ikibondo account for you so you can
+follow your children's growth and vaccinations.
+
+Choose your own password to start (the link works once and expires in 3 days):
+
+  {{ setup_url }}
+
+Never share this link. Ikibondo staff will never ask for your password.
+
+Ikibondo - Child Health Monitoring System

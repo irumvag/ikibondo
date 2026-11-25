@@ -77,6 +77,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'is_active', 'suspended_at', 'suspension_reason',
         ]
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        from .account_setup import has_real_email
+        # Phone-only parents carry an internal placeholder address; never show it
+        if not has_real_email(instance):
+            data['email'] = ''
+        data['password_set'] = instance.has_usable_password()
+        return data
+
     def get_has_guardian_record(self, obj) -> bool:
         from apps.children.models import Guardian
         return Guardian.objects.filter(user=obj).exists()
