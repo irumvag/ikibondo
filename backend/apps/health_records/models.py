@@ -1,9 +1,11 @@
 import uuid
+from datetime import date
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 from apps.core.models import BaseModel
 from .who_zscore import compute_whz, compute_haz, compute_waz, classify_nutrition_status
 
@@ -128,12 +130,17 @@ class HealthRecord(BaseModel):
         """Auto-compute z-scores, nutrition status, and zone from child before saving."""
         from .who_zscore import compute_bmi_z
         child = self.child
-        age_months = child.age_months
         sex = child.sex
+        # Age on the day of the measurement, not today: older records keep their own age
+        measured = self.measurement_date or timezone.now().date()
+        if isinstance(measured, str):
+            measured = date.fromisoformat(measured)
+        age_days = (measured - child.date_of_birth).days
+        age_months = age_days / 30.4375
 
-        whz = compute_whz(float(self.weight_kg), float(self.height_cm), sex)
-        haz = compute_haz(age_months, float(self.height_cm), sex)
-        waz = compute_waz(age_months, float(self.weight_kg), sex)
+        whz = compute_whz(float(self.weight_kg), float(self.height_cm), sex, age_days=age_days)
+        haz = compute_haz(height_cm=float(self.height_cm), sex=sex, age_days=age_days)
+        waz = compute_waz(weight_kg=float(self.weight_kg), sex=sex, age_days=age_days)
         bmi = float(self.weight_kg) / ((float(self.height_cm) / 100) ** 2) if self.height_cm else None
         bmi_z_val = compute_bmi_z(age_months, bmi, sex) if bmi else None
 

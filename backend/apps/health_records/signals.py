@@ -31,20 +31,18 @@ def trigger_ml_prediction(sender, instance, created, **kwargs):
                 classify_nutrition_status,
             )
             child = instance.child
+            age_days = (instance.measurement_date - child.date_of_birth).days
             instance.weight_for_height_z = compute_whz(
                 weight_kg=float(instance.weight_kg),
                 height_cm=float(instance.height_cm),
                 sex=child.sex,
+                age_days=age_days,
             )
             instance.height_for_age_z = compute_haz(
-                age_months=child.age_months,
-                height_cm=float(instance.height_cm),
-                sex=child.sex,
+                height_cm=float(instance.height_cm), sex=child.sex, age_days=age_days,
             )
             instance.weight_for_age_z = compute_waz(
-                age_months=child.age_months,
-                weight_kg=float(instance.weight_kg),
-                sex=child.sex,
+                weight_kg=float(instance.weight_kg), sex=child.sex, age_days=age_days,
             )
 
             # Auto-classify nutrition status

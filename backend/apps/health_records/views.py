@@ -413,39 +413,18 @@ def _build_parent_summary(child, records_qs, lang: str) -> dict:
 
 
 def _build_who_percentile_bands(sex: str) -> dict:
-    """Return WHO weight-for-age and height-for-age percentile bands for 0–72 months."""
-    from apps.health_records.who_zscore import (
-        _HAZ_LMS_MALE, _HAZ_LMS_FEMALE, _lms_zscore, _interpolate_lms
-    )
-    import math
+    """WHO weight-for-age and length/height-for-age percentile bands, birth to 60 months."""
+    from apps.health_records.who_zscore import _lms, _value_at
 
-    def z_to_x(age, z_score, table, is_height=True):
-        """Invert LMS z-score to raw measurement at a given z."""
-        try:
-            L, M, S = _interpolate_lms(table, age)
-            if L == 0:
-                return round(M * math.exp(z_score * S), 1)
-            return round(M * ((1 + L * S * z_score) ** (1 / L)), 1)
-        except Exception:
-            return None
-
-    haz_table = _HAZ_LMS_MALE if sex == 'M' else _HAZ_LMS_FEMALE
-
-    ages = list(range(0, 73, 3))  # 0,3,6,...,72 months
+    ages = list(range(0, 61, 3))  # WHO standards end at 5 years
     percentile_z = {'p3': -1.88, 'p15': -1.04, 'p50': 0.0, 'p85': 1.04, 'p97': 1.88}
+    bands = {'weight_for_age': ('wfa', {}), 'height_for_age': ('lhfa', {})}
 
-    height_bands = {p: [] for p in percentile_z}
-    weight_bands = {p: [] for p in percentile_z}
-
-    for age in ages:
+    for name, (indicator, out) in bands.items():
         for label, z in percentile_z.items():
-            h = z_to_x(age, z, haz_table, is_height=True)
-            height_bands[label].append({'age_months': age, 'value': h})
-            # Approximate weight from height using rough scaling
-            w = round(z_to_x(age, z, haz_table, is_height=True) * 0.138, 1) if h else None
-            weight_bands[label].append({'age_months': age, 'value': w})
+            out[label] = []
+            for age in ages:
+                lms = _lms(indicator, sex, age * 30.4375)
+                out[label].append({'age_months': age, 'value': round(_value_at(z, *lms), 1) if lms else None})
 
-    return {
-        'weight_for_age': weight_bands,
-        'height_for_age': height_bands,
-    }
+    return {name: out for name, (_, out) in bands.items()}
