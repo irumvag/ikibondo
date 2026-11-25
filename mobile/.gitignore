@@ -23,3 +23,16 @@ ios/Flutter/flutter_export_environment.sh
 
 # Generated files
 coverage/
+
+# Firebase config (per-project; supply locally / in CI secrets)
+ios/Runner/GoogleService-Info.plist
+android/app/google-services.json
+
+# Local tooling and generated platform files
+*.iml
+.idea/
+**/flutter/ephemeral/
+ios/Flutter/ephemeral/
+ios/Flutter/Generated.xcconfig
+ios/Podfile.lock
+android/gradlew.bat

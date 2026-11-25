@@ -1,7 +1,24 @@
-# Ikibondo Mobile (Flutter)
+# Ikibondo Mobile (Flutter, iOS + Android)
 
-Offline-first Flutter app for CHWs, nurses and parents. Handles child PII, so the
-network and local database are hardened accordingly.
+Offline-first field app for **community health workers**, **parents**, and **nurses**
+(the nurse side covers away-from-the-laptop work: scanning, vaccination session mode,
+approvals, referrals). Handles child PII, so the network and local database are hardened
+accordingly.
+
+## What it does
+
+- **Works offline.** Caseload, vaccine queue and recent records are cached in the encrypted
+  database. Visits and vaccine-session taps made without signal are queued with a UUID and
+  uploaded through `POST /api/v1/sync/batch/` as soon as the phone is back online; the server
+  ignores duplicates. Records the server *refuses* (validation, permissions) are shown, not queued.
+- **Field triage with no signal.** MUAC / oedema bands (WHO, 6–59 months) show while the CHW types.
+- **Bluetooth scales** implementing the standard Weight Scale Service (0x181D / 0x2A9D) fill in
+  the weight (`lib/iot/ble_scale.dart`).
+- **Privacy.** Face ID / fingerprint / passcode lock after 5 minutes in the background; signing
+  out wipes the phone's records (with a warning if some have not uploaded); Android cloud backup is off.
+- **Account recovery.** "Forgot password?" sends a 6-digit code by SMS or email.
+- **Push** via Firebase Cloud Messaging (optional — see below).
+- **Version gate.** Builds older than `MOBILE_MIN_VERSION` on the server are asked to update.
 
 ## Setup
 
@@ -32,6 +49,48 @@ flutter build apk --release \
   --dart-define=API_BASE_URL=https://api.ikibondo.rw/api/v1 \
   --dart-define=API_CERT_SHA256=aa:bb:cc:...
 ```
+
+## Test on your iPhone with TestFlight
+
+Requirements: a Mac with **Xcode** (App Store), **CocoaPods** (`brew install cocoapods`), and an
+**Apple Developer Program** membership ($99/year).
+
+1. Deploy the backend to a server with **HTTPS** (iOS refuses plain HTTP, and release builds of
+   this app refuse to start without it). `infra/docker` has the stack; see `docs/deployment.md`.
+2. In [App Store Connect](https://appstoreconnect.apple.com): *Apps → +* → bundle ID
+   **`rw.ac.ur.ikibondo.ikibondo`**.
+3. `cd ios && pod install && open Runner.xcworkspace` → *Runner → Signing & Capabilities* → choose your team.
+   Add **Push Notifications** and **Background Modes → Remote notifications** if using push.
+4. Build and upload:
+   ```bash
+   flutter build ipa --dart-define=API_BASE_URL=https://your-server/api/v1
+   open build/ios/ipa   # drag the .ipa into Apple's Transporter app
+   ```
+5. App Store Connect → *TestFlight* → add yourself as an internal tester → install from the TestFlight app.
+6. Bump `version:` in `pubspec.yaml` for every upload (e.g. `1.0.1+2`).
+
+The iOS deployment target is 15.5 (needed by `mobile_scanner` and the Firebase pods).
+
+## Android (internal testing)
+
+Requires the Android SDK (Android Studio) and a JDK.
+
+```bash
+flutter build appbundle --dart-define=API_BASE_URL=https://your-server/api/v1
+```
+
+Upload `build/app/outputs/bundle/release/app-release.aab` to Play Console → *Testing → Internal testing*.
+Create an upload keystore first and reference it from `android/key.properties` (git-ignored).
+
+## Push notifications (optional)
+
+1. Create a Firebase project; add an iOS app and an Android app, both `rw.ac.ur.ikibondo.ikibondo`.
+2. Put `GoogleService-Info.plist` in `ios/Runner/` and `google-services.json` in `android/app/`.
+   For iOS, upload your APNs key in Firebase → Cloud Messaging.
+3. On the server set `FIREBASE_CREDENTIALS_FILE` to a service-account JSON.
+
+Without these files the app runs normally and simply skips push registration
+(`lib/core/push/push_registration.dart`).
 
 ## Security notes
 

@@ -4,10 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../core/api/api_client.dart';
+import '../../core/api/api_errors.dart';
 import '../../core/api/endpoints.dart';
 import '../../core/models/child.dart';
 import '../../core/providers/sync_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../iot/ble_scale.dart';
+import '../../iot/muac.dart';
 
 const _symptoms = [
   'fever', 'diarrhea', 'cough', 'vomiting',
@@ -35,10 +38,13 @@ class _LogVisitScreenState extends ConsumerState<LogVisitScreen> {
   bool _oedema      = false;
   final Set<String> _selectedSymptoms = {};
   bool _submitting  = false;
+  bool _readingScale = false;
 
   @override
   void initState() {
     super.initState();
+    // Re-run the on-device MUAC triage as the value is typed
+    _muacCtrl.addListener(() => setState(() {}));
     if (widget.preselectedChildId != null) _loadChild(widget.preselectedChildId!);
   }
 
@@ -85,13 +91,35 @@ class _LogVisitScreenState extends ConsumerState<LogVisitScreen> {
           _showResult(context, risk, data['nutrition_status_display'] as String? ?? '');
         }
       } catch (e) {
-        _saveOffline(payload);
+        if (isNetworkError(e)) {
+          await _saveOffline(payload);
+        } else if (mounted) {
+          // The server refused the data; queueing it would only fail again later
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(serverMessage(e, 'Could not save the visit.')), backgroundColor: colorDanger),
+          );
+        }
       }
     } else {
-      _saveOffline(payload);
+      await _saveOffline(payload);
     }
 
-    setState(() => _submitting = false);
+    if (mounted) setState(() => _submitting = false);
+  }
+
+  Future<void> _readScale() async {
+    setState(() => _readingScale = true);
+    try {
+      final kg = await BleScale.readOnce();
+      _weightCtrl.text = kg.toStringAsFixed(2);
+    } catch (e) {
+      if (mounted) {
+        final msg = e is StateError ? e.message : e.toString().replaceFirst(RegExp(r'^\w+Exception:?\s*'), '');
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      }
+    } finally {
+      if (mounted) setState(() => _readingScale = false);
+    }
   }
 
   Future<void> _saveOffline(Map<String, dynamic> payload) async {
@@ -205,6 +233,16 @@ class _LogVisitScreenState extends ConsumerState<LogVisitScreen> {
                     return null;
                   })),
             ]),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _readingScale ? null : _readScale,
+                icon: _readingScale
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.bluetooth),
+                label: Text(_readingScale ? 'Waiting for the scale…' : 'Read weight from Bluetooth scale'),
+              ),
+            ),
             const SizedBox(height: 12),
             Row(children: [
               Expanded(child: _NumField(ctrl: _muacCtrl, label: 'MUAC (cm)', hint: 'e.g. 12.5',
@@ -228,6 +266,7 @@ class _LogVisitScreenState extends ConsumerState<LogVisitScreen> {
               activeColor: colorDanger,
               contentPadding: EdgeInsets.zero,
             ),
+            _MuacTriage(band: MuacBand.classify(muacCm: double.tryParse(_muacCtrl.text), oedema: _oedema)),
 
             const SizedBox(height: 16),
 
@@ -289,4 +328,31 @@ class _NumField extends StatelessWidget {
     decoration: InputDecoration(labelText: label, hintText: hint),
     validator: validator,
   );
+}
+
+/// Immediate WHO MUAC/oedema guidance, shown before the visit is saved so the
+/// CHW can act even with no signal.
+class _MuacTriage extends StatelessWidget {
+  final MuacBand? band;
+  const _MuacTriage({required this.band});
+
+  @override
+  Widget build(BuildContext context) {
+    final b = band;
+    if (b == null) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: b.background,
+        borderRadius: BorderRadius.circular(10),
+        border: Border(left: BorderSide(color: b.color, width: 4)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(b.label, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: b.color)),
+        const SizedBox(height: 2),
+        Text(b.action, style: GoogleFonts.inter(fontSize: 13, color: colorInk)),
+      ]),
+    );
+  }
 }

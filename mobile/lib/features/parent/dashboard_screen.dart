@@ -9,6 +9,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/risk_badge.dart';
+import '../../shared/widgets/sign_out_button.dart';
 
 final parentChildrenProvider = FutureProvider.autoDispose<List<Child>>((ref) async {
   final resp = await ApiClient.dio.get(Endpoints.children);
@@ -33,6 +34,7 @@ class ParentDashboardScreen extends ConsumerWidget {
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () => context.go('/parent/notifications'),
           ),
+          const SignOutButton(),
         ],
       ),
       body: RefreshIndicator(

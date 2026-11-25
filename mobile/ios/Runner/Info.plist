@@ -4,6 +4,10 @@
 <dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Ikibondo needs camera access to scan child QR identity cards</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Ikibondo connects to Bluetooth scales to read a child's weight.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Ikibondo uses Face ID to unlock children's records.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

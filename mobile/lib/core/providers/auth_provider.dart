@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../api/api_errors.dart';
 import '../api/auth_service.dart';
 import '../models/user.dart';
+import '../push/push_registration.dart';
+import 'sync_provider.dart';
 
 // ── Auth state ─────────────────────────────────────────────────────────────
 class AuthState {
@@ -32,6 +35,7 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final user = await AuthService.restoreSession();
       state = AuthState(user: user);
+      if (user != null) PushRegistration.register();
     } catch (_) {
       state = const AuthState();
     }
@@ -42,6 +46,7 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final user = await AuthService.login(email, password);
       state = AuthState(user: user);
+      PushRegistration.register();
       return true;
     } catch (e) {
       state = AuthState(error: _parseError(e));
@@ -51,19 +56,14 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<void> logout() async {
     await AuthService.logout();
+    await ref.read(dbProvider).wipeAll();
+    await ref.read(syncProvider.notifier).refresh();
     state = const AuthState();
   }
 
-  String _parseError(Object e) {
-    final str = e.toString();
-    if (str.contains('401') || str.contains('No active account')) {
-      return 'Invalid email or password.';
-    }
-    if (str.contains('SocketException') || str.contains('connection')) {
-      return 'Cannot reach server. Check your internet connection.';
-    }
-    return 'Login failed. Please try again.';
-  }
+  /// The server explains lockouts and unapproved accounts itself; show that.
+  String _parseError(Object e) =>
+      serverMessage(e, 'Sign-in failed. Please try again.');
 }
 
 final authProvider = NotifierProvider<AuthNotifier, AuthState>(

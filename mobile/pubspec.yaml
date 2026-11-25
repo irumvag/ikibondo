@@ -56,6 +56,17 @@ dependencies:
   # UUID generation (for offline operation IDs)
   uuid: ^4.4.0
 
+  # Push notifications (FCM HTTP v1; needs the Firebase config files to activate)
+  firebase_core: ^5.2.0
+  firebase_messaging: ^17.1.0
+  package_info_plus: ^10.2.2
+
+  # Biometric / passcode app lock
+  local_auth: ^3.0.2
+
+  # Bluetooth weight scales (standard Weight Scale Service)
+  flutter_blue_plus: ^1.34.5
+
   # Google Fonts (Inter)
   google_fonts: ^8.1.0
 
@@ -67,6 +78,15 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   build_runner: ^2.4.9
   drift_dev: ^2.18.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
+
+flutter_launcher_icons:
+  image_path: assets/icon.png
+  ios: true
+  remove_alpha_ios: true
+  android: true
+  adaptive_icon_background: "#16324F"
+  adaptive_icon_foreground: assets/icon_foreground.png

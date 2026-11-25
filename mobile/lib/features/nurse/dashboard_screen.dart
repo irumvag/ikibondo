@@ -8,6 +8,7 @@ import '../../core/models/child.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/loading_skeleton.dart';
+import '../../shared/widgets/sign_out_button.dart';
 
 final nurseCampChildrenProvider = FutureProvider.autoDispose<List<Child>>((ref) async {
   final resp = await ApiClient.dio.get(Endpoints.children, queryParameters: {'page_size': 200});
@@ -32,7 +33,10 @@ class NurseDashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: colorCream,
-      appBar: AppBar(title: const Text('Ikibondo — Nurse')),
+      appBar: AppBar(
+        title: const Text('Ikibondo — Nurse'),
+        actions: const [SignOutButton()],
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(nurseCampChildrenProvider);
@@ -74,6 +78,22 @@ class NurseDashboardScreen extends ConsumerWidget {
                 : const SizedBox.shrink(),
               orElse: () => const SizedBox.shrink(),
             ),
+
+            // Away-from-the-laptop work
+            Row(children: [
+              Expanded(child: _QuickAction(
+                icon: Icons.vaccines_outlined,
+                label: 'Vaccination session',
+                onTap: () => context.push('/nurse/sessions'),
+              )),
+              const SizedBox(width: 12),
+              Expanded(child: _QuickAction(
+                icon: Icons.local_hospital_outlined,
+                label: 'Referrals',
+                onTap: () => context.push('/nurse/referrals'),
+              )),
+            ]),
+            const SizedBox(height: 16),
 
             // KPI cards
             children.when(
@@ -184,4 +204,36 @@ class _ActionBtn extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _QuickAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _QuickAction({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: colorBgElev,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colorBorder),
+          ),
+          child: Row(children: [
+            Icon(icon, color: colorInk),
+            const SizedBox(width: 10),
+            Expanded(child: Text(label,
+                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: colorInk))),
+          ]),
+        ),
+      ),
+    );
+  }
 }

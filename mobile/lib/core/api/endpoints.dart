@@ -47,6 +47,11 @@ class Endpoints {
   static const changePassword   = '$kBaseUrl/auth/change-password/';
   static const pendingApprovals = '$kBaseUrl/auth/pending-approvals/';
   static String approveUser(String id) => '$kBaseUrl/auth/approve/$id/';
+  static const passwordResetRequest = '$kBaseUrl/auth/password-reset/request/';
+  static const passwordResetConfirm = '$kBaseUrl/auth/password-reset/confirm/';
+
+  // ── App ────────────────────────────────────────────────────────────────
+  static const appConfig        = '$kBaseUrl/app/config/';
 
   // ── Children ───────────────────────────────────────────────────────────
   static const children         = '$kBaseUrl/children/';
@@ -71,6 +76,13 @@ class Endpoints {
   static String vaccination(String id) => '$kBaseUrl/vaccinations/$id/';
   static String administerVaccine(String id) => '$kBaseUrl/vaccinations/$id/administer/';
   static const vaccines         = '$kBaseUrl/vaccinations/vaccines/';
+  static const clinicSessions   = '$kBaseUrl/vaccinations/clinic-sessions/';
+  static String sessionEligible(String id) => '$kBaseUrl/vaccinations/clinic-sessions/$id/eligible-children/';
+  static String sessionAttendance(String id) => '$kBaseUrl/vaccinations/clinic-sessions/$id/record-attendance/';
+
+  // ── Referrals ──────────────────────────────────────────────────────────
+  static const referrals        = '$kBaseUrl/referrals/';
+  static String completeReferral(String id) => '$kBaseUrl/referrals/$id/complete/';
 
   // ── CHW ────────────────────────────────────────────────────────────────
   static const chwFamilies      = '$kBaseUrl/chw/families/';
@@ -81,6 +93,7 @@ class Endpoints {
   static String markRead(String id) => '$kBaseUrl/notifications/$id/read/';
   static const markAllRead      = '$kBaseUrl/notifications/read-all/';
   static String dismissNotif(String id) => '$kBaseUrl/notifications/$id/dismiss/';
+  static const devices          = '$kBaseUrl/notifications/devices/';
 
   // ── Sync ───────────────────────────────────────────────────────────────
   static const batchSync        = '$kBaseUrl/sync/batch/';

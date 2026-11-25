@@ -1,3 +1,4 @@
+import '../push/push_registration.dart';
 import '../storage/secure_storage.dart';
 import 'api_client.dart';
 import 'endpoints.dart';
@@ -33,8 +34,9 @@ class AuthService {
     }
   }
 
-  /// Logout — blacklist refresh token.
+  /// Logout — stop push to this phone, blacklist the refresh token.
   static Future<void> logout() async {
+    await PushRegistration.unregister();
     try {
       final refresh = await SecureStorage.getRefreshToken();
       if (refresh != null) {

@@ -1,5 +1,6 @@
 package rw.ac.ur.ikibondo.ikibondo
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+// FlutterFragmentActivity: local_auth (biometric unlock) needs a FragmentActivity
+class MainActivity : FlutterFragmentActivity()

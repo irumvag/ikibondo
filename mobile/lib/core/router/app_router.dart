@@ -4,6 +4,7 @@ import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/change_password_screen.dart';
+import '../../features/auth/forgot_password_screen.dart';
 import '../../features/chw/dashboard_screen.dart';
 import '../../features/chw/scan_screen.dart';
 import '../../features/chw/log_visit_screen.dart';
@@ -22,6 +23,8 @@ import '../../features/nurse/child_detail_screen.dart';
 import '../../features/nurse/register_child_screen.dart';
 import '../../features/nurse/scan_screen.dart';
 import '../../features/nurse/approvals_screen.dart';
+import '../../features/nurse/referrals_screen.dart';
+import '../../features/nurse/sessions_screen.dart';
 import '../../shared/widgets/chw_shell.dart';
 import '../../shared/widgets/parent_shell.dart';
 import '../../shared/widgets/nurse_shell.dart';
@@ -34,8 +37,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final loggedIn = auth.isAuthenticated;
       final onLogin  = state.matchedLocation == '/login';
+      final public   = onLogin || state.matchedLocation == '/forgot-password';
 
-      if (!loggedIn && !onLogin) return '/login';
+      if (!loggedIn && !public) return '/login';
       if (loggedIn && onLogin) {
         if (auth.user!.mustChangePassword) return '/change-password';
         return _homeForRole(auth.user!.role);
@@ -46,6 +50,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         builder: (_, __) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (_, __) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: '/change-password',
@@ -99,6 +107,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/nurse/scan',        builder: (_, __) => const NurseScanScreen()),
           GoRoute(path: '/nurse/register',    builder: (_, __) => const RegisterChildScreen()),
           GoRoute(path: '/nurse/approvals',   builder: (_, __) => const ApprovalsScreen()),
+          GoRoute(path: '/nurse/referrals',   builder: (_, __) => const ReferralsScreen()),
+          GoRoute(path: '/nurse/sessions',    builder: (_, __) => const SessionsScreen()),
+          GoRoute(
+            path: '/nurse/sessions/:id',
+            builder: (_, state) => SessionModeScreen(
+              sessionId: state.pathParameters['id']!,
+              title: state.uri.queryParameters['vaccine'] ?? 'Vaccination session',
+            ),
+          ),
           GoRoute(
             path: '/nurse/children/:id',
             builder: (_, state) => NurseChildDetailScreen(childId: state.pathParameters['id']!),

@@ -205,6 +205,15 @@ class AppDatabase extends _$AppDatabase {
     await (delete(cachedVaccinationRecords)
       ..where((t) => t.cachedAt.isSmallerThan(Variable(cutoff)))).go();
   }
+
+  /// Sign-out: phones are shared in the camps, so nothing about the previous
+  /// user's children (or their unsent records) may stay on the device.
+  Future<void> wipeAll() => transaction(() async {
+        await delete(pendingOperations).go();
+        await delete(cachedChildren).go();
+        await delete(cachedHealthRecords).go();
+        await delete(cachedVaccinationRecords).go();
+      });
 }
 
 LazyDatabase _openConnection() {
