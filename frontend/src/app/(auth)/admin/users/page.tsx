@@ -100,11 +100,16 @@ const USER_COLUMNS = (
   { key: 'full_name', header: 'Name',  width: '170px' },
   { key: 'email',     header: 'Email', width: '210px' },
   {
-    key: 'role', header: 'Role', width: '110px',
-    render: (v: unknown) => (
-      <Badge variant={roleBadgeVariant(v as string)}>
-        {ROLE_LABELS[v as string] ?? v as string}
-      </Badge>
+    key: 'role', header: 'Role', width: '150px',
+    render: (v: unknown, row: AuthUser) => (
+      <span className="flex flex-wrap gap-1">
+        <Badge variant={roleBadgeVariant(v as string)}>
+          {ROLE_LABELS[v as string] ?? v as string}
+        </Badge>
+        {(row.roles ?? []).filter((r) => r !== v).map((r) => (
+          <Badge key={r} variant="default">+ {ROLE_LABELS[r] ?? r}</Badge>
+        ))}
+      </span>
     ),
   },
   { key: 'camp_name', header: 'Camp', width: '130px', render: (v: unknown) => (v as string) || '—' },
@@ -183,6 +188,8 @@ const EMPTY_CREATE: CreateUserForm = { full_name: '', email: '', role: 'CHW', ph
 interface EditUserForm {
   full_name: string; email: string; phone_number: string;
   role: string; camp: string; is_approved: boolean;
+  /** Roles held in addition to the main role */
+  extra_roles: string[];
 }
 
 const TOAST_MS = 5000;
@@ -213,7 +220,7 @@ export default function UsersPage() {
   // Edit
   const [editingUser, setEditingUser] = useState<AuthUser | null>(null);
   const [editForm, setEditForm]       = useState<EditUserForm>({
-    full_name: '', email: '', phone_number: '', role: '', camp: '', is_approved: false,
+    full_name: '', email: '', phone_number: '', role: '', camp: '', is_approved: false, extra_roles: [],
   });
   const [saving, setSaving]         = useState(false);
   const [editError, setEditError]   = useState('');
@@ -273,6 +280,7 @@ export default function UsersPage() {
       full_name: user.full_name, email: user.email,
       phone_number: user.phone_number ?? '', role: user.role,
       camp: user.camp ?? '', is_approved: user.is_approved,
+      extra_roles: (user.roles ?? []).filter((r) => r !== user.role),
     });
     setEditError('');
   };
@@ -282,16 +290,18 @@ export default function UsersPage() {
     if (!editingUser) return;
     setSaving(true); setEditError('');
     try {
+      const { extra_roles, ...fields } = editForm;
       await updateUser(editingUser.id, {
-        ...editForm,
-        phone_number: editForm.phone_number || undefined,
-        camp: editForm.camp || null,
+        ...fields,
+        phone_number: fields.phone_number || undefined,
+        camp: fields.camp || null,
+        roles: [fields.role, ...extra_roles.filter((r) => r !== fields.role)],
       });
       invalidateUsers();
       setEditingUser(null);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setEditError(msg ?? 'Failed to save changes.');
+      const data = (err as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+      setEditError(data?.error ?? data?.message ?? 'Failed to save changes.');
     } finally { setSaving(false); }
   };
 
@@ -680,9 +690,9 @@ export default function UsersPage() {
               <Input label="Phone number" type="tel" value={editForm.phone_number}
                 onChange={(e) => setEditForm({ ...editForm, phone_number: e.target.value })} />
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Role</label>
+                <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Main role</label>
                 <select value={editForm.role}
-                  onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                  onChange={(e) => setEditForm({ ...editForm, role: e.target.value, extra_roles: editForm.extra_roles.filter((r) => r !== e.target.value) })}
                   className="text-sm px-3 py-2 rounded-lg border outline-none"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
                 >
@@ -691,6 +701,27 @@ export default function UsersPage() {
                   ))}
                 </select>
               </div>
+              <fieldset className="flex flex-col gap-1.5">
+                <legend className="text-sm font-medium mb-1" style={{ color: 'var(--ink)' }}>Also works as</legend>
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                  {ROLE_OPTIONS.filter((r) => r && r !== editForm.role).map((r) => (
+                    <label key={r} className="flex items-center gap-2 cursor-pointer select-none text-sm" style={{ color: 'var(--ink)' }}>
+                      <input type="checkbox" className="w-4 h-4 rounded"
+                        checked={editForm.extra_roles.includes(r)}
+                        onChange={(e) => setEditForm({
+                          ...editForm,
+                          extra_roles: e.target.checked
+                            ? [...editForm.extra_roles, r]
+                            : editForm.extra_roles.filter((x) => x !== r),
+                        })} />
+                      {ROLE_LABELS[r]}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  They switch between roles from the top bar. A parent role shows the children linked to their account.
+                </p>
+              </fieldset>
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Camp</label>
                 <select value={editForm.camp}

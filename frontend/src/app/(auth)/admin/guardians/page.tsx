@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { Search, Users, Baby, X, UserCheck } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { listGuardians, assignCHWToGuardian } from '@/lib/api/admin';
+import { listGuardians, assignCHWToGuardian, linkGuardianAccount } from '@/lib/api/admin';
 import { useAdminUsers } from '@/lib/api/queries';
 import type { Guardian } from '@/lib/api/admin';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { AuthUser } from '@/store/authStore';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function GuardiansPage() {
   const qc = useQueryClient();
@@ -27,6 +28,35 @@ export default function GuardiansPage() {
 
   const { data: users = [] } = useAdminUsers('CHW');
   const chws = users as AuthUser[];
+  // Anyone holding the Parent role (including staff who were also given it)
+  const { data: parentUsers = [] } = useAdminUsers('PARENT');
+  const toast = useToast();
+
+  const [linking, setLinking] = useState<Guardian | null>(null);
+  const [selectedUser, setSelectedUser] = useState('');
+
+  const openLink = (g: Guardian) => {
+    setLinking(g);
+    setSelectedUser(g.user_id ?? '');
+    setError('');
+  };
+
+  const handleLink = async () => {
+    if (!linking) return;
+    setSaving(true);
+    setError('');
+    try {
+      await linkGuardianAccount(linking.id, selectedUser || null);
+      qc.invalidateQueries({ queryKey: ['guardians'] });
+      toast.success(selectedUser ? 'Account linked to the family' : 'Account link removed');
+      setLinking(null);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setError(msg ?? 'Failed to link the account. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const openAssign = (g: Guardian) => {
     setAssigning(g);
@@ -151,12 +181,62 @@ export default function GuardiansPage() {
                 ) : (
                   <span className="text-xs" style={{ color: 'var(--text-muted)' }}>No CHW</span>
                 )}
+                <Button size="sm" variant="secondary" onClick={() => openLink(g)}>
+                  {g.has_account ? 'Account' : 'Link account'}
+                </Button>
                 <Button size="sm" variant="secondary" onClick={() => openAssign(g)}>
                   Assign CHW
                 </Button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Link app account modal */}
+      {linking && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setLinking(null); }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl p-6 flex flex-col gap-4 shadow-xl animate-pop"
+            style={{ backgroundColor: 'var(--bg-elev)', border: '1px solid var(--border)' }}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-lg" style={{ color: 'var(--ink)' }}>Link app account</h3>
+              <button type="button" onClick={() => setLinking(null)} aria-label="Close">
+                <X size={18} style={{ color: 'var(--text-muted)' }} />
+              </button>
+            </div>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              The linked account sees <strong style={{ color: 'var(--ink)' }}>{linking.full_name}</strong>&#8217;s
+              children in its Parent view. Only accounts with the Parent role are listed — give a staff
+              member that role in Users first.
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Account</label>
+              <select
+                value={selectedUser}
+                onChange={(e) => setSelectedUser(e.target.value)}
+                className="text-sm px-3 py-2 rounded-lg border outline-none"
+                style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
+              >
+                <option value="">— No linked account —</option>
+                {(parentUsers as AuthUser[]).map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.full_name} · {u.phone_number || u.email}{u.role !== 'PARENT' ? ` (also ${u.role.toLowerCase()})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
+            <div className="flex gap-2">
+              <Button variant="primary" loading={saving} onClick={handleLink} className="flex-1">Save</Button>
+              <Button variant="secondary" onClick={() => setLinking(null)}>Cancel</Button>
+            </div>
+          </div>
         </div>
       )}
 

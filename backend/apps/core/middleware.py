@@ -1,7 +1,6 @@
 """
 Core middleware for Ikibondo.
 
-ZoneScopeMiddleware — sets request.scope after JWT auth resolves the user.
 AuditLogMiddleware  — records every mutation request (POST/PUT/PATCH/DELETE)
                       to the AuditLog table with user, IP, path, and body.
 """
@@ -15,54 +14,13 @@ logger = logging.getLogger(__name__)
 # Fields whose values must never be stored in the audit log
 _SENSITIVE_KEYS = frozenset({
     'password', 'new_password', 'old_password', 'confirm_password',
-    'token', 'access', 'refresh', 'secret', 'api_key',
+    'token', 'access', 'refresh', 'secret', 'api_key', 'code', 'uid',
 })
 
 _MUTATION_METHODS = frozenset({'POST', 'PUT', 'PATCH', 'DELETE'})
 
 # Paths that carry credentials and must never be body-logged
 _SKIP_BODY_PATHS = ('/auth/login/', '/auth/token/', '/auth/token/refresh/')
-
-
-class ZoneScopeMiddleware(MiddlewareMixin):
-    def process_request(self, request):
-        user = getattr(request, 'user', None)
-        if user is None or not user.is_authenticated:
-            request.scope = {
-                'role': None,
-                'camp_id': None,
-                'zone_ids': [],
-                'user_id': None,
-            }
-            return
-
-        role = user.role
-        camp_id = str(user.camp_id) if user.camp_id else None
-        zone_ids = []
-
-        try:
-            if role == 'SUPERVISOR':
-                from apps.camps.models import ZoneCoordinatorAssignment
-                zone_ids = list(
-                    ZoneCoordinatorAssignment.objects
-                    .filter(user=user, status='active')
-                    .values_list('zone_id', flat=True)
-                )
-                zone_ids = [str(z) for z in zone_ids]
-            elif role == 'CHW':
-                from apps.camps.models import CHWZoneAssignment
-                assignment = CHWZoneAssignment.objects.filter(chw_user=user, status='active').first()
-                if assignment:
-                    zone_ids = [str(assignment.zone_id)]
-        except Exception:
-            pass
-
-        request.scope = {
-            'role': role,
-            'camp_id': camp_id,
-            'zone_ids': zone_ids,
-            'user_id': str(user.id),
-        }
 
 
 class AuditLogMiddleware(MiddlewareMixin):

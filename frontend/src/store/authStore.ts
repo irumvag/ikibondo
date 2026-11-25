@@ -6,7 +6,11 @@ export interface AuthUser {
   id: string;
   email: string;
   full_name: string;
+  /** The role the person is acting as right now */
   role: UserRole;
+  /** Every role the person holds (primary first); more than one shows the role switcher */
+  roles?: UserRole[];
+  primary_role?: UserRole;
   phone_number: string | null;
   national_id?: string | null;
   camp: string | null;

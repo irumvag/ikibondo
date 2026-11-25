@@ -18,10 +18,21 @@ import type { AppNotification } from '@/lib/api/notifications';
 
 function resolveLink(n: AppNotification, role: string): string | null {
   const t = n.trigger_type;
-  // Visit-related
-  if (t === 'VISIT_REQUESTED' || t === 'MISSED_VISIT')           return '/chw/requests';
-  if (t === 'VISIT_ACCEPTED' || t === 'VISIT_DECLINED' ||
-      t === 'VISIT_COMPLETED' || t === 'VISIT_WITHDRAWN')        return '/parent/request-visit';
+  // Account
+  if (t === 'ROLE_GRANTED') return '/profile';
+  if (t === 'CASE_CLOSED') {
+    if (role === 'ADMIN') return '/admin/closed-cases';
+    if (role === 'SUPERVISOR') return '/supervisor/closed-cases';
+    return '/nurse/closed-cases';
+  }
+  // Visit-related (types as sent by the API, see notifications/models.py)
+  if (t === 'VISIT_REQUEST_CREATED' || t === 'MISSED_VISIT')    return '/chw/requests';
+  if (t === 'VISIT_REQUEST_ACCEPTED' || t === 'VISIT_REQUEST_DECLINED' ||
+      t === 'VISIT_REQUEST_COMPLETED')                          return '/parent/request-visit';
+  if (t === 'VACCINATION_DONE') {
+    if (role === 'PARENT') return '/parent/vaccines';
+    return '/nurse/vaccines';
+  }
   // Health / risk
   if (t === 'SAM_ALERT' || t === 'HIGH_RISK_ALERT' || t === 'GROWTH_RISK') {
     if (role === 'PARENT')        return n.child_id ? `/parent/children/${n.child_id}` : '/parent';
@@ -32,7 +43,7 @@ function resolveLink(n: AppNotification, role: string): string | null {
   // Vaccination
   if (t === 'VACCINATION_REMINDER' || t === 'VACCINATION_OVERDUE') {
     if (role === 'PARENT') return '/parent/vaccines';
-    if (role === 'CHW')    return '/chw/caseload';
+    if (role === 'CHW')    return '/chw/vaccines';
     return '/nurse/children';
   }
   // Admin / supervisor

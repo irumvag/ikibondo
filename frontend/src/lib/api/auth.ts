@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { AuthUser } from '@/store/authStore';
+import type { AuthUser, UserRole } from '@/store/authStore';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -60,4 +60,11 @@ export async function confirmPasswordReset(identifier: string, code: string, new
 /** First password for a nurse-created parent account, from the link sent to them. */
 export async function setInitialPassword(uid: string, token: string, newPassword: string): Promise<void> {
   await apiClient.post('/auth/set-password/', { uid, token, new_password: newPassword });
+}
+
+/** Act as another role the person holds. Returns a fresh token pair and the profile in that role. */
+export async function switchRole(role: UserRole): Promise<LoginResponse> {
+  const refresh = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') ?? '' : '';
+  const { data } = await apiClient.post('/auth/switch-role/', { role, refresh });
+  return unwrap<LoginResponse>(data);
 }

@@ -11,6 +11,12 @@ Roles determine what each user can see and do in the system:
 - SUPERVISOR: oversees a camp or district; read-only on all data, write on reports.
 - ADMIN: full access including user management.
 - PARENT: guardian of a registered child; read-only view of their own children.
+
+One person may hold several roles (e.g. a nurse who is also a parent). `role` is the
+primary role stored on the account; `RoleGrant` rows list every role the person holds
+(the primary role included). During a request `user.role` is the role the person is
+currently acting as, taken from the token (see accounts/authentication.py), so every
+permission check and data scope follows the active role.
 """
 import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
@@ -25,7 +31,13 @@ class UserRole(models.TextChoices):
     PARENT = 'PARENT', 'Parent / Guardian'
 
 
-class CustomUserManager(BaseUserManager):
+class CustomUserQuerySet(models.QuerySet):
+    def with_role(self, role):
+        """Users who hold `role`, as their primary role or an extra grant."""
+        return self.filter(models.Q(role=role) | models.Q(role_grants__role=role)).distinct()
+
+
+class CustomUserManager(BaseUserManager.from_queryset(CustomUserQuerySet)):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError('Email is required.')
@@ -106,6 +118,46 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f'{self.full_name} ({self.get_role_display()})'
 
+    # ── Multiple roles ────────────────────────────────────────────────────────
+    @property
+    def primary_role(self):
+        """The stored role, even while the user is acting as another one."""
+        return getattr(self, '_primary_role', None) or self.role
+
+    @property
+    def roles(self):
+        """Every role this person holds, primary first."""
+        cached = getattr(self, '_roles_cache', None)
+        if cached is None:
+            granted = set(self.role_grants.values_list('role', flat=True)) if self.pk else set()
+            others = sorted(r for r in granted if r != self.primary_role)
+            cached = [self.primary_role, *others]
+            self._roles_cache = cached
+        return list(cached)
+
+    def has_role(self, role):
+        return role in self.roles
+
+    def act_as(self, role):
+        """Switch the in-memory active role for this request (never persisted)."""
+        if role and role != self.role and self.has_role(role):
+            self._primary_role = self.primary_role
+            self.role = role
+
+    def save(self, *args, **kwargs):
+        # A request may have switched `role` to the active role; never write that back
+        active = None
+        if getattr(self, '_primary_role', None) and self._primary_role != self.role:
+            active, self.role = self.role, self._primary_role
+        try:
+            super().save(*args, **kwargs)
+        finally:
+            if active:
+                self.role = active
+        if self.pk and not RoleGrant.objects.filter(user_id=self.pk, role=self.primary_role).exists():
+            RoleGrant.objects.get_or_create(user_id=self.pk, role=self.primary_role)
+            self._roles_cache = None
+
     @property
     def is_chw(self):
         return self.role == UserRole.CHW
@@ -125,6 +177,23 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     @property
     def is_parent(self):
         return self.role == UserRole.PARENT
+
+
+class RoleGrant(models.Model):
+    """One role a person holds. Every user has a grant for their primary role."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='role_grants')
+    role = models.CharField(max_length=20, choices=UserRole.choices)
+    granted_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='+')
+    granted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'role')
+        ordering = ['granted_at']
+
+    def __str__(self):
+        return f'{self.user_id}: {self.role}'
 
 
 class ConsentRecord(models.Model):

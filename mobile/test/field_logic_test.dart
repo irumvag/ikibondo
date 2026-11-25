@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ikibondo/core/api/api_errors.dart';
 import 'package:ikibondo/core/api/response.dart';
 import 'package:ikibondo/core/db/app_database.dart';
+import 'package:ikibondo/core/models/user.dart';
 import 'package:ikibondo/core/theme/app_theme.dart';
 import 'package:ikibondo/features/auth/version_gate.dart';
 import 'package:ikibondo/iot/ble_scale.dart';
@@ -100,6 +101,29 @@ void main() {
       await db.wipeAll();
       expect(await db.countPending(), 0);
       expect(await db.getCachedChild('c-1'), isNull);
+    });
+  });
+
+  group('several roles', () {
+    Map<String, dynamic> json(List<String>? roles) => {
+          'id': 'u1', 'email': 'n@x.rw', 'full_name': 'Mutoni Grace', 'role': 'NURSE',
+          'is_approved': true, 'must_change_password': false, if (roles != null) 'roles': roles,
+        };
+
+    test('a nurse who is also a parent can switch between both', () {
+      final u = AppUser.fromJson(json(['NURSE', 'PARENT']));
+      expect(u.role, UserRole.nurse);
+      expect(u.switchableRoles, [UserRole.nurse, UserRole.parent]);
+      expect(AppUser.apiValue(UserRole.parent), 'PARENT');
+    });
+
+    test('roles survive a session restore', () {
+      final u = AppUser.fromJson(json(['NURSE', 'PARENT']));
+      expect(AppUser.fromJsonString(u.toJsonString()).roles, u.roles);
+    });
+
+    test('older servers without roles still give one role', () {
+      expect(AppUser.fromJson(json(null)).switchableRoles, [UserRole.nurse]);
     });
   });
 }

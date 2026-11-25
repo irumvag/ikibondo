@@ -74,7 +74,7 @@ def landing_stats_view(request):
 
         total_children = Child.objects.filter(is_active=True).count()
         total_camps = Camp.objects.filter(status='active').count()
-        total_chws_active = CustomUser.objects.filter(role=UserRole.CHW, is_active=True).count()
+        total_chws_active = CustomUser.objects.with_role(UserRole.CHW).filter(is_active=True).count()
 
         high_risk_30d = HealthRecord.objects.filter(
             risk_level='HIGH',

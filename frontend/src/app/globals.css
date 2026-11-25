@@ -164,6 +164,39 @@ body {
   to   { opacity: 1; transform: translateX(0); }
 }
 
+/* Small, purposeful motion. All of it is switched off by the reduced-motion rule above. */
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes item-out {
+  to { opacity: 0; transform: translateX(16px); height: 0; margin: 0; padding-top: 0; padding-bottom: 0; }
+}
+@keyframes check-draw {
+  from { stroke-dashoffset: 24; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes ring-pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 45%, transparent); }
+  100% { box-shadow: 0 0 0 14px transparent; }
+}
+.animate-pop     { animation: pop-in 160ms ease-out both; }
+.animate-fade-up { animation: fade-up 320ms cubic-bezier(.2,.7,.3,1) both; }
+.animate-item-out{ animation: item-out 280ms ease-in forwards; overflow: hidden; }
+.animate-ring    { animation: ring-pulse 900ms ease-out 1; }
+.check-draw path { stroke-dasharray: 24; animation: check-draw 420ms ease-out 120ms both; }
+/* Stagger children of a list as they appear: <ul class="stagger"> */
+.stagger > * { animation: fade-up 320ms cubic-bezier(.2,.7,.3,1) both; }
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(n+6) { animation-delay: 200ms; }
+
 /* ── Scrollbar: hide on tab bars ────────────────────────────────────────── */
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { scrollbar-width: none; }

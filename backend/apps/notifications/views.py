@@ -155,7 +155,7 @@ class BroadcastViewSet(viewsets.ModelViewSet):
             ids = set(chw_ids) | set(coord_ids)
             return list(qs.filter(id__in=ids).exclude(id=requesting_user.id))
         if broadcast.scope_type == BroadcastScope.ROLE and broadcast.scope_id:
-            return list(qs.filter(role=broadcast.scope_id).exclude(id=requesting_user.id))
+            return list(qs.with_role(broadcast.scope_id).exclude(id=requesting_user.id))
         return []
 
 

@@ -11,6 +11,7 @@ Creates:
 - 2 CHW users
 - 1 Nurse user
 - 1 Parent user linked to a family in Mahama
+- The nurse also holds the Parent role, with her own child
 - Zones, CHW zone + family assignments
 - An open clinic session, a referral and a visit request (so every role has work to see)
 - 3 Camps (Mahama, Kiziba, Nyabiheke)
@@ -60,7 +61,7 @@ class Command(BaseCommand):
         self.stdout.write('  Supervisor: supervisor@ikibondo.rw / super123')
         self.stdout.write('  CHW 1:      chw1@ikibondo.rw / chw123')
         self.stdout.write('  CHW 2:      chw2@ikibondo.rw / chw123')
-        self.stdout.write('  Nurse:      nurse@ikibondo.rw / nurse123')
+        self.stdout.write('  Nurse:      nurse@ikibondo.rw / nurse123  (also a parent: use the role switcher)')
         self.stdout.write('  Parent:     parent@ikibondo.rw / parent123')
         self.stdout.write(self.style.SUCCESS('-' * 50))
 
@@ -414,6 +415,23 @@ class Command(BaseCommand):
             guardian.user = parent
             guardian.save(update_fields=['user'])
         self.stdout.write(f'  Parent: {parent.full_name} linked to {guardian.full_name}')
+
+        # The nurse is also a mother: she holds the Parent role and has her own child here
+        from apps.accounts.models import RoleGrant
+        from apps.children.models import Child, Guardian
+        from apps.vaccinations.schedule import generate_schedule_for_child
+        RoleGrant.objects.get_or_create(user=nurse, role=UserRole.PARENT, defaults={'granted_by': admin})
+        own_guardian, _ = Guardian.objects.get_or_create(
+            phone_number=nurse.phone_number,
+            defaults={'full_name': nurse.full_name, 'relationship': 'mother', 'user': nurse},
+        )
+        own_child, created = Child.objects.get_or_create(
+            full_name='Mutoni Keza', date_of_birth=date.today() - timedelta(days=240),
+            defaults={'sex': 'F', 'camp': camps[0], 'guardian': own_guardian, 'registered_by': nurse},
+        )
+        if created:
+            generate_schedule_for_child(own_child)
+        self.stdout.write(f'  Nurse {nurse.full_name} also holds the Parent role (child: {own_child.full_name})')
 
         vaccine = Vaccine.objects.order_by('name').first()
         if vaccine and not ClinicSession.objects.filter(camp=camps[0], status='OPEN').exists():

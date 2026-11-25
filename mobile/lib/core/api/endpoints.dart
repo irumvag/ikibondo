@@ -45,6 +45,7 @@ class Endpoints {
   static const me               = '$kBaseUrl/auth/me/';
   static const register         = '$kBaseUrl/auth/register/';
   static const changePassword   = '$kBaseUrl/auth/change-password/';
+  static const switchRole       = '$kBaseUrl/auth/switch-role/';
   static const pendingApprovals = '$kBaseUrl/auth/pending-approvals/';
   static String approveUser(String id) => '$kBaseUrl/auth/approve/$id/';
   static const passwordResetRequest = '$kBaseUrl/auth/password-reset/request/';

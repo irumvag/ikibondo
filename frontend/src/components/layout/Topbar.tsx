@@ -7,6 +7,7 @@ import { Menu, WifiOff, RefreshCw } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { NotificationBell } from './NotificationBell';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { RoleSwitcher } from './RoleSwitcher';
 import { useAuthStore } from '@/store/authStore';
 import { useSyncStore } from '@/store/syncStore';
 
@@ -181,6 +182,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           </div>
         )}
 
+        <RoleSwitcher />
         <LanguageSwitcher />
         <NotificationBell />
         <ThemeToggle />

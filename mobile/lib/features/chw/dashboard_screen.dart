@@ -11,6 +11,7 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/risk_badge.dart';
 import '../../shared/widgets/sign_out_button.dart';
+import '../../shared/widgets/switch_role_button.dart';
 
 // ── Families provider ──────────────────────────────────────────────────────
 final chwFamiliesProvider = FutureProvider.autoDispose<List<Child>>((ref) async {
@@ -57,6 +58,7 @@ class ChwDashboardScreen extends ConsumerWidget {
                 ),
               ),
             ),
+          const SwitchRoleButton(),
           const SignOutButton(),
         ],
       ),

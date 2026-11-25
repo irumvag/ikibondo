@@ -22,6 +22,8 @@ class NotificationType(models.TextChoices):
     VISIT_REQUEST_COMPLETED = 'VISIT_REQUEST_COMPLETED', 'Visit completed'
     # Case closure — deceased, transferred, or departed
     CASE_CLOSED = 'CASE_CLOSED', 'Child case closed (deceased/transferred/departed)'
+    # Account
+    ROLE_GRANTED = 'ROLE_GRANTED', 'A new role was added to your account'
 
 
 class NotificationChannel(models.TextChoices):

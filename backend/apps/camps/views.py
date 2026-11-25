@@ -79,8 +79,8 @@ class CampViewSet(viewsets.ModelViewSet):
         ).values('child').distinct().count()
 
         seven_days_ago = timezone.now() - timezone.timedelta(days=7)
-        active_chw_count = camp.staff.filter(
-            role=UserRole.CHW, is_active=True,
+        active_chw_count = camp.staff.with_role(UserRole.CHW).filter(
+            is_active=True,
             last_login__gte=seven_days_ago,
         ).count()
 

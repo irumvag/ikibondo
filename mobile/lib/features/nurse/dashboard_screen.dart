@@ -9,6 +9,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/sign_out_button.dart';
+import '../../shared/widgets/switch_role_button.dart';
 
 final nurseCampChildrenProvider = FutureProvider.autoDispose<List<Child>>((ref) async {
   final resp = await ApiClient.dio.get(Endpoints.children, queryParameters: {'page_size': 200});
@@ -35,7 +36,7 @@ class NurseDashboardScreen extends ConsumerWidget {
       backgroundColor: colorCream,
       appBar: AppBar(
         title: const Text('Ikibondo — Nurse'),
-        actions: const [SignOutButton()],
+        actions: const [SwitchRoleButton(), SignOutButton()],
       ),
       body: RefreshIndicator(
         onRefresh: () async {

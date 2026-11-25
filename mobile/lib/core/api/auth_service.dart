@@ -46,6 +46,20 @@ class AuthService {
     await SecureStorage.clear();
   }
 
+  /// Act as another role the person holds; stores the new tokens and profile.
+  static Future<AppUser> switchRole(UserRole role) async {
+    final refresh = await SecureStorage.getRefreshToken();
+    final resp = await ApiClient.dio.post(Endpoints.switchRole, data: {
+      'role': AppUser.apiValue(role),
+      'refresh': refresh ?? '',
+    });
+    final data = resp.data['data'] ?? resp.data;
+    final user = AppUser.fromJson(data['user'] as Map<String, dynamic>);
+    await SecureStorage.saveTokens(access: data['access'] as String, refresh: data['refresh'] as String);
+    await SecureStorage.saveUserJson(user.toJsonString());
+    return user;
+  }
+
   /// Change password.
   static Future<void> changePassword(String oldPass, String newPass) async {
     await ApiClient.dio.post(Endpoints.changePassword, data: {

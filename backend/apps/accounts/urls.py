@@ -12,6 +12,7 @@ urlpatterns = [
     path('register/', views.register_view, name='auth-register'),
     path('password-reset/request/', views.password_reset_request_view, name='auth-password-reset-request'),
     path('password-reset/confirm/', views.password_reset_confirm_view, name='auth-password-reset-confirm'),
+    path('switch-role/', views.switch_role_view, name='auth-switch-role'),
     path('set-password/', views.set_password_view, name='auth-set-password'),
     path('users/<uuid:user_id>/setup-link/', views.resend_setup_link_view, name='auth-resend-setup-link'),
     path('users/', views.create_user_view, name='auth-create-user'),

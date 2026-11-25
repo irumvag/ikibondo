@@ -54,6 +54,17 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  /// Returns null on success, or a message to show.
+  Future<String?> switchRole(UserRole role) async {
+    try {
+      final user = await AuthService.switchRole(role);
+      state = AuthState(user: user);
+      return null;
+    } catch (e) {
+      return serverMessage(e, 'Could not switch role. Check your connection.');
+    }
+  }
+
   Future<void> logout() async {
     await AuthService.logout();
     await ref.read(dbProvider).wipeAll();

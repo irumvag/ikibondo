@@ -43,6 +43,8 @@ export async function updateUser(
     role: string;
     camp: string | null;
     is_approved: boolean;
+    /** Every role the person holds, main role included */
+    roles: string[];
   }>,
 ): Promise<AuthUser> {
   const { data } = await apiClient.patch(`/auth/users/${userId}/`, payload);

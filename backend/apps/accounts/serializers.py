@@ -17,9 +17,17 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
 
     @classmethod
-    def get_token(cls, user):
+    def get_token(cls, user, active_role=None):
+        """
+        `active_role` (default: the primary role) is the role the token acts as;
+        the caller must have checked the person holds it.
+        """
         token = super().get_token(user)
+        if active_role:
+            user.act_as(active_role)
         token['role'] = user.role
+        token['active_role'] = user.role
+        token['roles'] = user.roles
         token['camp_id'] = str(user.camp_id) if user.camp_id else None
 
         # Embed zone_ids so clients can scope UI without extra API calls
@@ -84,6 +92,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
         if not has_real_email(instance):
             data['email'] = ''
         data['password_set'] = instance.has_usable_password()
+        # `role` is the role the person is acting as right now
+        data['roles'] = instance.roles
+        data['primary_role'] = instance.primary_role
         return data
 
     def get_has_guardian_record(self, obj) -> bool:
@@ -139,10 +150,17 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['email', 'full_name', 'role', 'phone_number', 'camp', 'password', 'guardian_id', 'preferred_language']
+        fields = ['email', 'full_name', 'role', 'phone_number', 'camp', 'password', 'guardian_id',
+                  'preferred_language', 'roles']
+
+    roles = serializers.ListField(
+        child=serializers.ChoiceField(choices=[c[0] for c in CustomUser._meta.get_field('role').choices]),
+        required=False, write_only=True,
+    )
 
     def create(self, validated_data):
         import secrets
+        extra_roles = validated_data.pop('roles', None) or []
         guardian_id = validated_data.pop('guardian_id', None)
         raw_password = validated_data.pop('password', '') or ''
         if not raw_password:
@@ -155,6 +173,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
         if guardian_id and validated_data.get('role') == 'PARENT':
             from apps.children.models import Guardian
             Guardian.objects.filter(id=guardian_id).update(user=user)
+        if extra_roles:
+            set_user_roles(user, [user.role, *extra_roles], self.context.get('request'))
         # Stash generated password so the view can include it in the welcome email
         user._generated_password = raw_password
         return user
@@ -170,7 +190,53 @@ class UserAdminUpdateSerializer(serializers.ModelSerializer):
     """Admin PATCH on any user — can edit role, camp, approval status."""
     class Meta:
         model = CustomUser
-        fields = ['full_name', 'email', 'phone_number', 'role', 'camp', 'is_approved']
+        fields = ['full_name', 'email', 'phone_number', 'role', 'camp', 'is_approved', 'roles']
+
+    roles = serializers.ListField(
+        child=serializers.ChoiceField(choices=[c[0] for c in CustomUser._meta.get_field('role').choices]),
+        required=False, allow_empty=False, write_only=True,
+        help_text='Every role the person holds; must include the primary role.',
+    )
+
+    def validate(self, attrs):
+        roles = attrs.get('roles')
+        primary = attrs.get('role', getattr(self.instance, 'role', None))
+        camp = attrs.get('camp', getattr(self.instance, 'camp', None))
+        if roles is not None:
+            roles = list(dict.fromkeys(roles))
+            if primary not in roles:
+                roles.insert(0, primary)
+            attrs['roles'] = roles
+        effective = roles or [primary]
+        changing_access = any(k in attrs for k in ('role', 'roles', 'camp'))
+        if changing_access and any(r in ('CHW', 'NURSE', 'SUPERVISOR') for r in effective) and not camp:
+            raise serializers.ValidationError({'camp': 'CHWs, nurses and supervisors need a camp.'})
+        return attrs
+
+    def update(self, instance, validated_data):
+        roles = validated_data.pop('roles', None)
+        old_primary = instance.primary_role
+        instance = super().update(instance, validated_data)
+        if roles is None and instance.role != old_primary:
+            # Changing the main role replaces it; extra roles are kept
+            roles = [r for r in instance.roles if r != old_primary]
+        if roles is not None:
+            instance._granted_roles = set_user_roles(instance, roles, self.context.get('request'))
+        return instance
+
+
+def set_user_roles(user, roles, request=None):
+    """Make `roles` exactly the roles `user` holds. Returns the newly granted roles."""
+    from .models import RoleGrant
+    current = set(user.role_grants.values_list('role', flat=True))
+    wanted = set(roles) | {user.primary_role}
+    RoleGrant.objects.filter(user=user).exclude(role__in=wanted).delete()
+    granted_by = getattr(request, 'user', None) if request else None
+    added = [r for r in roles if r not in current]
+    for r in added:
+        RoleGrant.objects.get_or_create(user=user, role=r, defaults={'granted_by': granted_by})
+    user._roles_cache = None
+    return added
 
 
 class ChangePasswordSerializer(serializers.Serializer):

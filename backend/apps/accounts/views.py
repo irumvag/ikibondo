@@ -207,14 +207,14 @@ def _send_pending_review_emails(user):
         }
         # Supervisors in the same camp
         recipients = list(
-            CustomUser.objects.filter(
-                role=UserRole.SUPERVISOR, is_active=True, camp=user.camp
+            CustomUser.objects.with_role(UserRole.SUPERVISOR).filter(
+                is_active=True, camp=user.camp
             ).values_list('email', flat=True)
         ) if user.camp else []
         # All admins
         recipients += list(
-            CustomUser.objects.filter(
-                role=UserRole.ADMIN, is_active=True
+            CustomUser.objects.with_role(UserRole.ADMIN).filter(
+                is_active=True
             ).values_list('email', flat=True)
         )
         for email in set(recipients):
@@ -263,14 +263,14 @@ def create_user_view(request):
             # Nurses see PARENT accounts in their camp
             if not request.user.camp_id:
                 return success_response(data=[])
-            qs = qs.filter(role=UserRole.PARENT, camp=request.user.camp)
+            qs = qs.with_role(UserRole.PARENT).filter(camp=request.user.camp)
         elif request.user.role == UserRole.SUPERVISOR:
             if not request.user.camp_id:
                 return success_response(data=[])
             qs = qs.filter(camp=request.user.camp)
         role = request.query_params.get('role')
         if role:
-            qs = qs.filter(role=role)
+            qs = qs.with_role(role)
         search = request.query_params.get('search', '').strip()
         if search:
             from django.db.models import Q
@@ -309,6 +309,7 @@ def create_user_view(request):
                 return error_response('Guardian not found.', 'NOT_FOUND', status_code=status.HTTP_404_NOT_FOUND)
         # The nurse never chooses or sees the parent's password: the parent sets it from a link
         data.pop('password', None)
+        data.pop('roles', None)  # only admins grant extra roles
         if not (data.get('email') or '').strip():
             from .account_setup import placeholder_email
             data['email'] = placeholder_email()
@@ -342,7 +343,10 @@ def create_user_view(request):
                 status_code=status.HTTP_403_FORBIDDEN,
             )
 
-    serializer = UserCreateSerializer(data=request.data)
+    if creator_role != UserRole.ADMIN and request.data.get('roles'):
+        return error_response('Only admins can give an account several roles.', 'ROLE_FORBIDDEN',
+                              status_code=status.HTTP_403_FORBIDDEN)
+    serializer = UserCreateSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         user = serializer.save()
         temp_password = getattr(user, '_generated_password', None)
@@ -457,14 +461,68 @@ def manage_user_view(request, user_id):
         revoke_user_tokens(user)
         return success_response(message=f'{user.full_name} has been deactivated.')
 
-    serializer = UserAdminUpdateSerializer(user, data=request.data, partial=True)
+    serializer = UserAdminUpdateSerializer(user, data=request.data, partial=True,
+                                           context={'request': request})
     if serializer.is_valid():
         serializer.save()
+        for role in getattr(user, '_granted_roles', []):
+            _notify_role_granted(user, role)
         return success_response(
             data=UserProfileSerializer(user).data,
             message='User updated successfully.',
         )
     return error_response(str(serializer.errors), 'VALIDATION_ERROR')
+
+
+def _notify_role_granted(user, role):
+    """Tell the person a role was added and how to use it (in-app + push when available)."""
+    try:
+        from apps.notifications.models import (
+            Notification, NotificationChannel, NotificationStatus, NotificationType,
+        )
+        from apps.notifications.tasks import send_push
+        label = UserRole(role).label
+        notif = Notification.objects.create(
+            recipient=user,
+            notification_type=NotificationType.ROLE_GRANTED,
+            channel=NotificationChannel.PUSH,
+            message=f'You now also have {label} access. Use the role switcher at the top of the screen '
+                    f'(or your profile) to open the {label} pages.',
+            status=NotificationStatus.PENDING,
+        )
+        send_push.delay(str(notif.id))
+    except Exception:  # noqa: BLE001 — a missed notification must not undo the change
+        logger.exception('Role-granted notification failed for user %s', user.id)
+
+
+@extend_schema(exclude=True)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def switch_role_view(request):
+    """
+    POST /api/v1/auth/switch-role/  {"role": "PARENT", "refresh": "<current refresh token>"}
+    Returns a new token pair acting as `role` (which the person must hold) and their profile.
+    The old refresh token is blacklisted.
+    """
+    role = request.data.get('role')
+    if not role or not request.user.has_role(role):
+        return error_response('You do not have that role.', 'FORBIDDEN', status_code=status.HTTP_403_FORBIDDEN)
+    old_refresh = request.data.get('refresh')
+    if old_refresh:
+        try:
+            RefreshToken(old_refresh).blacklist()
+        except Exception:  # noqa: BLE001 — an already-invalid token is fine here
+            pass
+    user = request.user
+    token = CustomTokenObtainPairSerializer.get_token(user, active_role=role)
+    return success_response(
+        data={
+            'access': str(token.access_token),
+            'refresh': str(token),
+            'user': UserProfileSerializer(user).data,
+        },
+        message=f'Now acting as {UserRole(role).label}.',
+    )
 
 
 @extend_schema(exclude=True)
@@ -735,7 +793,7 @@ def resend_setup_link_view(request, user_id):
     Nurses and supervisors may only do this for parents in their own camp.
     """
     from .account_setup import needs_setup
-    qs = CustomUser.objects.filter(pk=user_id, role=UserRole.PARENT)
+    qs = CustomUser.objects.with_role(UserRole.PARENT).filter(pk=user_id)
     if request.user.role != UserRole.ADMIN:
         qs = qs.filter(camp_id=request.user.camp_id) if request.user.camp_id else qs.none()
     user = qs.first()

@@ -11,14 +11,8 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Alert } from '@/components/ui/Alert';
 import { useToast } from '@/contexts/ToastContext';
-
-const ROLE_LABEL: Record<string, string> = {
-  ADMIN:      'Administrator',
-  SUPERVISOR: 'Zone Supervisor',
-  NURSE:      'Nurse',
-  CHW:        'Community Health Worker',
-  PARENT:     'Parent / Guardian',
-};
+import { useRoleSwitch } from '@/components/layout/RoleSwitcher';
+import { ROLE_LABEL } from '@/lib/roles';
 
 const ROLE_HOME: Record<string, string> = {
   ADMIN:      '/admin',
@@ -180,6 +174,7 @@ export default function ProfilePage() {
   const user    = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const { theme, setTheme } = useTheme();
+  const { switchTo, switching } = useRoleSwitch();
 
   const forceChange = searchParams.get('force') === '1' || (user?.must_change_password ?? false);
 
@@ -248,7 +243,7 @@ export default function ProfilePage() {
             <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>{user?.email ?? '—'}</p>
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}>
-                {ROLE_LABEL[user?.role ?? ''] ?? user?.role}
+                {user ? ROLE_LABEL[user.role] : ''}
               </span>
               {user?.camp_name && (
                 <span className="text-xs px-2.5 py-1 rounded-full" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' }}>
@@ -273,6 +268,31 @@ export default function ProfilePage() {
             </div>
           ))}
         </div>
+
+        {/* Roles — only for people who hold more than one */}
+        {!forceChange && (user?.roles?.length ?? 0) > 1 && (
+          <div className="rounded-2xl border p-5 flex flex-col gap-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Your roles</p>
+            {user!.roles!.map((r) => {
+              const active = r === user!.role;
+              return (
+                <div key={r} className="flex justify-between items-center text-sm border-b last:border-b-0 pb-2.5 last:pb-0" style={{ borderColor: 'var(--border)' }}>
+                  <span className="font-medium" style={{ color: 'var(--ink)' }}>{ROLE_LABEL[r]}</span>
+                  {active ? (
+                    <span className="text-xs font-bold flex items-center gap-1" style={{ color: 'var(--success)' }}>
+                      <Check size={13} aria-hidden="true" /> Working as
+                    </span>
+                  ) : (
+                    <Button variant="secondary" size="sm" loading={switching === r} disabled={switching !== null}
+                      onClick={() => void switchTo(r)}>
+                      Switch
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Action buttons */}
         {!forceChange && (

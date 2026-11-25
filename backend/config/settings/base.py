@@ -66,7 +66,6 @@ MIDDLEWARE = [
     'auditlog.middleware.AuditlogMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'apps.core.middleware.ZoneScopeMiddleware',
     'apps.core.middleware.AuditLogMiddleware',
 ]
 
@@ -148,7 +147,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # ---------------------------------------------------------------------------
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'apps.accounts.authentication.ActiveRoleJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',

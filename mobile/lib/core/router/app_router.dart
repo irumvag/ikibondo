@@ -44,6 +44,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (auth.user!.mustChangePassword) return '/change-password';
         return _homeForRole(auth.user!.role);
       }
+      // Each role only reaches its own screens (e.g. after switching role)
+      if (loggedIn) {
+        final home = _homeForRole(auth.user!.role);
+        final loc = state.matchedLocation;
+        const sections = ['/chw', '/parent', '/nurse'];
+        final section = sections.where((s) => loc == s || loc.startsWith('$s/')).firstOrNull;
+        if (section != null && section != home) return home;
+      }
       return null;
     },
     routes: [

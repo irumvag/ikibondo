@@ -34,10 +34,16 @@ class TestManageUserPatch:
     def test_admin_can_update_role(self, client, admin, target_user):
         client.force_authenticate(user=admin)
         url = reverse('auth-manage-user', kwargs={'user_id': target_user.pk})
-        resp = client.patch(url, {'role': 'SUPERVISOR'})
+        resp = client.patch(url, {'role': 'SUPERVISOR', 'camp': str(CampFactory().id)})
         assert resp.status_code == 200
         target_user.refresh_from_db()
         assert target_user.role == 'SUPERVISOR'
+        assert target_user.roles == ['SUPERVISOR']  # the old main role is replaced, not kept
+
+    def test_camp_staff_role_needs_a_camp(self, client, admin, target_user):
+        client.force_authenticate(user=admin)
+        url = reverse('auth-manage-user', kwargs={'user_id': target_user.pk})
+        assert client.patch(url, {'role': 'SUPERVISOR'}).status_code == 400
 
     def test_admin_can_assign_camp(self, client, admin, target_user, db):
         camp = CampFactory()

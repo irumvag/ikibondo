@@ -85,7 +85,7 @@ class GuardianViewSet(viewsets.ModelViewSet):
 
         from apps.accounts.models import CustomUser
         try:
-            user = CustomUser.objects.get(id=user_id, role=UserRole.PARENT, is_active=True)
+            user = CustomUser.objects.with_role(UserRole.PARENT).get(id=user_id, is_active=True)
         except CustomUser.DoesNotExist:
             return error_response(
                 'No active PARENT user found with that ID.',
@@ -130,7 +130,7 @@ class GuardianViewSet(viewsets.ModelViewSet):
 
         from apps.accounts.models import CustomUser
         try:
-            chw = CustomUser.objects.get(id=chw_id, role=UserRole.CHW, is_active=True)
+            chw = CustomUser.objects.with_role(UserRole.CHW).get(id=chw_id, is_active=True)
         except CustomUser.DoesNotExist:
             return error_response('No active CHW found with that ID.', 'NOT_FOUND', status_code=404)
 
@@ -643,9 +643,9 @@ class ChildViewSet(viewsets.ModelViewSet):
             from apps.accounts.models import CustomUser
             # Admins have no camp scoping — every case closure pages every
             # admin. Supervisors are scoped to the child's camp.
-            leads = CustomUser.objects.filter(is_active=True).filter(
-                Q(role=UserRole.ADMIN)
-                | Q(role=UserRole.SUPERVISOR, camp=child.camp)
+            leads = (
+                CustomUser.objects.with_role(UserRole.ADMIN).filter(is_active=True)
+                | CustomUser.objects.with_role(UserRole.SUPERVISOR).filter(is_active=True, camp=child.camp)
             ).values_list('id', flat=True)
             recipients.update(leads)
             recipients.discard(request.user.id)  # don't notify the actor
@@ -862,9 +862,9 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
         qs = VisitRequest.objects.select_related(
             'child', 'requested_by', 'assigned_chw'
         )
-        # Any user with a guardian profile (not just PARENT role) sees their own requests
-        has_guardian = getattr(user, 'guardian_profile', None) is not None
-        if user.role == UserRole.PARENT or has_guardian:
+        # The active role decides: a nurse who is also a parent sees her camp's requests as
+        # Nurse and only her own requests after switching to Parent
+        if user.role == UserRole.PARENT:
             qs = qs.filter(requested_by=user)
         elif user.role == UserRole.CHW:
             qs = qs.filter(child__guardian__assigned_chw=user)
@@ -875,11 +875,9 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
         return qs.order_by('-created_at')
 
     def create(self, request, *args, **kwargs):
-        # Allow any user with a linked guardian profile (not just PARENT role)
-        guardian = getattr(request.user, 'guardian_profile', None)
-        if request.user.role != UserRole.PARENT and guardian is None:
+        if request.user.role != UserRole.PARENT:
             return error_response(
-                'Only users with a guardian profile can submit visit requests.',
+                'Switch to your Parent role to request a visit.',
                 'FORBIDDEN', status_code=403,
             )
 
@@ -975,10 +973,9 @@ class VisitRequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='withdraw')
     def withdraw(self, request, pk=None):
         """POST /api/v1/visit-requests/<id>/withdraw/ — parent/guardian withdraws a PENDING request."""
-        guardian = getattr(request.user, 'guardian_profile', None)
-        if request.user.role != UserRole.PARENT and guardian is None:
+        if request.user.role != UserRole.PARENT:
             return error_response(
-                'Only users with a guardian profile can withdraw visit requests.',
+                'Switch to your Parent role to withdraw a visit request.',
                 'FORBIDDEN', status_code=403,
             )
 
