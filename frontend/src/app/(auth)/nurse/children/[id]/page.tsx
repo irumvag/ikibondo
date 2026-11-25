@@ -1208,7 +1208,8 @@ function RecordMeasurementModal({ childId, onClose }: { childId: string; onClose
     const body: Record<string, unknown> = {
       child: childId,
       measurement_date: form.measurement_date,
-      data_source: 'FACILITY',
+      // How the values were taken (manual | iot) — the API rejects anything else
+      data_source: 'manual',
       oedema: form.oedema,
     };
     if (form.weight_kg)    body.weight_kg    = parseFloat(form.weight_kg);

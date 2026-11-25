@@ -75,6 +75,9 @@ apiClient.interceptors.response.use(
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('access_token', newAccess);
+        // The server rotates refresh tokens and blacklists the old one: keep the new one,
+        // or the next refresh fails and the person is signed out mid-shift
+        if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
       }
 
       processQueue(null, newAccess);
@@ -85,7 +88,11 @@ apiClient.interceptors.response.use(
     } catch (refreshError) {
       processQueue(refreshError, null);
       isRefreshing = false;
-      // Clear tokens — user must log in again
+      // Lost signal mid-refresh: keep the session, the next request tries again
+      if (axios.isAxiosError(refreshError) && !refreshError.response) {
+        return Promise.reject(refreshError);
+      }
+      // The server refused the refresh token — user must log in again
       if (typeof window !== 'undefined') {
         sessionStorage.clear();
         localStorage.removeItem('access_token');

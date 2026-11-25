@@ -159,7 +159,8 @@ function CaseloadInner() {
         spo2: intNum(form.spo2),
         symptom_flags: form.symptom_flags.length > 0 ? form.symptom_flags : undefined,
         notes: form.notes || undefined,
-        data_source: 'CHW',
+        // How the values were taken (manual | iot) — the API rejects anything else
+        data_source: 'manual',
     } as const;
     try {
       const res = await createVisit(payload);
@@ -263,10 +264,17 @@ function CaseloadInner() {
                   background: 'var(--card)',
                 }}
               >
-                {/* Family header row */}
-                <button
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-[var(--bg-sand)] transition-colors"
+                {/* Family header row — a div with button semantics because it contains a phone link */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isOpen}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-[var(--bg-sand)] transition-colors cursor-pointer"
                   onClick={() => toggleFamily(family.id)}
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFamily(family.id); }
+                  }}
                 >
                   <div
                     className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
@@ -306,7 +314,7 @@ function CaseloadInner() {
                   <div className="shrink-0 flex items-center gap-2">
                     {isOpen ? <ChevronUp size={16} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} />}
                   </div>
-                </button>
+                </div>
 
                 {/* Children */}
                 {isOpen && (

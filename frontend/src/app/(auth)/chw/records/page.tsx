@@ -201,7 +201,7 @@ function RecordRow({ rec, onView, onAmend }: {
       <div className="min-w-0">
         <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>{rec.child_name}</p>
         <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          {rec.data_source === 'CHW' ? 'Field visit' : rec.data_source}
+          {rec.data_source === 'iot' ? 'Bluetooth device' : 'Entered by hand'}
           {rec.recorded_by_name ? ` · ${rec.recorded_by_name}` : ''}
         </p>
       </div>

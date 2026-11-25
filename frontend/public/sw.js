@@ -68,4 +68,26 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'LOGOUT') {
     event.waitUntil(caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))));
   }
+  // After sign-in: save the field pages now, so they open in the field even if the
+  // health worker never visited them while online. Pages the role can't open redirect
+  // and are skipped.
+  if (event.data && event.data.type === 'WARM') {
+    event.waitUntil(caches.open(CACHE).then((cache) => Promise.all(OFFLINE_PAGES.map(async (page) => {
+      try {
+        const res = await fetch(page, { credentials: 'same-origin' });
+        if (!res.ok || res.redirected) return;
+        const html = await res.clone().text();
+        await cache.put(page, res);
+        // The page also needs its own script and style chunks to run offline
+        const assets = new Set(html.match(/\/_next\/static\/[^"'\s)\\]+/g) || []);
+        await Promise.all([...assets].map(async (asset) => {
+          if (await cache.match(asset)) return;
+          const a = await fetch(asset);
+          if (a.ok) await cache.put(asset, a);
+        }));
+      } catch {
+        // Offline or the page failed: try again on the next sign-in
+      }
+    }))));
+  }
 });

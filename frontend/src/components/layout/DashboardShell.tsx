@@ -30,6 +30,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   // Upload visits saved while offline as soon as the connection or the user returns
   useEffect(() => startAutoSync(), []);
 
+  // Save the field pages for offline use right away, not only once each has been visited
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready
+      .then((reg) => reg.active?.postMessage({ type: 'WARM' }))
+      .catch(() => { /* no service worker: nothing to warm */ });
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

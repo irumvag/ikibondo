@@ -2,8 +2,9 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore, loadSavedProfile } from '@/store/authStore';
 import { getMe } from '@/lib/api/user';
+import { isNetworkError } from '@/lib/offline/queue';
 
 /**
  * Hydrates the auth store from localStorage on first mount.
@@ -39,7 +40,14 @@ export function AuthInitializer({ children }: { children: React.ReactNode }) {
           router.replace('/onboarding');
         }
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        // No signal is not a sign-out: keep the person in with their last known profile
+        // so offline visits can still be recorded. A real rejection signs them out.
+        const saved = loadSavedProfile();
+        if (isNetworkError(err) && saved) {
+          setUser(saved);
+          return;
+        }
         clearAuth();
         router.replace('/login');
       })

@@ -22,10 +22,16 @@ test('visit logged offline is queued, then synced when back online', async ({ pa
   // Load the caseload once while online so it is stored on the device
   await page.goto('/chw/visit');
   // Family rows show "N child(ren)"; expanding one reveals its children's "Log visit" buttons
-  const firstFamily = page.getByText(/\d+ child(ren)?$/).first();
+  // A family row (not the "3 families · 3 children" summary above the list)
+  const firstFamily = page.getByRole('button', { name: /\d+ child(ren)?$/ }).first();
   await expect(firstFamily).toBeVisible({ timeout: 15_000 });
-  await firstFamily.click();
-  await page.getByRole('button', { name: /log visit/i }).first().click();
+  const logVisit = page.getByRole('button', { name: /log visit/i }).first();
+  // The row may be clickable before the page's scripts have loaded; retry until it opens
+  await expect(async () => {
+    if (!(await logVisit.isVisible())) await firstFamily.click();
+    await expect(logVisit).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
+  await logVisit.click();
 
   await context.setOffline(true);
   await page.getByLabel('Weight (kg)').fill('7.4');

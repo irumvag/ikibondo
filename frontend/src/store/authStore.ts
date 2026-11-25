@@ -39,6 +39,23 @@ interface AuthState {
   setLoading: (v: boolean) => void;
 }
 
+// Last known profile, so a health worker who opens the app with no signal stays signed in.
+// Removed on sign-out with the rest of the per-person data.
+const PROFILE_KEY = 'ikibondo.profile';
+
+function saveProfile(user: AuthUser) {
+  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(user)); } catch { /* private mode */ }
+}
+
+export function loadSavedProfile(): AuthUser | null {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    return raw ? (JSON.parse(raw) as AuthUser) : null;
+  } catch {
+    return null;
+  }
+}
+
 function setRoleCookie(role: string) {
   if (typeof document === 'undefined') return;
   document.cookie = `_ikibondo_role=${role}; path=/; SameSite=Strict`;
@@ -71,6 +88,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       localStorage.setItem('refresh_token', refreshToken);
       setRoleCookie(user.role);
       setMustChangePwCookie(user.must_change_password ?? false);
+      saveProfile(user);
     }
     set({ user, accessToken, isLoading: false });
   },
@@ -97,7 +115,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Per-person data a shared phone must not hand to the next user.
       // The unsynced visit queue is kept: those records exist nowhere else and are tagged to their owner.
       for (const key of Object.keys(localStorage)) {
-        if (key.startsWith('ikibondo.caseload.') || key === 'ikibondo.local_notifs' || key === 'ikibondo.ble_devices') {
+        if (key.startsWith('ikibondo.caseload.') || key === 'ikibondo.local_notifs' || key === 'ikibondo.ble_devices'
+            || key === PROFILE_KEY) {
           localStorage.removeItem(key);
         }
       }
@@ -110,6 +129,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) => {
     setRoleCookie(user.role);
     setMustChangePwCookie(user.must_change_password ?? false);
+    if (typeof window !== 'undefined') saveProfile(user);
     set({ user });
   },
 
