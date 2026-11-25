@@ -10,11 +10,12 @@ Creates:
 - 1 Supervisor user
 - 2 CHW users
 - 1 Nurse user
-- 1 Parent user linked to a family in Mahama
+- 1 Parent user linked to a family in Test Camp Amahoro
 - The nurse also holds the Parent role, with her own child
+- A government user (all camps) and an NGO partner user (one camp): statistics only
 - Zones, CHW zone + family assignments
 - An open clinic session, a referral and a visit request (so every role has work to see)
-- 3 Camps (Mahama, Kiziba, Nyabiheke)
+- 3 fictional test camps (Test Camp Amahoro, Ubumwe, Icyizere) — never real camps
 - Rwanda EPI vaccines (auto-created via schedule module)
 - 5 Sample children with guardians
 - Sample health records to test ML predictions
@@ -27,13 +28,19 @@ from django.db import transaction
 logger = logging.getLogger(__name__)
 
 
+DEMO_EMAILS = [
+    'admin@ikibondo.rw', 'supervisor@ikibondo.rw', 'chw1@ikibondo.rw', 'chw2@ikibondo.rw',
+    'nurse@ikibondo.rw', 'parent@ikibondo.rw', 'government@ikibondo.rw', 'partner@ikibondo.rw',
+]
+
+
 class Command(BaseCommand):
     help = 'Seed database with test data for development and testing'
 
     def add_arguments(self, parser):
         parser.add_argument(
             '--reset', action='store_true',
-            help='Delete all existing data before seeding'
+            help='Delete the demo data (test camps and demo accounts) before seeding; real data is kept'
         )
 
     @transaction.atomic
@@ -63,69 +70,49 @@ class Command(BaseCommand):
         self.stdout.write('  CHW 2:      chw2@ikibondo.rw / chw123')
         self.stdout.write('  Nurse:      nurse@ikibondo.rw / nurse123  (also a parent: use the role switcher)')
         self.stdout.write('  Parent:     parent@ikibondo.rw / parent123')
+        self.stdout.write('  Government: government@ikibondo.rw / government123  (statistics, all camps)')
+        self.stdout.write('  NGO:        partner@ikibondo.rw / partner123  (statistics, one camp)')
         self.stdout.write(self.style.SUCCESS('-' * 50))
 
     def _reset(self):
-        from apps.health_records.models import HealthRecord
-        from apps.vaccinations.models import VaccinationRecord, Vaccine
-        from apps.children.models import Child, Guardian
-        from apps.camps.models import Camp
-        from apps.notifications.models import Notification
-        from apps.ml_engine.models import MLPredictionLog
+        """Remove demo data only: the fictional TST- camps, everything in them, and the demo accounts.
+        Real camps (seed_camps) and their records are never touched."""
         from apps.accounts.models import CustomUser
+        from apps.camps.models import Camp
+        from apps.children.models import Child, Guardian
 
+        test_camps = Camp.objects.filter(code__startswith='TST-')
+        children = Child.objects.filter(camp__in=test_camps)
+        guardian_ids = list(children.values_list('guardian_id', flat=True))
+
+        self.stdout.write('Clearing demo data (test camps and demo accounts only)...')
         from apps.children.models import VisitRequest
         from apps.referrals.models import Referral
         from apps.vaccinations.models import ClinicSession
-        from apps.camps.models import CampZone
-
-        self.stdout.write('Clearing existing data...')
-        VisitRequest.objects.all().delete()
-        Referral.objects.all().delete()
-        ClinicSession.objects.all().delete()
-        CampZone.objects.all().delete()
-        MLPredictionLog.objects.all().delete()
-        Notification.objects.all().delete()
-        HealthRecord.objects.all().delete()
-        VaccinationRecord.objects.all().delete()
-        Child.objects.all().delete()
-        Guardian.objects.all().delete()
-        Vaccine.objects.all().delete()
-        Camp.objects.all().delete()
-        CustomUser.objects.filter(is_superuser=False).delete()
-        self.stdout.write(self.style.WARNING('  All data cleared.'))
+        VisitRequest.objects.filter(child__in=children).delete()
+        Referral.objects.filter(child__in=children).delete()
+        ClinicSession.objects.filter(camp__in=test_camps).delete()
+        children.delete()  # health records, vaccinations, predictions cascade
+        Guardian.objects.filter(id__in=guardian_ids, children__isnull=True).delete()
+        CustomUser.objects.filter(email__in=DEMO_EMAILS).delete()
+        CustomUser.objects.filter(camp__in=test_camps, is_superuser=False).delete()
+        test_camps.delete()
+        from apps.accounts.models import Organization
+        Organization.objects.filter(name__in=['Test Ministry of Health', 'Test Nutrition NGO']).delete()
+        self.stdout.write(self.style.WARNING('  Demo data cleared.'))
 
     def _create_camps(self):
         from apps.camps.models import Camp
 
+        # Fictional camps for testing only. Real camps are set up with `seed_camps`
+        # and must never hold demo data.
         camps_data = [
-            {
-                'name': 'Mahama',
-                'code': 'MAH',
-                'district': 'Kirehe',
-                'province': 'Eastern',
-                'capacity': 58000,
-                'latitude': -2.4275,
-                'longitude': 30.5192,
-            },
-            {
-                'name': 'Kiziba',
-                'code': 'KIZ',
-                'district': 'Karongi',
-                'province': 'Western',
-                'capacity': 17500,
-                'latitude': -2.0942,
-                'longitude': 29.2833,
-            },
-            {
-                'name': 'Nyabiheke',
-                'code': 'NYA',
-                'district': 'Gatsibo',
-                'province': 'Eastern',
-                'capacity': 14500,
-                'latitude': -1.5753,
-                'longitude': 30.3544,
-            },
+            {'name': 'Test Camp Amahoro', 'code': 'TST-A', 'district': 'Test District North',
+             'province': 'Test Province', 'capacity': 5000},
+            {'name': 'Test Camp Ubumwe', 'code': 'TST-B', 'district': 'Test District West',
+             'province': 'Test Province', 'capacity': 3000},
+            {'name': 'Test Camp Icyizere', 'code': 'TST-C', 'district': 'Test District East',
+             'province': 'Test Province', 'capacity': 2000},
         ]
 
         camps = []
@@ -433,6 +420,20 @@ class Command(BaseCommand):
             generate_schedule_for_child(own_child)
         self.stdout.write(f'  Nurse {nurse.full_name} also holds the Parent role (child: {own_child.full_name})')
 
+        # Oversight users: a ministry that sees every camp, an NGO that covers one test camp
+        from apps.accounts.models import Organization
+        ministry, _ = Organization.objects.get_or_create(name='Test Ministry of Health', defaults={'kind': 'GOVERNMENT'})
+        ngo, _ = Organization.objects.get_or_create(name='Test Nutrition NGO', defaults={'kind': 'NGO'})
+        ngo.camps.set([camps[0]])  # re-link every run: test camps are recreated after --reset
+        for email, name, role, org in (
+            ('government@ikibondo.rw', 'Test Ministry Officer', UserRole.GOVERNMENT, ministry),
+            ('partner@ikibondo.rw', 'Test NGO Officer', UserRole.PARTNER, ngo),
+        ):
+            if not CustomUser.objects.filter(email=email).exists():
+                CustomUser.objects.create_user(email=email, password=role.lower() + '123', full_name=name,
+                                               role=role, organization=org, is_approved=True)
+        self.stdout.write('  Oversight users: Test Ministry of Health (all camps), Test Nutrition NGO (one camp)')
+
         vaccine = Vaccine.objects.order_by('name').first()
         if vaccine and not ClinicSession.objects.filter(camp=camps[0], status='OPEN').exists():
             ClinicSession.objects.create(camp=camps[0], vaccine=vaccine, session_date=date.today(),
@@ -440,7 +441,7 @@ class Command(BaseCommand):
             self.stdout.write(f'  Clinic session: {vaccine.name} at {camps[0].name} (open)')
 
         if not Referral.objects.filter(child=children[1]).exists():
-            Referral.objects.create(child=children[1], referring_user=chw1, target_facility='Mahama Health Centre',
+            Referral.objects.create(child=children[1], referring_user=chw1, target_facility='Test Health Centre',
                                     urgency='SOON', reason='Not gaining weight for two visits')
         if not VisitRequest.objects.filter(child=children[0]).exists():
             VisitRequest.objects.create(child=children[0], requested_by=parent, urgency='ROUTINE',
