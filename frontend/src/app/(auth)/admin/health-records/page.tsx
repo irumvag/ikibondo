@@ -103,7 +103,7 @@ function AmendModal({ target, onDone, onCancel }: {
             onClick={() => mut.mutate()}
             disabled={!reason.trim() || mut.isPending}
             style={{
-              background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8,
+              background: 'var(--ink)', color: 'var(--bg)', border: 'none', borderRadius: 8,
               padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600,
               opacity: (!reason.trim() || mut.isPending) ? 0.5 : 1,
             }}
@@ -181,7 +181,7 @@ export default function AdminHealthRecordsPage() {
   });
 
   const total = (data as { count?: number })?.count ?? 0;
-  const records = (data as { results?: Record<string, unknown>[] })?.results ?? (Array.isArray(data) ? data as Record<string, unknown>[] : []);
+  const records = (data?.items ?? []) as unknown as Record<string, unknown>[];
   const totalPages = Math.ceil(total / 20);
 
   function invalidate() {

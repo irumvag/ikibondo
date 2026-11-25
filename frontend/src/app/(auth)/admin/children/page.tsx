@@ -311,7 +311,7 @@ const modal: React.CSSProperties = {
   padding: 24, width: 400, maxWidth: '90vw',
 };
 const btnPrimary: React.CSSProperties = {
-  background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8,
+  background: 'var(--ink)', color: 'var(--bg)', border: 'none', borderRadius: 8,
   padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600,
 };
 const btnSecondary: React.CSSProperties = {

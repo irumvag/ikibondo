@@ -433,7 +433,7 @@ function ChildRow({ child, onLogVisit }: { child: CHWChildSummary; onLogVisit: (
       <button
         onClick={onLogVisit}
         className="shrink-0 inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
-        style={{ background: 'var(--primary)', color: '#fff' }}
+        style={{ background: 'var(--ink)', color: 'var(--bg)' }}
       >
         Log Visit
       </button>

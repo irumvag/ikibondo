@@ -71,7 +71,7 @@ export default function SupervisorHealthRecordsPage() {
   });
 
   const total = (data as { count?: number })?.count ?? 0;
-  const records = (data as { results?: Record<string, unknown>[] })?.results ?? (Array.isArray(data) ? data as Record<string, unknown>[] : []);
+  const records = (data?.items ?? []) as unknown as Record<string, unknown>[];
   const totalPages = Math.ceil(total / 20);
 
   return (

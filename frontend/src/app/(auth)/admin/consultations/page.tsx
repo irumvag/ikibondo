@@ -110,7 +110,7 @@ function ConsultationCard({ c, onRefresh }: { c: Consultation; onRefresh: () => 
                 onClick={() => replyMut.mutate()}
                 disabled={!replyText.trim() || replyMut.isPending}
                 style={{
-                  background: 'var(--primary)', color: '#fff', border: 'none',
+                  background: 'var(--ink)', color: 'var(--bg)', border: 'none',
                   borderRadius: 8, padding: '8px 14px', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: 6, fontSize: 13,
                   opacity: (!replyText.trim() || replyMut.isPending) ? 0.5 : 1,

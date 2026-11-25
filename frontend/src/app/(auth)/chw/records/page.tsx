@@ -291,7 +291,7 @@ function RecordDetailDrawer({ rec, onClose, onAmend }: {
               <button
                 onClick={onAmend}
                 className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium hover:opacity-80"
-                style={{ background: 'var(--primary)', color: '#fff' }}
+                style={{ background: 'var(--ink)', color: 'var(--bg)' }}
               >
                 <Edit2 size={12} /> Edit
               </button>

@@ -543,13 +543,13 @@ export interface AdminReferral {
   id: string;
   child: string;
   child_name: string;
-  referred_by: string | null;
-  referred_by_name: string | null;
+  referring_user: string | null;
+  referring_user_name: string | null;
   target_facility: string;
   reason: string;
-  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  status: 'PENDING' | 'ACCEPTED' | 'COMPLETED' | 'CANCELLED';
   outcome: string | null;
-  created_at: string;
+  referred_at: string;
   completed_at: string | null;
 }
 

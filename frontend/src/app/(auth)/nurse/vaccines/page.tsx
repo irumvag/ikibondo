@@ -445,7 +445,7 @@ export default function NurseVaccinesPage() {
             {icon}
             {label}
             {key === 'today' && todayCount > 0 && (
-              <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full font-semibold" style={{ backgroundColor: 'var(--primary)', color: '#fff' }}>
+              <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full font-semibold" style={{ backgroundColor: 'var(--ink)', color: 'var(--bg)' }}>
                 {todayCount}
               </span>
             )}

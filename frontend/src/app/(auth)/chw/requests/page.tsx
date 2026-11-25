@@ -308,7 +308,7 @@ function RequestCard({
             onClick={onAccept}
             disabled={isAccepting}
             className="flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-medium transition-opacity disabled:opacity-50"
-            style={{ background: 'var(--primary)', color: '#fff' }}
+            style={{ background: 'var(--ink)', color: 'var(--bg)' }}
           >
             {isAccepting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
             Accept

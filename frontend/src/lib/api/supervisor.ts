@@ -120,11 +120,11 @@ export interface ClinicSession {
   camp_name: string;
   vaccine: string;
   vaccine_name: string;
-  date: string;
+  session_date: string;
   status: 'OPEN' | 'CLOSED';
   opened_by: string | null;
   opened_by_name: string | null;
-  attendee_count: number;
+  attendance_count: number;
   created_at: string;
 }
 
@@ -153,7 +153,10 @@ export async function createClinicSession(payload: {
   vaccine: string;
   date: string;
 }): Promise<ClinicSession> {
-  const { data } = await apiClient.post('/vaccinations/clinic-sessions/', payload);
+  const { data } = await apiClient.post('/vaccinations/clinic-sessions/', {
+    vaccine: payload.vaccine,
+    session_date: payload.date,
+  });
   return data.data ?? data;
 }
 

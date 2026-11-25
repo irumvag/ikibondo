@@ -50,14 +50,18 @@ function ChildVaccinePanel({ child, filter }: { child: SupervisedChild; filter: 
 
   return (
     <div className="rounded-2xl border overflow-hidden" style={{ borderColor: overdue > 0 ? 'color-mix(in srgb, var(--danger) 35%, var(--border))' : 'var(--border)' }}>
-      {/* Header — always clickable */}
-      <button
-        type="button"
+      {/* Header — the whole row toggles; the name area is the keyboard-accessible toggle */}
+      <div
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-[var(--bg-sand)]"
+        className="w-full flex items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-[var(--bg-sand)] cursor-pointer"
         style={{ backgroundColor: 'var(--bg-elev)' }}
       >
-        <div className="flex items-center gap-3 min-w-0">
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+          className="flex items-center gap-3 min-w-0 text-left"
+        >
           <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
             style={{ backgroundColor: 'color-mix(in srgb, var(--ink) 8%, var(--bg-sand))' }}>
             <Syringe size={16} style={{ color: 'var(--ink)' }} aria-hidden="true" />
@@ -70,7 +74,7 @@ function ChildVaccinePanel({ child, filter }: { child: SupervisedChild; filter: 
               {overdue > 0 && <span className="ml-1 font-bold" style={{ color: 'var(--danger)' }}>· {overdue} overdue</span>}
             </p>
           </div>
-        </div>
+        </button>
 
         <div className="flex items-center gap-2 shrink-0">
           <button
@@ -95,7 +99,7 @@ function ChildVaccinePanel({ child, filter }: { child: SupervisedChild; filter: 
             ? <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} />
             : <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />}
         </div>
-      </button>
+      </div>
 
       {/* Expanded vaccine list */}
       {open && (

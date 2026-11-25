@@ -45,9 +45,9 @@ function SessionRow({ session, onClose }: {
           {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </td>
         <td style={td}><span style={{ fontWeight: 600 }}>{session.vaccine_name}</span></td>
-        <td style={td}>{new Date(session.date).toLocaleDateString()}</td>
+        <td style={td}>{new Date(session.session_date).toLocaleDateString()}</td>
         <td style={td}><StatusBadge status={session.status} /></td>
-        <td style={td}>{session.attendee_count}</td>
+        <td style={td}>{session.attendance_count}</td>
         <td style={td}>{session.opened_by_name ?? '—'}</td>
         <td style={{ ...td, whiteSpace: 'nowrap' }}>
           {session.status === 'OPEN' && (

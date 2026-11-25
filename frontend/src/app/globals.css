@@ -49,6 +49,14 @@
   --radius-lg: 14px;
 }
 
+/* Aliases for names some pages use; they follow the active theme. */
+:root {
+  --primary: var(--ink);
+  --brand:   var(--ink);
+  --card:    var(--bg-elev);
+  --warn-bg: var(--med-bg);
+}
+
 /* ── Dark theme (night / low-light) ──────────────────────────────────── */
 [data-theme="dark"] {
   --bg:        #0E1620;

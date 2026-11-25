@@ -140,7 +140,7 @@ export default function CHWConsultationsPage() {
           <button
             onClick={() => setShowNew(true)}
             className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
-            style={{ background: 'var(--primary)', color: '#fff' }}
+            style={{ background: 'var(--ink)', color: 'var(--bg)' }}
           >
             <Plus size={13} />
             New
@@ -223,7 +223,7 @@ export default function CHWConsultationsPage() {
             <button
               onClick={() => setShowNew(true)}
               className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium"
-              style={{ background: 'var(--primary)', color: '#fff' }}
+              style={{ background: 'var(--ink)', color: 'var(--bg)' }}
             >
               <Plus size={15} />
               Ask a nurse
@@ -446,7 +446,7 @@ export default function CHWConsultationsPage() {
                   onClick={sendReply}
                   disabled={replyMut.isPending || !reply.trim()}
                   className="rounded-full p-2.5 shrink-0 transition-all disabled:opacity-40 hover:opacity-80"
-                  style={{ background: 'var(--primary)', color: '#fff' }}
+                  style={{ background: 'var(--ink)', color: 'var(--bg)' }}
                 >
                   {replyMut.isPending
                     ? <Loader2 size={18} className="animate-spin" />
@@ -686,7 +686,7 @@ function NewConsultationModal({
             onClick={() => pickedChild && onOpen(pickedChild.id)}
             disabled={!pickedChild || isOpening}
             className="flex-1 rounded-xl py-2.5 text-sm font-medium disabled:opacity-40 transition-opacity hover:opacity-80 flex items-center justify-center gap-2"
-            style={{ background: 'var(--primary)', color: '#fff' }}
+            style={{ background: 'var(--ink)', color: 'var(--bg)' }}
           >
             {isOpening && <Loader2 size={14} className="animate-spin" />}
             Open consultation

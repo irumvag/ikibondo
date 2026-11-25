@@ -103,13 +103,13 @@ export default function SupervisorReferralsPage() {
               {items.map(r => (
                 <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={td}><span style={{ fontWeight: 600 }}>{r.child_name}</span></td>
-                  <td style={td}>{r.referred_by_name ?? '—'}</td>
+                  <td style={td}>{r.referring_user_name ?? '—'}</td>
                   <td style={td}>{r.target_facility}</td>
                   <td style={{ ...td, maxWidth: 180 }}>
                     <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{r.reason}</span>
                   </td>
                   <td style={td}><StatusBadge status={r.status} /></td>
-                  <td style={td}>{new Date(r.created_at).toLocaleDateString()}</td>
+                  <td style={td}>{new Date(r.referred_at).toLocaleDateString()}</td>
                   <td style={td}>
                     {r.status === 'PENDING' && (
                       <button onClick={() => setCompleteTarget(r)}

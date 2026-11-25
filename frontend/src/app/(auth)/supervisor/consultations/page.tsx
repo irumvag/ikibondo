@@ -62,7 +62,7 @@ function ConsultationCard({ c, onRefresh }: { c: Consultation; onRefresh: () => 
               <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Write a reply…" rows={2}
                 style={{ flex: 1, resize: 'vertical', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', fontSize: 13, background: 'var(--bg-elev)', color: 'var(--ink)' }} />
               <button onClick={() => replyMut.mutate()} disabled={!replyText.trim() || replyMut.isPending}
-                style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, opacity: (!replyText.trim() || replyMut.isPending) ? 0.5 : 1 }}>
+                style={{ background: 'var(--ink)', color: 'var(--bg)', border: 'none', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, opacity: (!replyText.trim() || replyMut.isPending) ? 0.5 : 1 }}>
                 <Send size={14} /> Reply
               </button>
             </div>
