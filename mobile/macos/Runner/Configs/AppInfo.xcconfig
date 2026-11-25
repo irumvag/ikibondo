@@ -8,7 +8,7 @@
 PRODUCT_NAME = ikibondo
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = rw.ac.ur.ikibondo.ikibondo
+PRODUCT_BUNDLE_IDENTIFIER = rw.ikibondo.app
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 rw.ac.ur.ikibondo. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 Ikibondo. All rights reserved.

@@ -58,7 +58,7 @@ Requirements: a Mac with **Xcode** (App Store), **CocoaPods** (`brew install coc
 1. Deploy the backend to a server with **HTTPS** (iOS refuses plain HTTP, and release builds of
    this app refuse to start without it). `infra/docker` has the stack; see `docs/deployment.md`.
 2. In [App Store Connect](https://appstoreconnect.apple.com): *Apps → +* → bundle ID
-   **`rw.ac.ur.ikibondo.ikibondo`**.
+   **`rw.ikibondo.app`**.
 3. `cd ios && pod install && open Runner.xcworkspace` → *Runner → Signing & Capabilities* → choose your team.
    Add **Push Notifications** and **Background Modes → Remote notifications** if using push.
 4. Build and upload:
@@ -84,7 +84,7 @@ Create an upload keystore first and reference it from `android/key.properties` (
 
 ## Push notifications (optional)
 
-1. Create a Firebase project; add an iOS app and an Android app, both `rw.ac.ur.ikibondo.ikibondo`.
+1. Create a Firebase project; add an iOS app and an Android app, both `rw.ikibondo.app`.
 2. Put `GoogleService-Info.plist` in `ios/Runner/` and `google-services.json` in `android/app/`.
    For iOS, upload your APNs key in Firebase → Cloud Messaging.
 3. On the server set `FIREBASE_CREDENTIALS_FILE` to a service-account JSON.

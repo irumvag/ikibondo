@@ -1,4 +1,4 @@
-package rw.ac.ur.ikibondo.ikibondo
+package rw.ikibondo.app
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 
