@@ -5,7 +5,7 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
 const [, , FRONTEND, OUT, ONLY] = process.argv;
-const require = createRequire(path.join(FRONTEND, 'package.json'));
+const require = createRequire(path.resolve(FRONTEND, 'package.json'));
 const { chromium } = require('@playwright/test');
 
 const BASE = 'http://localhost:3000';

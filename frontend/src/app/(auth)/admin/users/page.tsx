@@ -1,22 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Check, Pencil, UserCheck, UserPlus, UserX, Users,
   ShieldOff, ShieldCheck, AlertTriangle,
 } from 'lucide-react';
 import { useAdminUsers, useAdminCamps, usePendingApprovals, QK } from '@/lib/api/queries';
-import { approveUser, createStaffUser, updateUser, deactivateUser, suspendUser, bulkSuspendUsers } from '@/lib/api/admin';
+import { approveUser, createStaffUser, updateUser, deactivateUser, suspendUser, bulkSuspendUsers, listOrganizations } from '@/lib/api/admin';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import type { AuthUser } from '@/store/authStore';
 
-const ROLE_OPTIONS = ['', 'ADMIN', 'SUPERVISOR', 'NURSE', 'CHW', 'PARENT'];
+const ROLE_OPTIONS = ['', 'ADMIN', 'SUPERVISOR', 'NURSE', 'CHW', 'PARENT', 'GOVERNMENT', 'PARTNER'];
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Admin', SUPERVISOR: 'Supervisor', NURSE: 'Nurse', CHW: 'CHW', PARENT: 'Parent',
+  GOVERNMENT: 'Government', PARTNER: 'NGO partner',
 };
 
 function roleBadgeVariant(role: string) {
@@ -182,14 +183,22 @@ const USER_COLUMNS = (
 
 interface CreateUserForm {
   full_name: string; email: string; role: string; phone_number: string; password: string;
+  camp: string; organization: string;
 }
-const EMPTY_CREATE: CreateUserForm = { full_name: '', email: '', role: 'CHW', phone_number: '', password: '' };
+const EMPTY_CREATE: CreateUserForm = {
+  full_name: '', email: '', role: 'CHW', phone_number: '', password: '', camp: '', organization: '',
+};
+
+// Which extra field a role needs: camp staff work in one camp; oversight roles belong to an organisation
+const CAMP_ROLES = ['CHW', 'NURSE', 'SUPERVISOR'];
+const ORG_ROLES = ['GOVERNMENT', 'PARTNER'];
 
 interface EditUserForm {
   full_name: string; email: string; phone_number: string;
   role: string; camp: string; is_approved: boolean;
   /** Roles held in addition to the main role */
   extra_roles: string[];
+  organization: string;
 }
 
 const TOAST_MS = 5000;
@@ -221,6 +230,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<AuthUser | null>(null);
   const [editForm, setEditForm]       = useState<EditUserForm>({
     full_name: '', email: '', phone_number: '', role: '', camp: '', is_approved: false, extra_roles: [],
+    organization: '',
   });
   const [saving, setSaving]         = useState(false);
   const [editError, setEditError]   = useState('');
@@ -243,6 +253,7 @@ export default function UsersPage() {
   const { data: users, isLoading: usersLoading } = useAdminUsers(roleFilter || undefined, showSuspended);
   const { data: pending, isLoading: pendingLoading } = usePendingApprovals();
   const { data: camps } = useAdminCamps();
+  const { data: organizations } = useQuery({ queryKey: ['organizations'], queryFn: listOrganizations });
 
   const invalidateUsers = () => qc.invalidateQueries({ queryKey: QK.adminUsers });
 
@@ -259,18 +270,21 @@ export default function UsersPage() {
     e.preventDefault();
     setCreating(true); setCreateError('');
     try {
+      const { camp, organization, ...fields } = createForm;
       const created = await createStaffUser({
-        ...createForm,
-        phone_number: createForm.phone_number || undefined,
-        password: createForm.password || undefined,
+        ...fields,
+        phone_number: fields.phone_number || undefined,
+        password: fields.password || undefined,
+        camp: CAMP_ROLES.includes(fields.role) ? camp || undefined : undefined,
+        organization: ORG_ROLES.includes(fields.role) ? organization || undefined : undefined,
       });
       invalidateUsers();
       setShowCreate(false);
       setCreateForm(EMPTY_CREATE);
       setCreateToast(created.email);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setCreateError(msg ?? 'Failed to create user. Check the form and try again.');
+      const data = (err as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+      setCreateError(data?.error ?? data?.message ?? 'Failed to create user. Check the form and try again.');
     } finally { setCreating(false); }
   };
 
@@ -281,6 +295,7 @@ export default function UsersPage() {
       phone_number: user.phone_number ?? '', role: user.role,
       camp: user.camp ?? '', is_approved: user.is_approved,
       extra_roles: (user.roles ?? []).filter((r) => r !== user.role),
+      organization: user.organization ?? '',
     });
     setEditError('');
   };
@@ -296,6 +311,7 @@ export default function UsersPage() {
         phone_number: fields.phone_number || undefined,
         camp: fields.camp || null,
         roles: [fields.role, ...extra_roles.filter((r) => r !== fields.role)],
+        organization: fields.organization || null,
       });
       invalidateUsers();
       setEditingUser(null);
@@ -651,6 +667,33 @@ export default function UsersPage() {
                   ))}
                 </select>
               </div>
+              {CAMP_ROLES.includes(createForm.role) && (
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Camp</span>
+                  <select value={createForm.camp} required
+                    onChange={(e) => setCreateForm({ ...createForm, camp: e.target.value })}
+                    className="text-sm px-3 py-2 rounded-lg border outline-none"
+                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}>
+                    <option value="">Choose a camp</option>
+                    {(camps ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </label>
+              )}
+              {ORG_ROLES.includes(createForm.role) && (
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Organisation</span>
+                  <select value={createForm.organization} required
+                    onChange={(e) => setCreateForm({ ...createForm, organization: e.target.value })}
+                    className="text-sm px-3 py-2 rounded-lg border outline-none"
+                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}>
+                    <option value="">Choose an organisation</option>
+                    {(organizations ?? []).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                  </select>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    They see statistics for the organisation&apos;s camps only — never a child&apos;s record.
+                  </span>
+                </label>
+              )}
               <Input
                 label="Temporary password (leave blank to auto-generate)"
                 type="password" value={createForm.password}
@@ -722,6 +765,18 @@ export default function UsersPage() {
                   They switch between roles from the top bar. A parent role shows the children linked to their account.
                 </p>
               </fieldset>
+              {[editForm.role, ...editForm.extra_roles].some((r) => ORG_ROLES.includes(r)) && (
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Organisation</span>
+                  <select value={editForm.organization}
+                    onChange={(e) => setEditForm({ ...editForm, organization: e.target.value })}
+                    className="text-sm px-3 py-2 rounded-lg border outline-none"
+                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}>
+                    <option value="">— None —</option>
+                    {(organizations ?? []).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                  </select>
+                </label>
+              )}
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Camp</label>
                 <select value={editForm.camp}

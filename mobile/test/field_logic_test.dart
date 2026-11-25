@@ -126,4 +126,13 @@ void main() {
       expect(AppUser.fromJson(json(null)).switchableRoles, [UserRole.nurse]);
     });
   });
+
+  test('government and partner accounts are recognised, not treated as parents', () {
+    Map<String, dynamic> j(String role) => {
+          'id': 'u', 'email': 'g@x.rw', 'full_name': 'G', 'role': role,
+          'is_approved': true, 'must_change_password': false,
+        };
+    expect(AppUser.fromJson(j('GOVERNMENT')).role, UserRole.government);
+    expect(AppUser.fromJson(j('PARTNER')).role, UserRole.partner);
+  });
 }

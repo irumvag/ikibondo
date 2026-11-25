@@ -19,6 +19,7 @@ export async function createStaffUser(payload: {
   phone_number?: string;
   camp?: string;
   password?: string;
+  organization?: string;
 }): Promise<AuthUser> {
   const { data } = await apiClient.post('/auth/users/', payload);
   return data.data;
@@ -45,6 +46,7 @@ export async function updateUser(
     is_approved: boolean;
     /** Every role the person holds, main role included */
     roles: string[];
+    organization: string | null;
   }>,
 ): Promise<AuthUser> {
   const { data } = await apiClient.patch(`/auth/users/${userId}/`, payload);
@@ -655,4 +657,39 @@ export async function updateFaqItem(
 
 export async function deleteFaqItem(id: string): Promise<void> {
   await apiClient.delete(`/faq/${id}/`);
+}
+
+// ── Organisations (government bodies and partners) ────────────────────────────
+
+export interface Organization {
+  id: string;
+  name: string;
+  kind: 'GOVERNMENT' | 'NGO';
+  camps: string[];
+  camp_names: string[];
+  is_active: boolean;
+  member_count: number;
+  created_at: string;
+}
+
+export type OrganizationInput = Pick<Organization, 'name' | 'kind' | 'camps' | 'is_active'>;
+
+export async function listOrganizations(): Promise<Organization[]> {
+  const { data } = await apiClient.get('/auth/organizations/');
+  const payload = data.data ?? data;
+  return payload?.results ?? payload ?? [];
+}
+
+export async function createOrganization(input: OrganizationInput): Promise<Organization> {
+  const { data } = await apiClient.post('/auth/organizations/', input);
+  return data.data ?? data;
+}
+
+export async function updateOrganization(id: string, input: Partial<OrganizationInput>): Promise<Organization> {
+  const { data } = await apiClient.patch(`/auth/organizations/${id}/`, input);
+  return data.data ?? data;
+}
+
+export async function deleteOrganization(id: string): Promise<void> {
+  await apiClient.delete(`/auth/organizations/${id}/`);
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
-enum UserRole { admin, supervisor, nurse, chw, parent }
+/// `government` and `partner` see aggregated statistics on the website only.
+enum UserRole { admin, supervisor, nurse, chw, parent, government, partner }
 
 class AppUser {
   final String id;
@@ -64,6 +65,8 @@ class AppUser {
       case 'SUPERVISOR': return UserRole.supervisor;
       case 'NURSE':      return UserRole.nurse;
       case 'CHW':        return UserRole.chw;
+      case 'GOVERNMENT': return UserRole.government;
+      case 'PARTNER':    return UserRole.partner;
       default:           return UserRole.parent;
     }
   }

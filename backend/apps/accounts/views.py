@@ -1,5 +1,5 @@
 import logging
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 
 logger = logging.getLogger(__name__)
@@ -35,6 +35,7 @@ from .serializers import (
     ApproveUserSerializer,
     UserAdminUpdateSerializer,
     ChangePasswordSerializer,
+    OrganizationSerializer,
 )
 from .permissions import IsAdminUser, IsSupervisorOrAdmin, IsStaffCreator, IsStaffCreatorOrNurse, IsNurseOrSupervisorOrAdmin
 from .models import CustomUser, UserRole, ConsentRecord
@@ -824,3 +825,14 @@ def set_password_view(request):
     except SetupError as exc:
         return error_response(str(exc), 'SETUP_FAILED')
     return success_response(message='Password set. You can sign in now.')
+
+
+class OrganizationViewSet(viewsets.ModelViewSet):
+    """Admin: government bodies and partner organisations, and the camps each one covers."""
+    serializer_class = OrganizationSerializer
+    permission_classes = [IsAdminUser]
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        from .models import Organization
+        return Organization.objects.prefetch_related('camps').all()

@@ -1,7 +1,11 @@
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
 from .views import consent_view, consent_withdraw_view
+
+_router = DefaultRouter()
+_router.register(r'organizations', views.OrganizationViewSet, basename='organization')
 
 urlpatterns = [
     path('login/', views.LoginView.as_view(), name='auth-login'),
@@ -24,4 +28,5 @@ urlpatterns = [
     path('onboarding/complete/', views.complete_onboarding_view, name='auth-onboarding-complete'),
     path('consent/', consent_view, name='auth-consent'),
     path('consent/<uuid:consent_id>/withdraw/', consent_withdraw_view, name='auth-consent-withdraw'),
+    path('', include(_router.urls)),
 ]

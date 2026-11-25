@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
-from .models import CustomUser
+from .models import CustomUser, Organization
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -95,6 +95,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
         # `role` is the role the person is acting as right now
         data['roles'] = instance.roles
         data['primary_role'] = instance.primary_role
+        data['organization'] = str(instance.organization_id) if instance.organization_id else None
+        data['organization_name'] = instance.organization.name if instance.organization_id else None
         return data
 
     def get_has_guardian_record(self, obj) -> bool:
@@ -151,7 +153,15 @@ class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ['email', 'full_name', 'role', 'phone_number', 'camp', 'password', 'guardian_id',
-                  'preferred_language', 'roles']
+                  'preferred_language', 'roles', 'organization']
+
+    def validate(self, attrs):
+        if attrs.get('role') in ('GOVERNMENT', 'PARTNER') and not attrs.get('organization'):
+            raise serializers.ValidationError({'organization': 'Government and partner accounts need an organisation.'})
+        # Camp staff without a camp would see nothing (access fails closed)
+        if attrs.get('role') in ('CHW', 'NURSE', 'SUPERVISOR') and not attrs.get('camp'):
+            raise serializers.ValidationError({'camp': 'CHWs, nurses and supervisors need a camp.'})
+        return attrs
 
     roles = serializers.ListField(
         child=serializers.ChoiceField(choices=[c[0] for c in CustomUser._meta.get_field('role').choices]),
@@ -190,7 +200,7 @@ class UserAdminUpdateSerializer(serializers.ModelSerializer):
     """Admin PATCH on any user — can edit role, camp, approval status."""
     class Meta:
         model = CustomUser
-        fields = ['full_name', 'email', 'phone_number', 'role', 'camp', 'is_approved', 'roles']
+        fields = ['full_name', 'email', 'phone_number', 'role', 'camp', 'is_approved', 'roles', 'organization']
 
     roles = serializers.ListField(
         child=serializers.ChoiceField(choices=[c[0] for c in CustomUser._meta.get_field('role').choices]),
@@ -211,6 +221,10 @@ class UserAdminUpdateSerializer(serializers.ModelSerializer):
         changing_access = any(k in attrs for k in ('role', 'roles', 'camp'))
         if changing_access and any(r in ('CHW', 'NURSE', 'SUPERVISOR') for r in effective) and not camp:
             raise serializers.ValidationError({'camp': 'CHWs, nurses and supervisors need a camp.'})
+        org = attrs.get('organization', getattr(self.instance, 'organization', None))
+        changing_org = changing_access or 'organization' in attrs
+        if changing_org and any(r in ('GOVERNMENT', 'PARTNER') for r in effective) and not org:
+            raise serializers.ValidationError({'organization': 'Government and partner accounts need an organisation.'})
         return attrs
 
     def update(self, instance, validated_data):
@@ -242,3 +256,16 @@ def set_user_roles(user, roles, request=None):
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True, min_length=8)
+
+
+class OrganizationSerializer(serializers.ModelSerializer):
+    member_count = serializers.IntegerField(source='members.count', read_only=True)
+    camp_names = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Organization
+        fields = ['id', 'name', 'kind', 'camps', 'camp_names', 'is_active', 'member_count', 'created_at']
+        read_only_fields = ['id', 'camp_names', 'member_count', 'created_at']
+
+    def get_camp_names(self, obj):
+        return [c.name for c in obj.camps.all()]

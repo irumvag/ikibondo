@@ -19,6 +19,8 @@ const ROLE_HOME: Record<string, string> = {
   NURSE:      '/nurse',
   CHW:        '/chw',
   PARENT:     '/parent',
+  GOVERNMENT: '/insights',
+  PARTNER:    '/insights',
 };
 
 // Prefixes a role is allowed to visit (their own + public)
@@ -28,6 +30,8 @@ const ROLE_PREFIX: Record<string, string> = {
   NURSE:      '/nurse',
   CHW:        '/chw',
   PARENT:     '/parent',
+  GOVERNMENT: '/insights',
+  PARTNER:    '/insights',
 };
 
 function isPublic(pathname: string) {

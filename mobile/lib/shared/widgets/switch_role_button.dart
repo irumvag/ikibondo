@@ -9,6 +9,8 @@ const _labels = {
   UserRole.nurse: 'Nurse',
   UserRole.chw: 'Community health worker',
   UserRole.parent: 'Parent / guardian',
+  UserRole.government: 'Government official',
+  UserRole.partner: 'NGO / UN partner',
 };
 
 /// "Switch role" for people who hold more than one (e.g. a nurse who is also a parent).

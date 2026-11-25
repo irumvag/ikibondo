@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, MapPin, ScrollText, Cpu,
   AlertTriangle, Activity, Baby, FileBarChart, ClipboardList,
   UserPlus, Stethoscope, Syringe, RefreshCw, Heart, Bell,
-  X, LogOut, Settings, MessageCircleQuestion, FileText, ChevronDown,
+  X, LogOut, Settings, MessageCircleQuestion, FileText, ChevronDown, Building2,
   ChevronRight, PanelLeftClose, PanelLeftOpen, BarChart2,
   Inbox, GitBranch, Calendar, Bluetooth, ShieldCheck,
   Globe, ClipboardCheck, Megaphone, FlaskConical, QrCode,
@@ -44,6 +44,7 @@ const ROLE_NAV: Record<UserRole, NavEntry[]> = {
       kind: 'group', id: 'admin-mgmt', label: 'Management', icon: Users,
       items: [
         { href: '/admin/users',          label: 'Users',          icon: Users },
+        { href: '/admin/organizations',  label: 'Organisations',  icon: Building2 },
         { href: '/admin/camps',          label: 'Camps & Zones',  icon: MapPin },
         { href: '/admin/children',       label: 'Children',       icon: Baby },
         { href: '/admin/vaccinations',   label: 'Vaccines',       icon: Syringe },
@@ -170,6 +171,18 @@ const ROLE_NAV: Record<UserRole, NavEntry[]> = {
     { href: '/parent/notifications', label: 'Notifications',     icon: Bell },
     { href: '/parent/consent',       label: 'Consent & Privacy', icon: ShieldCheck },
   ],
+
+  // Oversight roles: aggregated statistics only, no child records
+  GOVERNMENT: [
+    { href: '/insights',         label: 'Overview',      icon: BarChart2 },
+    { href: '/insights/reports', label: 'Reports',       icon: FileBarChart },
+    { href: '/notifications',    label: 'Notifications', icon: Bell },
+  ],
+  PARTNER: [
+    { href: '/insights',         label: 'Overview',      icon: BarChart2 },
+    { href: '/insights/reports', label: 'Reports',       icon: FileBarChart },
+    { href: '/notifications',    label: 'Notifications', icon: Bell },
+  ],
 };
 
 const ROLE_LABEL: Record<UserRole, string> = {
@@ -178,6 +191,8 @@ const ROLE_LABEL: Record<UserRole, string> = {
   NURSE:      'Nurse',
   CHW:        'Community Health Worker',
   PARENT:     'Parent / Guardian',
+  GOVERNMENT: 'Government official',
+  PARTNER:    'NGO / UN partner',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

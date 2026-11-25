@@ -18,6 +18,25 @@ camp-scoped user with no camp, sees nothing.
 
 Records outside a user's scope return **404**, not 403, so ids can't be probed.
 
+### Government and partner organisations
+
+| Role | Sees |
+|---|---|
+| Government official | Aggregated statistics for the camps of their organisation; a government body with no camps listed covers every camp |
+| NGO / UN partner | Aggregated statistics for the camps their organisation is linked to; none until an admin links camps |
+
+These roles never see a child, guardian or visit record: every child-level endpoint returns nothing for
+them, and they only use `/insights/*`. The statistics are counts per camp (nutrition status, risk,
+vaccination coverage, visits, referrals, a 12-month trend) with **small-cell suppression**: counts from
+1 to 4 are shown as "<5" and rates need at least 5 children, so a child in a small camp cannot be
+singled out. Admins manage organisations and their camps (Admin → Organisations).
+
+Known limit: a hidden count can sometimes be worked out by subtracting the other camps from the
+total. Enough for programme reporting; anything published should still be reviewed.
+
+One person can hold several roles (e.g. a nurse who is also a parent). They act as one role at a time
+(role switcher); the token carries the active role and every rule above applies to that role only.
+
 ## What each role can change
 
 | Action | Allowed |

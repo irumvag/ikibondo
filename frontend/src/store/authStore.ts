@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type UserRole = 'CHW' | 'NURSE' | 'SUPERVISOR' | 'ADMIN' | 'PARENT';
+export type UserRole = 'CHW' | 'NURSE' | 'SUPERVISOR' | 'ADMIN' | 'PARENT' | 'GOVERNMENT' | 'PARTNER';
 
 export interface AuthUser {
   id: string;
@@ -11,6 +11,9 @@ export interface AuthUser {
   /** Every role the person holds (primary first); more than one shows the role switcher */
   roles?: UserRole[];
   primary_role?: UserRole;
+  /** Government and partner users: the organisation that decides which camps they see */
+  organization?: string | null;
+  organization_name?: string | null;
   phone_number: string | null;
   national_id?: string | null;
   camp: string | null;

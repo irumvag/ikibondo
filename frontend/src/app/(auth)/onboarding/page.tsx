@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/Button';
 
-type Role = 'CHW' | 'NURSE' | 'SUPERVISOR' | 'ADMIN' | 'PARENT';
+type Role = 'CHW' | 'NURSE' | 'SUPERVISOR' | 'ADMIN' | 'PARENT' | 'GOVERNMENT' | 'PARTNER';
 
 interface ChecklistItem {
   id: string;
@@ -46,6 +46,16 @@ const ROLE_CHECKLISTS: Record<Role, ChecklistItem[]> = {
     { id: 'consent', label: 'Review data consent', description: 'Understand how your data is used under UNHCR policy.' },
     { id: 'notifications', label: 'Set notification preferences', description: 'Choose how you want to receive health reminders.' },
   ],
+  GOVERNMENT: [
+    { id: 'profile', label: 'Set up your profile', description: 'Confirm your name and organisation.' },
+    { id: 'overview', label: 'Read the overview', description: 'Malnutrition, vaccination and visit figures for the camps you oversee.' },
+    { id: 'report', label: 'Download a report', description: 'Export the figures as a spreadsheet for planning and reporting.' },
+  ],
+  PARTNER: [
+    { id: 'profile', label: 'Set up your profile', description: 'Confirm your name and organisation.' },
+    { id: 'overview', label: 'Read the overview', description: 'Figures for the camps your organisation works in.' },
+    { id: 'report', label: 'Download a report', description: 'Export the figures as a spreadsheet for donors and planning.' },
+  ],
 };
 
 const ROLE_LANDING: Record<Role, string> = {
@@ -54,6 +64,8 @@ const ROLE_LANDING: Record<Role, string> = {
   SUPERVISOR: '/supervisor',
   ADMIN: '/admin',
   PARENT: '/parent',
+  GOVERNMENT: '/insights',
+  PARTNER: '/insights',
 };
 
 export default function OnboardingPage() {

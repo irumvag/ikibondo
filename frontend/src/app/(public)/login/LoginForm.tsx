@@ -19,6 +19,8 @@ const ROLE_ROUTES: Record<UserRole, string> = {
   NURSE:      '/nurse',
   CHW:        '/chw',
   PARENT:     '/parent',
+  GOVERNMENT: '/insights',
+  PARTNER:    '/insights',
 };
 
 export function LoginForm() {

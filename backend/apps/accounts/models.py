@@ -29,6 +29,37 @@ class UserRole(models.TextChoices):
     SUPERVISOR = 'SUPERVISOR', 'Supervisor'
     ADMIN = 'ADMIN', 'Admin'
     PARENT = 'PARENT', 'Parent / Guardian'
+    # Oversight roles: aggregated, de-identified statistics only — never a child's record
+    GOVERNMENT = 'GOVERNMENT', 'Government official'
+    PARTNER = 'PARTNER', 'NGO / UN partner'
+
+
+STAKEHOLDER_ROLES = (UserRole.GOVERNMENT, UserRole.PARTNER)
+
+
+class OrganizationKind(models.TextChoices):
+    GOVERNMENT = 'GOVERNMENT', 'Government body (e.g. MoH, RBC, MINEMA)'
+    NGO = 'NGO', 'NGO / UN agency'
+
+
+class Organization(models.Model):
+    """
+    A government body or partner organisation whose staff see aggregated statistics.
+    `camps` limits what they see; a government body with no camps listed sees every camp,
+    a partner with no camps sees none (fail closed).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=200, unique=True)
+    kind = models.CharField(max_length=12, choices=OrganizationKind.choices)
+    camps = models.ManyToManyField('camps.Camp', blank=True, related_name='organizations')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
 
 
 class CustomUserQuerySet(models.QuerySet):
@@ -70,6 +101,11 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         null=True,
         blank=True,
         related_name='staff',
+    )
+
+    # Government and partner users belong to an organisation, which decides the camps they see
+    organization = models.ForeignKey(
+        Organization, on_delete=models.SET_NULL, null=True, blank=True, related_name='members',
     )
 
     is_active = models.BooleanField(default=True)

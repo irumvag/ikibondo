@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/change_password_screen.dart';
 import '../../features/auth/forgot_password_screen.dart';
+import '../../features/auth/web_only_screen.dart';
 import '../../features/chw/dashboard_screen.dart';
 import '../../features/chw/scan_screen.dart';
 import '../../features/chw/log_visit_screen.dart';
@@ -58,6 +59,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         builder: (_, __) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/web-only',
+        builder: (_, __) => const WebOnlyScreen(),
       ),
       GoRoute(
         path: '/forgot-password',
@@ -141,5 +146,7 @@ String _homeForRole(UserRole role) {
     case UserRole.nurse:      return '/nurse';
     case UserRole.supervisor: return '/nurse'; // supervisors use nurse views
     case UserRole.admin:      return '/nurse';
+    case UserRole.government: return '/web-only';
+    case UserRole.partner:    return '/web-only';
   }
 }
