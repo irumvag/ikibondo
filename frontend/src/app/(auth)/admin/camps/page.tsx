@@ -31,11 +31,13 @@ function statusVariant(s: string) {
 interface CampForm {
   name: string; code: string; district: string; province: string;
   status: string; estimated_population: string; managing_body: string; capacity: string;
+  public_description: string;
 }
 
 const EMPTY_CAMP: CampForm = {
   name: '', code: '', district: '', province: '',
   status: 'active', estimated_population: '', managing_body: '', capacity: '',
+  public_description: '',
 };
 
 function campFormToPayload(f: CampForm) {
@@ -48,6 +50,7 @@ function campFormToPayload(f: CampForm) {
     estimated_population: f.estimated_population ? Number(f.estimated_population) : undefined,
     managing_body: f.managing_body.trim() || undefined,
     capacity: f.capacity ? Number(f.capacity) : undefined,
+    public_description: f.public_description.trim(),
   };
 }
 
@@ -61,6 +64,7 @@ function campToForm(c: Camp): CampForm {
     estimated_population: c.estimated_population?.toString() ?? '',
     managing_body: c.managing_body ?? '',
     capacity: c.capacity?.toString() ?? '',
+    public_description: c.public_description ?? '',
   };
 }
 
@@ -131,6 +135,21 @@ function CampFormFields({ form, onChange }: {
         <Input label="Capacity" type="number" value={form.capacity} onChange={(e) => set('capacity', e.target.value)} />
       </div>
       <Input label="Managing body" value={form.managing_body} onChange={(e) => set('managing_body', e.target.value)} />
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Public description</span>
+        <textarea
+          rows={3}
+          maxLength={600}
+          value={form.public_description}
+          onChange={(e) => set('public_description', e.target.value)}
+          className="text-sm px-3 py-2 rounded-lg border outline-none"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
+          placeholder="e.g. Health centre open Monday to Friday, 8:00–16:00."
+        />
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          Shown on the public website. Never include names, health data or numbers about children.
+        </span>
+      </label>
     </>
   );
 }

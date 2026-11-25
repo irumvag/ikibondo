@@ -150,3 +150,59 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f'{self.action} {self.path} by {self.user_email} @ {self.timestamp}'
+
+
+# Keys of the public-site sections an admin may edit. The web app holds the default
+# text for each; a SiteContent row stores only what an admin changed.
+SITE_CONTENT_KEYS = (
+    'home.hero', 'home.how_it_works', 'home.roles', 'home.muac',
+    'about', 'footer', 'contact',
+)
+
+
+class SiteContent(models.Model):
+    """Admin-edited text for one section of the public site, per language."""
+
+    key = models.CharField(max_length=40, unique=True, choices=[(k, k) for k in SITE_CONTENT_KEYS])
+    # Field values for the section, e.g. {"title": "...", "body": "...", "steps": [{...}]}
+    content_en = models.JSONField(default=dict, blank=True)
+    content_fr = models.JSONField(default=dict, blank=True)
+    content_rw = models.JSONField(default=dict, blank=True)
+    updated_by = models.ForeignKey('accounts.CustomUser', on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='+')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['key']
+        verbose_name = 'Site content section'
+
+    def __str__(self):
+        return self.key
+
+
+class AnnouncementLevel(models.TextChoices):
+    INFO = 'INFO', 'Information'
+    WARNING = 'WARNING', 'Important'
+
+
+class Announcement(BaseModel):
+    """A short site-wide message, e.g. 'Vaccination day on Friday at Mahama'."""
+
+    message_en = models.CharField(max_length=280)
+    message_fr = models.CharField(max_length=280, blank=True)
+    message_rw = models.CharField(max_length=280, blank=True)
+    link_url = models.CharField(max_length=300, blank=True, help_text='Optional page or URL for "Learn more"')
+    level = models.CharField(max_length=10, choices=AnnouncementLevel.choices, default=AnnouncementLevel.INFO)
+    # Public site, signed-in dashboards, or both
+    show_public = models.BooleanField(default=True)
+    show_dashboard = models.BooleanField(default=True)
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey('accounts.CustomUser', on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='+')
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.message_en[:60]

@@ -70,6 +70,8 @@ export interface Camp {
   active_children_count: number;
   is_active: boolean;
   created_at: string;
+  /** Shown on the public website */
+  public_description?: string;
 }
 
 export interface CampStats {
@@ -123,6 +125,7 @@ export async function createCamp(payload: {
   managing_body?: string;
   status: string;
   capacity?: number;
+  public_description?: string;
 }): Promise<Camp> {
   const { data } = await apiClient.post('/camps/', payload);
   return data.data ?? data;
@@ -139,6 +142,7 @@ export async function updateCamp(
     managing_body: string;
     status: string;
     capacity: number;
+    public_description: string;
   }>,
 ): Promise<Camp> {
   const { data } = await apiClient.patch(`/camps/${campId}/`, payload);

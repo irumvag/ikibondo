@@ -21,6 +21,10 @@ class Camp(BaseModel):
         choices=[('active', 'Active'), ('closed', 'Closed'), ('transitioning', 'Transitioning')],
         default='active',
     )
+    public_description = models.TextField(
+        blank=True, max_length=600,
+        help_text='Short description shown on the public website (no personal or health data).',
+    )
     # Keep capacity for backward-compat with existing queries
     capacity = models.PositiveIntegerField(default=0, help_text='Maximum registered children capacity')
 

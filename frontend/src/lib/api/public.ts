@@ -17,6 +17,8 @@ export interface Camp {
   name: string;
   code: string;
   district: string | null;
+  /** Short public text set by an admin (Admin → Camps) */
+  public_description?: string;
 }
 
 export interface FAQItem {

@@ -1,12 +1,16 @@
 import { PublicNav } from '@/components/layout/PublicNav';
+import { AnnouncementBanner } from '@/components/layout/AnnouncementBanner';
+import { fetchSiteContent, resolveSection } from '@/lib/siteContent';
 
-export default function PublicLayout({
+export default async function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const footer = resolveSection(await fetchSiteContent(), 'footer');
   return (
     <>
+      <AnnouncementBanner where="public" />
       <PublicNav />
       {children}
       <footer className="border-t-2 py-10" style={{ borderColor: 'var(--ink)' }}>
@@ -16,7 +20,7 @@ export default function PublicLayout({
         >
           <p>
             <span className="font-extrabold" style={{ color: 'var(--ink)' }}>Ikibondo</span>
-            {' '}means &ldquo;baby&rdquo; in Kinyarwanda.
+            {' '}{footer.tagline}
           </p>
           <p>&copy; {new Date().getFullYear()} Ikibondo, Rwanda</p>
         </div>

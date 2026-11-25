@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { GrowthChartHero } from './GrowthChartHero';
+import { DEFAULTS, type SiteContent } from '@/lib/siteContent';
 
-export function HeroSection() {
+export function HeroSection({ content = DEFAULTS['home.hero'] }: { content?: SiteContent['home.hero'] }) {
   return (
     <section style={{ background: 'var(--bg)' }}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 sm:pt-16 sm:pb-24">
@@ -12,13 +13,11 @@ export function HeroSection() {
               className="text-[2.5rem] leading-[1.05] sm:text-[3.25rem] lg:text-[3.75rem] font-extrabold text-balance mb-6"
               style={{ color: 'var(--ink)', letterSpacing: '-0.025em' }}
             >
-              See a child&apos;s growth falter before it becomes an emergency.
+              {content.title}
             </h1>
 
             <p className="text-lg leading-relaxed mb-9" style={{ color: 'var(--text-muted)' }}>
-              Ikibondo is where community health workers, nurses and supervisors in Rwanda&apos;s
-              refugee camps record every measurement, compare it with WHO growth standards, and
-              see which children need help first.
+              {content.body}
             </p>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -27,18 +26,18 @@ export function HeroSection() {
                 className="inline-flex items-center h-12 px-7 rounded-[var(--radius-md)] text-base font-bold transition-colors bg-[var(--ink)] hover:bg-[var(--ink-soft)]"
                 style={{ color: 'var(--bg)' }}
               >
-                Sign in
+                {content.primary_cta}
               </Link>
               <Link
                 href="/register"
                 className="inline-flex items-center h-12 px-6 rounded-[var(--radius-md)] text-base font-bold border-2 transition-colors hover:bg-[var(--bg-sand)]"
                 style={{ borderColor: 'var(--ink)', color: 'var(--ink)' }}
               >
-                Register as a parent
+                {content.secondary_cta}
               </Link>
             </div>
             <p className="mt-4 text-sm" style={{ color: 'var(--text-muted)' }}>
-              Health worker accounts are created by your camp supervisor.
+              {content.note}
             </p>
           </div>
 

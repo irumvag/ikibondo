@@ -43,7 +43,8 @@ class TestCampList:
     def test_anonymous_camp_list_hides_population(self, client, camp):
         resp = client.get(reverse('camp-list'))
         results = resp.data.get('results', resp.data)
-        assert set(results[0].keys()) == {'id', 'name', 'code', 'district'}
+        # The admin-written public description is the only text added; still no counts
+        assert set(results[0].keys()) == {'id', 'name', 'code', 'district', 'public_description'}
 
 
 @pytest.mark.django_db

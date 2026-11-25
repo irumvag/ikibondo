@@ -37,7 +37,12 @@ export function CampsSection() {
             <tbody>
               {camps.map((camp) => (
                 <tr key={camp.id} className="border-b" style={{ borderColor: 'var(--rule)' }}>
-                  <td className="py-3 pr-4 font-bold" style={{ color: 'var(--text)' }}>{camp.name}</td>
+                  <td className="py-3 pr-4" style={{ color: 'var(--text)' }}>
+                    <span className="font-bold">{camp.name}</span>
+                    {camp.public_description && (
+                      <span className="block text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>{camp.public_description}</span>
+                    )}
+                  </td>
                   <td className="py-3" style={{ color: 'var(--text-muted)' }}>{camp.district ?? '—'}</td>
                 </tr>
               ))}

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { startAutoSync } from '@/lib/offline/queue';
+import { AnnouncementBanner } from './AnnouncementBanner';
 
 const STORAGE_COLLAPSED = 'ikibondo.sidebar.collapsed';
 
@@ -52,6 +53,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Topbar onMenuClick={() => setSidebarOpen((v) => !v)} />
+        <AnnouncementBanner where="dashboard" />
         <main
           id="main-content"
           className="flex-1 overflow-y-auto p-5 sm:p-6 lg:p-8"

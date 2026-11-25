@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, MapPin, ScrollText, Cpu,
   AlertTriangle, Activity, Baby, FileBarChart, ClipboardList,
   UserPlus, Stethoscope, Syringe, RefreshCw, Heart, Bell,
-  X, LogOut, Settings, MessageCircleQuestion, ChevronDown,
+  X, LogOut, Settings, MessageCircleQuestion, FileText, ChevronDown,
   ChevronRight, PanelLeftClose, PanelLeftOpen, BarChart2,
   Inbox, GitBranch, Calendar, Bluetooth, ShieldCheck,
   Globe, ClipboardCheck, Megaphone, FlaskConical, QrCode,
@@ -65,7 +65,14 @@ const ROLE_NAV: Record<UserRole, NavEntry[]> = {
       ],
     },
     { href: '/admin/broadcasts',  label: 'Broadcast',    icon: Megaphone },
-    { href: '/admin/faq',         label: 'FAQ',           icon: MessageCircleQuestion },
+    {
+      kind: 'group', id: 'admin-website', label: 'Website', icon: Globe,
+      items: [
+        { href: '/admin/site-content',  label: 'Site content',  icon: FileText },
+        { href: '/admin/announcements', label: 'Announcements', icon: Megaphone },
+        { href: '/admin/faq',           label: 'FAQ',           icon: MessageCircleQuestion },
+      ],
+    },
     { href: '/notifications',     label: 'Notifications', icon: Bell },
   ],
 

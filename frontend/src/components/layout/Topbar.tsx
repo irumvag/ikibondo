@@ -19,6 +19,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/logs':              'System Logs',
   '/admin/ml':                'ML Model',
   '/admin/faq':               'FAQ Management',
+  '/admin/site-content':      'Site Content',
+  '/admin/announcements':     'Announcements',
   '/admin/children':          'Children',
   '/admin/guardians':         'Guardians',
   '/admin/health-records':    'Health Records',

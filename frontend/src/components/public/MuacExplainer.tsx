@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
+import { DEFAULTS, type SiteContent } from '@/lib/siteContent';
 
 // WHO MUAC cut-offs for children 6–59 months.
 const MIN_CM = 9;
@@ -35,7 +36,7 @@ function classify(cm: number) {
 
 const pct = (cm: number) => ((cm - MIN_CM) / (MAX_CM - MIN_CM)) * 100;
 
-export function MuacExplainer() {
+export function MuacExplainer({ content = DEFAULTS['home.muac'] }: { content?: SiteContent['home.muac'] }) {
   const [cm, setCm] = useState(13.2);
   const id = useId();
   const result = classify(cm);
@@ -47,11 +48,10 @@ export function MuacExplainer() {
         <div>
           <h2 id={`${id}-heading`} className="text-3xl sm:text-4xl font-extrabold text-balance mb-4"
               style={{ color: 'var(--ink)', letterSpacing: '-0.02em' }}>
-            Read a MUAC tape the way a health worker does
+            {content.title}
           </h2>
           <p className="text-base leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-            The tape goes around the middle of a child&apos;s upper arm. Its colour band tells the health
-            worker what to do next. Move the marker to see each band.
+            {content.body}
           </p>
         </div>
 

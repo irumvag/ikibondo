@@ -10,7 +10,7 @@ class CampSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'code', 'district', 'province', 'latitude', 'longitude',
             'estimated_population', 'managing_body', 'status', 'capacity',
-            'active_children_count', 'is_active', 'created_at',
+            'active_children_count', 'is_active', 'created_at', 'public_description',
         ]
         read_only_fields = ['id', 'created_at']
 
@@ -20,7 +20,7 @@ class CampPublicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Camp
-        fields = ['id', 'name', 'code', 'district']
+        fields = ['id', 'name', 'code', 'district', 'public_description']
         read_only_fields = fields
 
 
