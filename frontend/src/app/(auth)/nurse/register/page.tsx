@@ -49,6 +49,13 @@ interface NewbornForm {
 }
 
 const EMPTY_PARENT: ParentForm = { full_name: '', email: '', phone_number: '' };
+/** Today's date on the device (YYYY-MM-DD). toISOString() would give the UTC date,
+ *  which in Rwanda is still yesterday between midnight and 2 a.m. */
+function todayLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 const EMPTY_NEWBORN: NewbornForm = {
   full_name: '', date_of_birth: '', sex: '', zone: '', notes: '',
   birth_weight: '', gestational_age: '', feeding_type: '',
@@ -199,7 +206,7 @@ export default function NurseRegisterPage() {
   const [step, setStep] = useState<Step>('parent');
   const [regMode, setRegMode] = useState<RegistrationMode>('newborn');
   const [parentForm, setParentForm] = useState<ParentForm>(EMPTY_PARENT);
-  const [newbornForm, setNewbornForm] = useState<NewbornForm>(EMPTY_NEWBORN);
+  const [newbornForm, setNewbornForm] = useState<NewbornForm>(() => ({ ...EMPTY_NEWBORN, date_of_birth: todayLocal() }));
   const [zones, setZones] = useState<Zone[]>([]);
 
   // Parent search/select state
@@ -304,7 +311,7 @@ export default function NurseRegisterPage() {
     setResult(null);
     setStep('parent');
     setParentForm(EMPTY_PARENT);
-    setNewbornForm(EMPTY_NEWBORN);
+    setNewbornForm({ ...EMPTY_NEWBORN, date_of_birth: regMode === 'newborn' ? todayLocal() : '' });
     setSelectedParent(null);
     setSearchQuery('');
     setSearchResults([]);
@@ -319,26 +326,17 @@ export default function NurseRegisterPage() {
     setSubmitting(true);
     setError('');
     try {
-      // Step 1: get or create parent account
-      let parentUser = selectedParent;
-      if (!parentUser) {
-        parentUser = await createParentAccount({
-          full_name: parentForm.full_name.trim(),
-          email: parentForm.email.trim(),
-          phone_number: parentForm.phone_number.trim(),
-        });
-      }
-
-      // Step 2: register child.
+      // Step 1: register the child first. For a new parent the account is created after,
+      // so a failed registration never leaves an account with no child behind.
       // If the selected parent already has a guardian record, reuse it so we
       // don't create a duplicate Guardian and avoid the 409 on link-account.
-      const existingGuardianId = parentUser.guardian_id ?? undefined;
+      const existingGuardianId = selectedParent?.guardian_id ?? undefined;
 
-      // Parse optional neonatal fields
+      // Optional neonatal fields are only sent when filled in (the API refuses null)
       const neonatal = {
-        birth_weight: newbornForm.birth_weight ? parseFloat(newbornForm.birth_weight) : null,
-        gestational_age: newbornForm.gestational_age ? parseInt(newbornForm.gestational_age, 10) : null,
-        feeding_type: (newbornForm.feeding_type || null) as 'BREAST' | 'FORMULA' | 'MIXED' | null,
+        ...(newbornForm.birth_weight ? { birth_weight: parseFloat(newbornForm.birth_weight) } : {}),
+        ...(newbornForm.gestational_age ? { gestational_age: parseInt(newbornForm.gestational_age, 10) } : {}),
+        ...(newbornForm.feeding_type ? { feeding_type: newbornForm.feeding_type as 'BREAST' | 'FORMULA' | 'MIXED' } : {}),
       };
 
       const child = await registerChild(
@@ -371,7 +369,15 @@ export default function NurseRegisterPage() {
             },
       );
 
-      // Step 3: link parent account → guardian (only needed when a new Guardian was created)
+      // Step 2: the parent account (new parents only), then link it to the child's guardian
+      let parentUser = selectedParent;
+      if (!parentUser) {
+        parentUser = await createParentAccount({
+          full_name: parentForm.full_name.trim(),
+          email: parentForm.email.trim(),
+          phone_number: parentForm.phone_number.trim(),
+        });
+      }
       if (!existingGuardianId) {
         await linkParentToGuardian(child.guardian_id, parentUser.id);
       }
@@ -389,8 +395,8 @@ export default function NurseRegisterPage() {
         account_created: accountCreated,
       });
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? 'Registration failed. Please check the form and try again.');
+      const data = (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data;
+      setError(data?.error ?? data?.message ?? 'Registration failed. Please check the form and try again.');
     } finally {
       setSubmitting(false);
       submitLock.current = false;
@@ -436,7 +442,7 @@ export default function NurseRegisterPage() {
                 // Reset DOB when switching modes
                 setNewbornForm((prev) => ({
                   ...prev,
-                  date_of_birth: value === 'newborn' ? new Date().toISOString().split('T')[0] : '',
+                  date_of_birth: value === 'newborn' ? todayLocal() : '',
                 }));
               }}
               className="flex-1 py-2 rounded-lg border text-sm font-medium transition-colors"

@@ -1221,8 +1221,9 @@ function RecordMeasurementModal({ childId, onClose }: { childId: string; onClose
   };
 
   const field = (label: string, key: keyof typeof form, type: 'number' | 'date' | 'textarea', step?: string) => (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{label}</label>
+    // Wrapping label: ties the visible text to the field for screen readers
+    <label className="flex flex-col gap-1">
+      <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{label}</span>
       {type === 'textarea' ? (
         <textarea
           value={form[key] as string}
@@ -1241,7 +1242,7 @@ function RecordMeasurementModal({ childId, onClose }: { childId: string; onClose
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
         />
       )}
-    </div>
+    </label>
   );
 
   return (
