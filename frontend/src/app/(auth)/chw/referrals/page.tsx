@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Referral {
   id: string;
@@ -60,6 +61,7 @@ function formatDate(iso: string) {
 }
 
 export default function CHWReferralsPage() {
+  const toast = useToast();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [childSearch, setChildSearch] = useState('');
@@ -83,6 +85,7 @@ export default function CHWReferralsPage() {
   const createMut = useMutation({
     mutationFn: createReferral,
     onSuccess: () => {
+      toast.success('Referral sent');
       qc.invalidateQueries({ queryKey: ['chw-referrals'] });
       setShowForm(false);
       setSelectedChild(null);
@@ -95,6 +98,7 @@ export default function CHWReferralsPage() {
   const completeMut = useMutation({
     mutationFn: ({ id, outcome }: { id: string; outcome: string }) => completeReferral(id, outcome),
     onSuccess: () => {
+      toast.success('Outcome recorded');
       qc.invalidateQueries({ queryKey: ['chw-referrals'] });
       setCompleteId(null);
       setOutcome('');

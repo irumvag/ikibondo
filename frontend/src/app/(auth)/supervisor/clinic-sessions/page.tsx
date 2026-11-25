@@ -9,6 +9,7 @@ import { createClinicSession, closeClinicSession, getSessionAttendees } from '@/
 import type { ClinicSession, ClinicAttendee } from '@/lib/api/supervisor';
 import type { VaccineRecord } from '@/lib/api/admin';
 import { useEffect } from 'react';
+import { useToast } from '@/contexts/ToastContext';
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
@@ -129,6 +130,7 @@ function CreateModal({ onDone, onCancel }: { onDone: () => void; onCancel: () =>
 const STATUSES = ['', 'OPEN', 'CLOSED'];
 
 export default function SupervisorClinicSessionsPage() {
+  const toast = useToast();
   const qc = useQueryClient();
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
@@ -141,7 +143,7 @@ export default function SupervisorClinicSessionsPage() {
 
   const closeMut = useMutation({
     mutationFn: (id: string) => closeClinicSession(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QK.supervisorClinicSessions() }),
+    onSuccess: () => { toast.success('Session closed'); qc.invalidateQueries({ queryKey: QK.supervisorClinicSessions() }); },
   });
 
   function invalidate() {

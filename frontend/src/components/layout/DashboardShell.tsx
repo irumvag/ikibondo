@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { startAutoSync } from '@/lib/offline/queue';
 import { AnnouncementBanner } from './AnnouncementBanner';
+import { useToast } from '@/contexts/ToastContext';
 
 const STORAGE_COLLAPSED = 'ikibondo.sidebar.collapsed';
 
@@ -27,8 +28,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // Upload visits saved while offline as soon as the connection or the user returns
-  useEffect(() => startAutoSync(), []);
+  // Upload visits saved while offline as soon as the connection or the user returns,
+  // and say what happened so the health worker knows their records arrived
+  const toast = useToast();
+  useEffect(() => startAutoSync(undefined, (results) => {
+    const ok = results.filter((r) => r.status === 'ok' || r.status === 'conflict').length;
+    const failed = results.length - ok;
+    if (ok > 0) toast.success(`${ok} saved record${ok === 1 ? '' : 's'} uploaded`);
+    if (failed > 0) toast.warn(`${failed} record${failed === 1 ? ' was' : 's were'} not accepted — open Sync to see why`);
+    // toast is stable for the app's lifetime
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), []);
 
   // Save the field pages for offline use right away, not only once each has been visited
   useEffect(() => {

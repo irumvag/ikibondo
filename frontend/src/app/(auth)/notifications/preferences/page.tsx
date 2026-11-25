@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, CheckCircle2, Bell } from 'lucide-react';
 import { getMe, patchMe } from '@/lib/api/user';
+import { useToast } from '@/contexts/ToastContext';
 
 interface NotifPrefs {
   sms_high_risk: boolean;
@@ -46,6 +47,7 @@ const CATEGORIES: { key: keyof Omit<NotifPrefs, 'quiet_hours_start' | 'quiet_hou
 ];
 
 export default function NotificationPreferencesPage() {
+  const toast = useToast();
   const qc = useQueryClient();
   const { data: me } = useQuery({ queryKey: ['me'], queryFn: getMe });
 
@@ -62,6 +64,7 @@ export default function NotificationPreferencesPage() {
   const mutation = useMutation({
     mutationFn: (p: NotifPrefs) => patchMe({ notification_prefs: p as unknown as Record<string, unknown> }),
     onSuccess: () => {
+      toast.success('Notification settings saved');
       qc.invalidateQueries({ queryKey: ['me'] });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);

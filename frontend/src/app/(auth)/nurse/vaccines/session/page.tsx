@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/contexts/ToastContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -251,6 +252,7 @@ function DeleteConfirmDialog({
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ClinicSessionPage() {
+  const toast = useToast();
   const qc = useQueryClient();
 
   const [showForm, setShowForm]           = useState(false);
@@ -312,6 +314,7 @@ export default function ClinicSessionPage() {
       await apiClient.post(`/vaccinations/clinic-sessions/${selectedId}/record-attendance/`, { attendances });
     },
     onSuccess: () => {
+      toast.success('Attendance saved');
       qc.invalidateQueries({ queryKey: ['nurse', 'clinic-sessions'] });
       qc.invalidateQueries({ queryKey: ['clinic-session', selectedId, 'eligible'] });
       setAttendance({});
@@ -323,6 +326,7 @@ export default function ClinicSessionPage() {
   const closeMut = useMutation({
     mutationFn: () => apiClient.post(`/vaccinations/clinic-sessions/${selectedId}/close/`, {}),
     onSuccess: () => {
+      toast.success('Session closed');
       qc.invalidateQueries({ queryKey: ['nurse', 'clinic-sessions'] });
       qc.invalidateQueries({ queryKey: ['clinic-session', selectedId, 'attendees'] });
     },
@@ -332,6 +336,7 @@ export default function ClinicSessionPage() {
     mutationFn: (childId: string) =>
       apiClient.delete(`/vaccinations/clinic-sessions/${selectedId}/attendees/${childId}/`),
     onSuccess: () => {
+      toast.success('Removed from this session');
       qc.invalidateQueries({ queryKey: ['clinic-session', selectedId, 'eligible'] });
       qc.invalidateQueries({ queryKey: ['clinic-session', selectedId, 'attendees'] });
       qc.invalidateQueries({ queryKey: ['nurse', 'clinic-sessions'] });

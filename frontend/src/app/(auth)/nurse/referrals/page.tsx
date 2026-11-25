@@ -10,6 +10,7 @@ import { apiClient } from '@/lib/api/client';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Referral {
   id: string;
@@ -80,6 +81,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 export default function NurseReferralsPage() {
+  const toast = useToast();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
@@ -94,12 +96,12 @@ export default function NurseReferralsPage() {
 
   const createMut = useMutation({
     mutationFn: createReferral,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['nurse', 'referrals'] }); reset(); setShowForm(false); },
+    onSuccess: () => { toast.success('Referral created'); qc.invalidateQueries({ queryKey: ['nurse', 'referrals'] }); reset(); setShowForm(false); },
   });
 
   const completeMut = useMutation({
     mutationFn: ({ id, outcome }: { id: string; outcome: string }) => completeReferral(id, outcome),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['nurse', 'referrals'] }); setCompletingId(null); setOutcome(''); },
+    onSuccess: () => { toast.success('Outcome recorded'); qc.invalidateQueries({ queryKey: ['nurse', 'referrals'] }); setCompletingId(null); setOutcome(''); },
   });
 
   return (

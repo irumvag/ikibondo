@@ -55,10 +55,17 @@ export function flushQueue(): Promise<SyncResultEntry[]> {
  * iOS Safari has no Background Sync API, so these triggers are what make the PWA work there.
  * Returns a cleanup function.
  */
-export function startAutoSync(intervalMs = 60_000): () => void {
+export function startAutoSync(
+  intervalMs = 60_000,
+  onFlushed?: (results: SyncResultEntry[]) => void,
+): () => void {
   if (typeof window === 'undefined') return () => {};
   const tryFlush = () => {
-    if (useSyncStore.getState().pending.length > 0) flushQueue().catch(() => { /* retried on next trigger */ });
+    if (useSyncStore.getState().pending.length > 0) {
+      flushQueue()
+        .then((results) => { if (results.length > 0) onFlushed?.(results); })
+        .catch(() => { /* retried on next trigger */ });
+    }
   };
   const onVisible = () => { if (document.visibilityState === 'visible') tryFlush(); };
 

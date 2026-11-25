@@ -7,6 +7,7 @@ import { apiClient } from '@/lib/api/client';
 import { useAuthStore } from '@/store/authStore';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Broadcast {
   id: string;
@@ -47,6 +48,7 @@ const inputStyle = {
 };
 
 export default function SupervisorBroadcastPage() {
+  const toast = useToast();
   const qc   = useQueryClient();
   const user = useAuthStore((s) => s.user);
 
@@ -67,6 +69,7 @@ export default function SupervisorBroadcastPage() {
   const sendMut = useMutation({
     mutationFn: sendBroadcast,
     onSuccess: (res) => {
+      toast.success('Broadcast sent');
       qc.invalidateQueries({ queryKey: ['supervisor', 'broadcasts'] });
       setBody('');
       setSentMsg(res.message ?? 'Broadcast sent successfully.');

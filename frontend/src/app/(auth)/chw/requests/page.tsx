@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/contexts/ToastContext';
 
 const STATUS_TABS: { key: VisitRequestStatus | 'ALL'; label: string }[] = [
   { key: 'ALL',       label: 'All'       },
@@ -41,6 +42,7 @@ function fmtDate(iso: string) {
 }
 
 export default function CHWRequestsPage() {
+  const toast = useToast();
   const qc = useQueryClient();
   const [tab, setTab]                 = useState<VisitRequestStatus | 'ALL'>('PENDING');
   const [declineId, setDeclineId]     = useState<string | null>(null);
@@ -56,12 +58,13 @@ export default function CHWRequestsPage() {
 
   const acceptMut = useMutation({
     mutationFn: ({ id, eta }: { id: string; eta?: string }) => acceptVisitRequest(id, eta),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['chw', 'visit-requests'] }),
+    onSuccess: () => { toast.success('Visit accepted — the family has been told'); qc.invalidateQueries({ queryKey: ['chw', 'visit-requests'] }); },
   });
 
   const declineMut = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) => declineVisitRequest(id, reason),
     onSuccess: () => {
+      toast.success('Request declined');
       qc.invalidateQueries({ queryKey: ['chw', 'visit-requests'] });
       setDeclineId(null);
       setDeclineReason('');
@@ -70,7 +73,7 @@ export default function CHWRequestsPage() {
 
   const completeMut = useMutation({
     mutationFn: (id: string) => completeVisitRequest(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['chw', 'visit-requests'] }),
+    onSuccess: () => { toast.success('Visit marked complete'); qc.invalidateQueries({ queryKey: ['chw', 'visit-requests'] }); },
   });
 
   const pendingCount = requests.filter((r) => r.status === 'PENDING').length;

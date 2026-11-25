@@ -7,6 +7,7 @@ import { apiClient } from '@/lib/api/client';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/contexts/ToastContext';
 
 interface ConsentRecord {
   id: string;
@@ -36,6 +37,7 @@ const CONSENT_SCOPE_LABELS: Record<string, string> = {
 };
 
 export default function ConsentPage() {
+  const toast = useToast();
   const qc = useQueryClient();
   const [withdrawConfirm, setWithdrawConfirm] = useState<string | null>(null);
 
@@ -46,12 +48,13 @@ export default function ConsentPage() {
 
   const grantMutation = useMutation({
     mutationFn: () => grantConsent('data_collection', '1.0'),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['consent'] }),
+    onSuccess: () => { toast.success('Thank you — consent recorded'); qc.invalidateQueries({ queryKey: ['consent'] }); },
   });
 
   const withdrawMutation = useMutation({
     mutationFn: (id: string) => withdrawConsent(id),
     onSuccess: () => {
+      toast.success('Consent withdrawn');
       qc.invalidateQueries({ queryKey: ['consent'] });
       setWithdrawConfirm(null);
     },

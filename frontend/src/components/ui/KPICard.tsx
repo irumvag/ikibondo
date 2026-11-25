@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Skeleton } from './Skeleton';
+import { CountUp } from './CountUp';
 
 interface Delta {
   value: number;   // positive = up, negative = down, 0 = flat
@@ -78,7 +79,7 @@ export function KPICard({
           className="text-4xl font-extrabold leading-none tabular-nums"
           style={{ color: 'var(--ink)', letterSpacing: '-0.02em' }}
         >
-          {value}
+          {typeof value === 'number' ? <CountUp value={value} /> : value}
         </p>
       )}
 

@@ -6,6 +6,7 @@ import { Megaphone, CheckCircle2 } from 'lucide-react';
 import { listBroadcasts, sendBroadcast } from '@/lib/api/notifications';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/contexts/ToastContext';
 
 const SCOPE_LABELS: Record<string, string> = {
   CAMP: 'Specific camp', ZONE: 'Zone', ROLE: 'By role', GLOBAL: 'All users (global)',
@@ -23,6 +24,7 @@ const inputStyle = {
 };
 
 export default function AdminBroadcastsPage() {
+  const toast = useToast();
   const qc = useQueryClient();
 
   const [scopeType, setScopeType] = useState('GLOBAL');
@@ -40,6 +42,7 @@ export default function AdminBroadcastsPage() {
   const sendMut = useMutation({
     mutationFn: sendBroadcast,
     onSuccess: () => {
+      toast.success('Broadcast sent');
       qc.invalidateQueries({ queryKey: ['admin', 'broadcasts'] });
       setBody('');
       setSent(true);

@@ -6,21 +6,30 @@ import { usePendingApprovals } from '@/lib/api/queries';
 import { approveUser } from '@/lib/api/admin';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/contexts/ToastContext';
 
 export default function NurseApprovalsPage() {
   const queryClient = useQueryClient();
   const { data: pending, isLoading } = usePendingApprovals();
   const [approving, setApproving] = useState<string | null>(null);
   const [approved, setApproved] = useState<Set<string>>(new Set());
+  const [leaving, setLeaving] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
+  const toast = useToast();
 
   const handleApprove = async (userId: string) => {
     setApproving(userId);
     setError('');
     try {
       await approveUser(userId);
-      setApproved((prev) => new Set([...prev, userId]));
-      queryClient.invalidateQueries({ queryKey: ['pending-approvals'] });
+      const name = pending?.find((u) => u.id === userId)?.full_name;
+      toast.success(name ? `${name} can now sign in` : 'Account approved');
+      // Let the row slide out before it leaves the list
+      setLeaving((prev) => new Set([...prev, userId]));
+      setTimeout(() => {
+        setApproved((prev) => new Set([...prev, userId]));
+        queryClient.invalidateQueries({ queryKey: ['pending-approvals'] });
+      }, 280);
     } catch {
       setError('Failed to approve. Please try again.');
     } finally {
@@ -60,7 +69,7 @@ export default function NurseApprovalsPage() {
 
       {!isLoading && visible.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
-          <CheckCircle size={40} style={{ color: 'var(--success, #22c55e)' }} />
+          <CheckCircle size={40} className="animate-pop" style={{ color: 'var(--success, #22c55e)' }} />
           <p className="font-semibold" style={{ color: 'var(--ink)' }}>All clear</p>
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No pending parent approvals in your camp.</p>
         </div>
@@ -71,7 +80,7 @@ export default function NurseApprovalsPage() {
           {visible.map((u) => (
             <div
               key={u.id}
-              className="flex items-center justify-between px-5 py-4"
+              className={`flex items-center justify-between px-5 py-4 ${leaving.has(u.id) ? 'animate-item-out' : ''}`}
               style={{ backgroundColor: 'var(--bg-elev)' }}
             >
               <div className="flex items-center gap-3">

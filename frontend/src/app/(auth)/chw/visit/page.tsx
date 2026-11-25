@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { enqueue, isNetworkError } from '@/lib/offline/queue';
 import { useAuthStore } from '@/store/authStore';
+import { SuccessCheck } from '@/components/ui/SuccessCheck';
 
 // ── constants ──────────────────────────────────────────────────────────────────
 
@@ -707,7 +708,8 @@ function OfflineSaved({ form, childName, onAnother, onClose }: {
   const band = muacBand(form);
   return (
     <div className="flex flex-col gap-4">
-      <div>
+      <div className="flex flex-col items-start gap-3">
+        <SuccessCheck />
         <p className="font-extrabold text-lg" style={{ color: 'var(--ink)' }}>Saved on this phone</p>
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
           There&apos;s no connection right now. {childName}&apos;s visit will upload automatically when the phone is back online.

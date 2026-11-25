@@ -18,6 +18,7 @@ import {
 import { addLocalNotif } from '@/lib/localNotifs';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/contexts/ToastContext';
 
 // ── constants ──────────────────────────────────────────────────────────────────
 
@@ -179,6 +180,7 @@ function VisitHistory({ requests, onWithdraw }: {
 // ── Inner form (needs useSearchParams so must be in Suspense) ──────────────────
 
 function RequestVisitForm() {
+  const toast = useToast();
   const router       = useRouter();
   const searchParams = useSearchParams();
   const preChild     = searchParams.get('child') ?? '';
@@ -217,6 +219,7 @@ function RequestVisitForm() {
   const createMut = useMutation({
     mutationFn: createVisitRequest,
     onSuccess: (result) => {
+      toast.success('Request sent to your health worker');
       qc.invalidateQueries({ queryKey: ['parent', 'visit-requests'] });
       addLocalNotif(
         'VISIT_REQUESTED',
@@ -231,6 +234,7 @@ function RequestVisitForm() {
   const withdrawMut = useMutation({
     mutationFn: ({ id }: { id: string; childName: string }) => withdrawVisitRequest(id),
     onSuccess: (_, vars) => {
+      toast.success('Request withdrawn');
       qc.invalidateQueries({ queryKey: ['parent', 'visit-requests'] });
       addLocalNotif(
         'VISIT_WITHDRAWN',
