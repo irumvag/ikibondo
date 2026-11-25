@@ -1,0 +1,2 @@
+# Test value, not a secret: checks that a password a nurse tries to set is ignored.
+56de704e025b9e551e2643c59e8a77c1828be4b1:backend/apps/accounts/tests/test_account_setup.py:generic-api-key:43
