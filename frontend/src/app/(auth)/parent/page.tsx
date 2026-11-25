@@ -39,11 +39,6 @@ function NotifIcon({ type }: { type: string }) {
   return <Bell size={16} style={{ color: 'var(--text-muted)' }} />;
 }
 
-function fmtDate(s: string | null) {
-  if (!s) return '—';
-  return new Date(s).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
 // ── Child vaccination mini-summary ────────────────────────────────────────────
 
 function VaccineSummary({ childId }: { childId: string }) {

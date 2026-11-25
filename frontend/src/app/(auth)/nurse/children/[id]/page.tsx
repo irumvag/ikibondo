@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { use } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -624,7 +624,6 @@ function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | 
         .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
         .slice(0, 8)
     : [];
-  const maxFactor = factorEntries.length > 0 ? Math.max(...factorEntries.map(([, v]) => Math.abs(v))) : 1;
 
   return (
     <div className="flex flex-col gap-5">

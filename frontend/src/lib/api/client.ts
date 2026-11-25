@@ -90,6 +90,8 @@ apiClient.interceptors.response.use(
         sessionStorage.clear();
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        // Full reload on purpose: drops every in-memory query cache from the old session
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.href = '/login';
       }
       return Promise.reject(refreshError);

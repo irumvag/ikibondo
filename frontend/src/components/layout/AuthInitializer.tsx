@@ -44,6 +44,8 @@ export function AuthInitializer({ children }: { children: React.ReactNode }) {
         router.replace('/login');
       })
       .finally(() => setLoading(false));
+    // Runs once per sign-in; re-fetching /me on every navigation is not wanted
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clearAuth, router, setLoading, setUser]);
 
   // Full-screen spinner while hydrating

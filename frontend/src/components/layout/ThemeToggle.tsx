@@ -15,8 +15,6 @@ export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
 
-  const active = OPTIONS.find((o) => o.value === theme) ?? OPTIONS[0];
-
   return (
     <div
       role="group"

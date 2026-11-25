@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ClipboardList, Plus, X } from 'lucide-react';
+import { ClipboardList, Plus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useHealthRecords, QK } from '@/lib/api/queries';
 import { adminAmendRecord } from '@/lib/api/admin';

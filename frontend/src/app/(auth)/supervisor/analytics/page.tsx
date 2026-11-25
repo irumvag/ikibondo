@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { AlertTriangle, TrendingUp, Baby, Activity, Download } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell, Legend,
+  ResponsiveContainer, Legend,
 } from 'recharts';
 
 const RISK_COLORS: Record<string, string> = {

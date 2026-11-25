@@ -8,7 +8,7 @@ import {
   Loader2, Search, ChevronDown, ChevronUp, UserCircle,
 } from 'lucide-react';
 import {
-  listCHWFamilies, createVisit, type CHWFamily, type CHWChildSummary, type VisitResult,
+  listCHWFamilies, createVisit, type CHWChildSummary, type VisitResult,
 } from '@/lib/api/chw';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -181,7 +181,7 @@ function CaseloadInner() {
   const toggleFamily = (id: string) =>
     setExpanded((s) => {
       const n = new Set(s);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) n.delete(id); else n.add(id);
       return n;
     });
 

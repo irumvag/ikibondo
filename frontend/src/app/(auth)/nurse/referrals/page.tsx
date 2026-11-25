@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, CheckCircle2, Loader2, ExternalLink } from 'lucide-react';
+import { Plus, CheckCircle2, ExternalLink } from 'lucide-react';
 import { apiClient } from '@/lib/api/client';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';

@@ -56,7 +56,7 @@ export default function CHWTodayPage() {
   const getScore = (childId: string) => planMap.get(childId)?.priority_score ?? 0;
 
   const toggleFamily = (id: string) =>
-    setExpanded((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setExpanded((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   // Separate into priority vs all-clear based on server score
   const activeFamilies = families.filter((f) => f.children.some((c) => getScore(c.id) > 0));

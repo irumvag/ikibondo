@@ -35,7 +35,7 @@ const SEX_OPTIONS = [
 
 // ── Close modal ───────────────────────────────────────────────────────────────
 
-function CloseModal({ child, campId, onDone, onCancel }: {
+function CloseModal({ child, onDone, onCancel }: {
   child: SupervisedChild; campId: string; onDone: () => void; onCancel: () => void;
 }) {
   const [status, setStatus] = useState<'DECEASED' | 'TRANSFERRED' | 'DEPARTED'>('DECEASED');

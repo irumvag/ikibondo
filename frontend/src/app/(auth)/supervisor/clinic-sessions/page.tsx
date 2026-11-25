@@ -23,7 +23,7 @@ function StatusBadge({ status }: { status: string }) {
 
 // ── Session row (with attendees expand) ───────────────────────────────────────
 
-function SessionRow({ session, onClose, onRefresh }: {
+function SessionRow({ session, onClose }: {
   session: ClinicSession; onClose: (id: string) => void; onRefresh: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);

@@ -16,7 +16,7 @@ import {
 import { listVaccinationQueue, listDailyPlan, listCHWFamilies } from './chw';
 import { listMyChildren, getChildVaccinations, listNotifications } from './parent';
 import { getModelInfo, listPredictions } from './ml';
-import { getAllNotifications, markNotificationRead, markAllNotificationsRead } from './user';
+import { getAllNotifications } from './user';
 
 export const QK = {
   landingStats:       ['landing-stats']       as const,

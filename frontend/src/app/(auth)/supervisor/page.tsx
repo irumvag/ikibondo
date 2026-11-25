@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Baby, AlertTriangle, Activity, Syringe, Users, Eye } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { KPICard } from '@/components/ui/KPICard';

@@ -10,7 +10,6 @@ import { useAuthStore } from '@/store/authStore';
 import { useAdminUsers, usePendingApprovals, QK } from '@/lib/api/queries';
 import { approveUser, createStaffUser, listGuardians, assignCHWToGuardian } from '@/lib/api/admin';
 import type { Guardian } from '@/lib/api/admin';
-import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';

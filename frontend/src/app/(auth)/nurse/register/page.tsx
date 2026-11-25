@@ -302,7 +302,6 @@ export default function NurseRegisterPage() {
   const [showNewForm, setShowNewForm] = useState(false);
 
   // Guardian phone lookup — fires when nurse types a phone in the guardian section
-  const [guardianPhoneLookup, setGuardianPhoneLookup] = useState('');
   const [existingGuardian, setExistingGuardian] = useState<GuardianLookupResult | null>(null);
   const guardianLookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -373,7 +372,6 @@ export default function NurseRegisterPage() {
     if (guardianLookupTimer.current) clearTimeout(guardianLookupTimer.current);
     if (phone.replace(/\D/g, '').length < 8) return;
     guardianLookupTimer.current = setTimeout(async () => {
-      setGuardianPhoneLookup(phone);
       try {
         const found = await lookupGuardianByPhone(phone);
         setExistingGuardian(found);
@@ -415,7 +413,6 @@ export default function NurseRegisterPage() {
     setShowNewForm(false);
     setError('');
     setExistingGuardian(null);
-    setGuardianPhoneLookup('');
   };
 
   const handleSubmit = async () => {

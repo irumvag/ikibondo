@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Activity, AlertTriangle, CheckCircle, ChevronDown, ChevronUp,
-  Edit2, Loader2, MessageSquare, X, Pin, Clock,
+  Activity, Edit2, MessageSquare, X, Pin, Clock,
 } from 'lucide-react';
 import { listHealthRecords, getChildNotes, type HealthRecordDetail, type ClinicalNote } from '@/lib/api/nurse';
 import { amendHealthRecord } from '@/lib/api/chw';
