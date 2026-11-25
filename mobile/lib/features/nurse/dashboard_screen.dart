@@ -10,11 +10,12 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/sign_out_button.dart';
 import '../../shared/widgets/switch_role_button.dart';
+import '../../core/api/response.dart';
 
 final nurseCampChildrenProvider = FutureProvider.autoDispose<List<Child>>((ref) async {
   final resp = await ApiClient.dio.get(Endpoints.children, queryParameters: {'page_size': 200});
-  final items = (resp.data['data']?['results'] ?? resp.data['results'] ?? []) as List;
-  return items.map((e) => Child.fromJson(e as Map<String, dynamic>)).toList();
+  final items = unwrapList(resp.data);
+  return items.map((e) => Child.fromJson(e)).toList();
 });
 
 final pendingApprovalsCountProvider = FutureProvider.autoDispose<int>((ref) async {

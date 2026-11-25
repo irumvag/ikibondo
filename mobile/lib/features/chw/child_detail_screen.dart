@@ -10,6 +10,7 @@ import '../../core/models/health_record.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/risk_badge.dart';
+import '../../core/api/response.dart';
 
 final _childDetailProvider = FutureProvider.family.autoDispose<Child, String>((ref, id) async {
   final resp = await ApiClient.dio.get(Endpoints.child(id));
@@ -21,9 +22,9 @@ final _latestRecordProvider = FutureProvider.family.autoDispose<HealthRecord?, S
     Endpoints.healthRecords,
     queryParameters: {'child': childId, 'ordering': '-measurement_date', 'page_size': 1},
   );
-  final items = (resp.data['data']?['results'] ?? resp.data['results'] ?? []) as List;
+  final items = unwrapList(resp.data);
   if (items.isEmpty) return null;
-  return HealthRecord.fromJson(items.first as Map<String, dynamic>);
+  return HealthRecord.fromJson(items.first);
 });
 
 class ChwChildDetailScreen extends ConsumerWidget {

@@ -7,11 +7,12 @@ import '../../core/api/api_client.dart';
 import '../../core/api/endpoints.dart';
 import '../../core/models/notification.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/api/response.dart';
 
 final _notifProvider = FutureProvider.autoDispose<List<AppNotification>>((ref) async {
   final resp = await ApiClient.dio.get(Endpoints.notifications);
-  final items = (resp.data['data']?['results'] ?? resp.data['results'] ?? []) as List;
-  return items.map((e) => AppNotification.fromJson(e as Map<String, dynamic>)).toList();
+  final items = unwrapList(resp.data);
+  return items.map((e) => AppNotification.fromJson(e)).toList();
 });
 
 class NotificationsScreen extends ConsumerWidget {

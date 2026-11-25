@@ -7,6 +7,7 @@ import '../../core/models/child.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/risk_badge.dart';
+import '../../core/api/response.dart';
 
 final _nurseChildProvider = FutureProvider.family.autoDispose<Child, String>((ref, id) async {
   final resp = await ApiClient.dio.get(Endpoints.child(id));
@@ -19,7 +20,7 @@ final _childNotesProvider = FutureProvider.family.autoDispose<List, String>((ref
     Endpoints.healthRecords,
     queryParameters: {'child': childId, 'ordering': '-measurement_date', 'page_size': 1},
   );
-  final items = (resp.data['data']?['results'] ?? resp.data['results'] ?? []) as List;
+  final items = unwrapList(resp.data);
   if (items.isEmpty) return [];
   final recordId = items.first['id'] as String;
   final notesResp = await ApiClient.dio.get(Endpoints.healthRecordNotes(recordId));
@@ -95,7 +96,7 @@ class _NurseChildDetailScreenState extends ConsumerState<NurseChildDetailScreen>
                         Endpoints.healthRecords,
                         queryParameters: {'child': widget.childId, 'ordering': '-measurement_date', 'page_size': 1},
                       );
-                      final items = (resp.data['data']?['results'] ?? resp.data['results'] ?? []) as List;
+                      final items = unwrapList(resp.data);
                       if (items.isNotEmpty) {
                         final recordId = items.first['id'] as String;
                         await ApiClient.dio.post(Endpoints.healthRecordNotes(recordId), data: {

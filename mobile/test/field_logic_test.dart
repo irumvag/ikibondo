@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ikibondo/core/api/api_errors.dart';
 import 'package:ikibondo/core/api/response.dart';
 import 'package:ikibondo/core/db/app_database.dart';
+import 'package:ikibondo/core/models/child.dart';
 import 'package:ikibondo/core/models/user.dart';
 import 'package:ikibondo/core/theme/app_theme.dart';
 import 'package:ikibondo/features/auth/version_gate.dart';
@@ -66,6 +67,22 @@ void main() {
       expect(unwrapList({'results': [row]}), [row]);
       expect(unwrapList([row]), [row]);
       expect(unwrapList(null), isEmpty);
+    });
+
+    test('children list reply becomes Child objects (parent home screen)', () {
+      // Shape of GET /children/: a plain list under data, plus pagination
+      final body = {
+        'success': true,
+        'data': [
+          {'id': 'c1', 'registration_number': 'IKB-1', 'full_name': 'Uwimana Jean',
+           'date_of_birth': '2026-01-29', 'age_months': 9, 'sex': 'M', 'birth_weight': null,
+           'feeding_type': '', 'camp_name': 'Test Camp Amahoro'},
+        ],
+        'pagination': {'count': 1, 'next': null},
+      };
+      final children = unwrapList(body).map(Child.fromJson).toList();
+      expect(children.single.fullName, 'Uwimana Jean');
+      expect(children.single.ageMonths, 9);
     });
 
     final req = RequestOptions(path: '/x');

@@ -10,6 +10,7 @@ import '../../core/models/child.dart';
 import '../../core/models/health_record.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/risk_badge.dart';
+import '../../core/api/response.dart';
 
 final _parentChildProvider = FutureProvider.family.autoDispose<Child, String>((ref, id) async {
   final resp = await ApiClient.dio.get(Endpoints.child(id));
@@ -283,7 +284,7 @@ class _VaccinesTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vaccAsync = FutureProvider.autoDispose((ref) async {
       final resp = await ApiClient.dio.get(Endpoints.vaccinations, queryParameters: {'child': childId});
-      final items = (resp.data['data']?['results'] ?? resp.data['results'] ?? []) as List;
+      final items = unwrapList(resp.data);
       return items;
     });
 
@@ -294,7 +295,7 @@ class _VaccinesTab extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         itemCount: items.length,
         itemBuilder: (_, i) {
-          final v = items[i] as Map<String, dynamic>;
+          final v = items[i];
           final status = v['status'] as String? ?? '';
           return Container(
             margin: const EdgeInsets.only(bottom: 8),

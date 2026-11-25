@@ -6,6 +6,7 @@ import '../../core/api/endpoints.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/loading_skeleton.dart';
 import 'dashboard_screen.dart';
+import '../../core/api/response.dart';
 
 class ParentVaccinesScreen extends ConsumerStatefulWidget {
   const ParentVaccinesScreen({super.key});
@@ -80,7 +81,7 @@ class _ChildVaccSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vaccAsync = FutureProvider.family.autoDispose<List, String>((ref, id) async {
       final resp = await ApiClient.dio.get(Endpoints.vaccinations, queryParameters: {'child': id});
-      return (resp.data['data']?['results'] ?? resp.data['results'] ?? []) as List;
+      return unwrapList(resp.data);
     });
 
     return ref.watch(vaccAsync(child.id)).when(

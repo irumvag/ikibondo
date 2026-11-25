@@ -10,6 +10,7 @@ import '../../core/models/vaccination_record.dart';
 import '../../core/providers/sync_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/loading_skeleton.dart';
+import '../../core/api/response.dart';
 
 final _vaccineQueueProvider = FutureProvider.autoDispose<List<VaccinationRecord>>((ref) async {
   final db = ref.read(dbProvider);
@@ -18,8 +19,8 @@ final _vaccineQueueProvider = FutureProvider.autoDispose<List<VaccinationRecord>
       Endpoints.vaccinations,
       queryParameters: {'status': 'SCHEDULED', 'ordering': 'scheduled_date'},
     );
-    final items = (resp.data['data']?['results'] ?? resp.data['results'] ?? resp.data['data'] ?? []) as List;
-    final records = items.map((e) => VaccinationRecord.fromJson(e as Map<String, dynamic>)).toList();
+    final items = unwrapList(resp.data);
+    final records = items.map((e) => VaccinationRecord.fromJson(e)).toList();
     // Refresh the offline cache so the queue survives losing connectivity.
     await db.cacheVaccinationRecords([
       for (final r in records)

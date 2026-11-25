@@ -11,11 +11,12 @@ import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/risk_badge.dart';
 import '../../shared/widgets/sign_out_button.dart';
 import '../../shared/widgets/switch_role_button.dart';
+import '../../core/api/response.dart';
 
 final parentChildrenProvider = FutureProvider.autoDispose<List<Child>>((ref) async {
   final resp = await ApiClient.dio.get(Endpoints.children);
-  final items = (resp.data['data']?['results'] ?? resp.data['results'] ?? []) as List;
-  return items.map((e) => Child.fromJson(e as Map<String, dynamic>)).toList();
+  final items = unwrapList(resp.data);
+  return items.map((e) => Child.fromJson(e)).toList();
 });
 
 class ParentDashboardScreen extends ConsumerWidget {

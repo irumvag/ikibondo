@@ -6,6 +6,7 @@ import 'package:drift/drift.dart' show Value;
 import '../api/api_client.dart';
 import '../api/endpoints.dart';
 import '../db/app_database.dart';
+import '../api/response.dart';
 
 const _uuid = Uuid();
 
@@ -194,12 +195,9 @@ class SyncNotifier extends Notifier<SyncState> {
         Endpoints.vaccinations,
         queryParameters: {'status': 'SCHEDULED', 'ordering': 'scheduled_date'},
       );
-      final items = (resp.data['data']?['results'] ??
-          resp.data['results'] ??
-          resp.data['data'] ??
-          []) as List;
+      final items = unwrapList(resp.data);
       final companions = items.map((e) {
-        final v = e as Map<String, dynamic>;
+        final v = e;
         return CachedVaccinationRecordsCompanion(
           id:               Value(v['id'] as String),
           childId:          Value(v['child'] as String? ?? ''),
@@ -226,12 +224,9 @@ class SyncNotifier extends Notifier<SyncState> {
         Endpoints.healthRecords,
         queryParameters: {'ordering': '-measurement_date'},
       );
-      final items = (resp.data['data']?['results'] ??
-          resp.data['results'] ??
-          resp.data['data'] ??
-          []) as List;
+      final items = unwrapList(resp.data);
       for (final e in items) {
-        final r = e as Map<String, dynamic>;
+        final r = e;
         double? asDouble(dynamic v) =>
             v is num ? v.toDouble() : double.tryParse('$v');
         await _db.cacheHealthRecord(CachedHealthRecordsCompanion(
