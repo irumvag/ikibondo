@@ -22,7 +22,7 @@ every request.
 | Actor | Description |
 |-------|-------------|
 | **Parent / Guardian** | Caregiver of one or more registered children. Read-mostly access to their own children. |
-| **CHW** (Community Health Worker) | Field worker who visits families, records measurements (often offline), administers vaccines, and consults nurses. |
+| **CHW** (Community Health Worker) | Field worker who visits families, records measurements (often offline), reminds families of due vaccines and refers overdue children, and consults nurses. Doses are given and recorded by nurses (Rwanda EPI). |
 | **Nurse** | Camp clinician: registers children, creates health records with ML risk scoring, manages vaccinations and referrals, approves parent accounts. |
 | **Supervisor** | Zone-level oversight: analytics, CHW workforce management, clinic sessions, high-risk alerts. |
 | **Administrator** | System-wide configuration: users, camps/zones, FAQ, ML models, audit, DHIS2. |
@@ -104,7 +104,7 @@ request routed to the child's assigned CHW → parent sees it as *pending*.
 | UC-C03 | Log a visit (weight/height/MUAC/oedema/temp/symptoms) | `POST /health-records/` | `/chw/visit` | ✅ |
 | UC-C04 | Offline capture + batch sync | `POST /sync/batch/` | `/chw/sync` | ✅ |
 | UC-C05 | QR scan → child detail (manual fallback) | `GET /children/scan/{qr}/`, `GET /children/?search=` | `/chw/scan` | ✅ |
-| UC-C06 | Vaccination queue (administer doses) | `GET /vaccinations/`, `POST /vaccinations/{id}/administer/` | `/chw/vaccines` | ✅ |
+| UC-C06 | Vaccines due (track and refer; nurses administer) | `GET /vaccinations/` | `/chw/vaccines` | ✅ |
 | UC-C07 | Ask a nurse (async consultation) | `GET/POST /consultations/` | `/chw/consultations` | ✅ |
 | UC-C08 | Referrals (create / track) | `GET/POST /referrals/` | `/chw/referrals` | ✅ |
 | UC-C09 | Manage parents in caseload | `GET /children/guardians/` | `/chw/parents` | ✅ |
