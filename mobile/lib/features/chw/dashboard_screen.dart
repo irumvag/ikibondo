@@ -13,6 +13,9 @@ import '../../shared/widgets/risk_badge.dart';
 import '../../shared/widgets/sign_out_button.dart';
 import '../../shared/widgets/switch_role_button.dart';
 import '../../shared/widgets/announcement_banner.dart';
+import 'visit_requests_screen.dart';
+import '../../core/content/app_content.dart';
+import '../../shared/widgets/ui.dart';
 
 // ── Families provider ──────────────────────────────────────────────────────
 final chwFamiliesProvider = FutureProvider.autoDispose<List<Child>>((ref) async {
@@ -32,9 +35,14 @@ class ChwDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user     = ref.watch(currentUserProvider);
+    final user = ref.watch(currentUserProvider);
     final families = ref.watch(chwFamiliesProvider);
-    final pending  = ref.watch(pendingCountProvider);
+    final pending = ref.watch(pendingCountProvider);
+    final requests = ref.watch(chwVisitRequestsProvider).value ?? const [];
+    final newRequests = requests.where((r) => r['status'] == 'PENDING').toList();
+    final openRequests = requests.where((r) => r['status'] == 'PENDING' || r['status'] == 'ACCEPTED').length;
+    final children = families.value ?? const <Child>[];
+    final highRisk = children.where((c) => c.riskLevel == 'HIGH').length;
 
     return Scaffold(
       backgroundColor: colorCream,
@@ -43,20 +51,13 @@ class ChwDashboardScreen extends ConsumerWidget {
         actions: [
           if (pending > 0)
             Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: GestureDetector(
-                onTap: () => context.go('/chw/sync'),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: colorWarn,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '$pending unsynced',
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
-                  ),
-                ),
+              padding: const EdgeInsets.only(right: 4),
+              child: ActionChip(
+                onPressed: () => context.go('/chw/sync'),
+                backgroundColor: colorWarn,
+                side: BorderSide.none,
+                label: Text('$pending unsynced',
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
               ),
             ),
           const SwitchRoleButton(),
@@ -64,242 +65,162 @@ class ChwDashboardScreen extends ConsumerWidget {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () => ref.refresh(chwFamiliesProvider.future),
+        onRefresh: () async {
+          ref.invalidate(chwVisitRequestsProvider);
+          ref.invalidate(announcementsProvider);
+          return ref.refresh(chwFamiliesProvider.future);
+        },
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
-            // Greeting
-            Text(
-              'Hello, ${user?.fullName.split(' ').first ?? 'CHW'}',
-              style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700, color: colorInk),
+            HeroHeader(
+              icon: Icons.volunteer_activism_outlined,
+              title: 'Hello, ${user?.fullName.split(' ').first ?? ''}',
+              subtitle: '${children.length} children in your caseload'
+                  '${user?.campName != null ? ' · ${user!.campName}' : ''}',
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Here\'s your caseload overview',
-              style: GoogleFonts.inter(fontSize: 14, color: colorMuted),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             const AnnouncementBanner(),
 
-            // ── KPI row ───────────────────────────────────────────────────
-            families.when(
-              data: (children) {
-                final highRisk = children.where((c) => c.riskLevel == 'HIGH').length;
-                return Row(
-                  children: [
-                    _KpiCard(label: 'Children', value: '${children.length}', icon: Icons.people, color: colorInk),
-                    const SizedBox(width: 12),
-                    _KpiCard(label: 'High Risk', value: '$highRisk', icon: Icons.warning_amber, color: colorDanger),
-                    const SizedBox(width: 12),
-                    _KpiCard(label: 'Unsynced', value: '$pending', icon: Icons.sync, color: pending > 0 ? colorWarn : colorSuccess),
-                  ],
-                );
-              },
-              loading: () => const Row(children: [
-                Expanded(child: LoadingSkeleton(height: 80)),
-                SizedBox(width: 12),
-                Expanded(child: LoadingSkeleton(height: 80)),
-                SizedBox(width: 12),
-                Expanded(child: LoadingSkeleton(height: 80)),
-              ]),
-              error: (e, _) => const SizedBox.shrink(),
-            ),
-
-            const SizedBox(height: 20),
-
-            // ── Scan QR banner ────────────────────────────────────────────
-            GestureDetector(
-              onTap: () => context.go('/chw/scan'),
-              child: Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: colorInk,
-                  borderRadius: BorderRadius.circular(16),
-                ),
+            if (newRequests.isNotEmpty) ...[
+              SoftCard(
+                accent: colorDanger,
+                onTap: () => context.go('/chw/requests'),
                 child: Row(
                   children: [
-                    const Icon(Icons.qr_code_scanner, color: colorGold, size: 28),
-                    const SizedBox(width: 14),
+                    const Icon(Icons.home_work_outlined, color: colorDanger),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Scan child QR card', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorCream)),
-                          Text('Instant health record lookup', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF8BBFB0))),
-                        ],
+                      child: Text(
+                        '${newRequests.length} new visit request${newRequests.length == 1 ? '' : 's'} from parents',
+                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: colorInk),
                       ),
                     ),
-                    const Icon(Icons.chevron_right, color: colorGold),
+                    const Icon(Icons.chevron_right, color: colorMuted),
                   ],
                 ),
               ),
-            ),
+              const SizedBox(height: 14),
+            ],
 
-            const SizedBox(height: 16),
-
-            // ── Quick actions ─────────────────────────────────────────────
             Row(
               children: [
-                _ActionBtn(label: 'Log Visit', icon: Icons.add_chart, color: colorSuccess, onTap: () => context.go('/chw/visit')),
+                StatTile(icon: Icons.child_care, value: '${children.length}', label: 'Children'),
                 const SizedBox(width: 10),
-                _ActionBtn(label: 'Today\'s Plan', icon: Icons.calendar_today, color: colorGold, onTap: () => context.go('/chw/plan')),
+                StatTile(icon: Icons.warning_amber_rounded, value: '$highRisk', label: 'High risk',
+                    color: colorDanger),
                 const SizedBox(width: 10),
-                _ActionBtn(label: 'Sync', icon: Icons.sync, color: pending > 0 ? colorWarn : colorMuted, onTap: () => context.go('/chw/sync')),
+                StatTile(icon: Icons.sync, value: '$pending', label: 'Unsynced', color: colorWarn,
+                    onTap: () => context.go('/chw/sync')),
               ],
             ),
+            const SizedBox(height: 14),
 
-            const SizedBox(height: 24),
-
-            // ── Children list ─────────────────────────────────────────────
-            Text('Your caseload', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: colorInk)),
+            // Scan — the most used action in the field
+            Material(
+              borderRadius: BorderRadius.circular(18),
+              color: colorInk,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(18),
+                onTap: () => context.go('/chw/scan'),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
+                        child: const Icon(Icons.qr_code_scanner, color: Colors.white),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Scan a child\'s card',
+                                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                            Text('Or type the registration number',
+                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.white70),
+                    ],
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 12),
+            Row(
+              children: [
+                ActionTile(icon: Icons.add_chart, label: 'Log visit', onTap: () => context.go('/chw/visit')),
+                const SizedBox(width: 10),
+                ActionTile(icon: Icons.event_note_outlined, label: "Today's plan", onTap: () => context.go('/chw/plan')),
+                const SizedBox(width: 10),
+                ActionTile(icon: Icons.home_work_outlined, label: 'Visit requests', badge: openRequests,
+                    onTap: () => context.go('/chw/requests')),
+                const SizedBox(width: 10),
+                ActionTile(icon: Icons.vaccines_outlined, label: 'Vaccines due', onTap: () => context.go('/chw/vaccines')),
+              ],
+            ),
+            const SizedBox(height: 18),
 
+            const SectionTitle('Your caseload'),
             families.when(
-              data: (children) {
-                if (children.isEmpty) {
-                  return const _EmptyState(message: 'No children assigned yet.');
+              loading: () => Column(
+                children: List.generate(
+                    3, (_) => const Padding(padding: EdgeInsets.only(bottom: 10), child: SkeletonCard())),
+              ),
+              error: (e, _) => const EmptyState(
+                  icon: Icons.cloud_off_outlined, title: 'Could not load your caseload', text: 'Pull down to try again.'),
+              data: (kids) {
+                if (kids.isEmpty) {
+                  return const EmptyState(icon: Icons.child_care, title: 'No children assigned yet',
+                      text: 'Your supervisor assigns families to you.');
                 }
+                // High risk first
+                const rank = {'HIGH': 0, 'MEDIUM': 1, 'LOW': 2};
+                final sorted = [...kids]..sort((a, b) => (rank[a.riskLevel] ?? 3).compareTo(rank[b.riskLevel] ?? 3));
                 return Column(
-                  children: children.map((child) => _ChildTile(child: child)).toList(),
+                  children: [
+                    for (final c in sorted)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: SoftCard(
+                          accent: c.riskLevel == 'HIGH' ? colorDanger : null,
+                          onTap: () => context.go('/chw/children/${c.id}'),
+                          child: Row(
+                            children: [
+                              InitialAvatar(c.fullName),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(c.fullName,
+                                        style: GoogleFonts.inter(
+                                            fontSize: 15, fontWeight: FontWeight.w700, color: colorInk)),
+                                    Text([c.ageDisplay, c.zoneName].whereType<String>().join(' · '),
+                                        style: GoogleFonts.inter(fontSize: 12, color: colorMuted)),
+                                  ],
+                                ),
+                              ),
+                              RiskBadge(riskLevel: c.riskLevel, nutritionStatus: c.nutritionStatus),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.chevron_right, color: colorMuted),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 );
               },
-              loading: () => Column(
-                children: List.generate(4, (_) => const Padding(
-                  padding: EdgeInsets.only(bottom: 10),
-                  child: SkeletonCard(),
-                )),
-              ),
-              error: (e, _) => Center(
-                child: Text('Failed to load families', style: GoogleFonts.inter(color: colorDanger)),
-              ),
             ),
           ],
         ),
       ),
     );
   }
-}
-
-class _KpiCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _KpiCard({required this.label, required this.value, required this.icon, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: colorBgElev,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: softShadow,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(height: 8),
-            Text(value, style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700, color: colorInk)),
-            Text(label, style: GoogleFonts.inter(fontSize: 11, color: colorMuted)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionBtn extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ActionBtn({required this.label, required this.icon, required this.color, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: colorBgElev,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: softShadow,
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 22),
-              const SizedBox(height: 6),
-              Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: colorInk), textAlign: TextAlign.center),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ChildTile extends StatelessWidget {
-  final Child child;
-  const _ChildTile({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.go('/chw/children/${child.id}'),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: colorBgElev,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: softShadow,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40, height: 40,
-              decoration: BoxDecoration(color: colorBgSand, borderRadius: BorderRadius.circular(12)),
-              child: Center(child: Text(child.fullName[0], style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: colorInk))),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(child.fullName, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: colorInk)),
-                  Text('${child.ageDisplay ?? ''} · ${child.guardianName ?? ''}',
-                      style: GoogleFonts.inter(fontSize: 12, color: colorMuted)),
-                ],
-              ),
-            ),
-            RiskBadge(riskLevel: child.riskLevel, nutritionStatus: child.nutritionStatus),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final String message;
-  const _EmptyState({required this.message});
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(32),
-    child: Column(
-      children: [
-        const Icon(Icons.people_outline, size: 48, color: colorMuted),
-        const SizedBox(height: 12),
-        Text(message, style: GoogleFonts.inter(fontSize: 14, color: colorMuted), textAlign: TextAlign.center),
-      ],
-    ),
-  );
 }

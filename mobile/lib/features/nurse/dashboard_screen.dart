@@ -12,6 +12,10 @@ import '../../shared/widgets/sign_out_button.dart';
 import '../../shared/widgets/switch_role_button.dart';
 import '../../core/api/response.dart';
 import '../../shared/widgets/announcement_banner.dart';
+import 'sessions_screen.dart';
+import 'referrals_screen.dart';
+import '../../core/content/app_content.dart';
+import '../../shared/widgets/ui.dart';
 
 final nurseCampChildrenProvider = FutureProvider.autoDispose<List<Child>>((ref) async {
   final resp = await ApiClient.dio.get(Endpoints.children, queryParameters: {'page_size': 200});
@@ -30,212 +34,164 @@ class NurseDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user     = ref.watch(currentUserProvider);
+    final user = ref.watch(currentUserProvider);
     final children = ref.watch(nurseCampChildrenProvider);
-    final approvals = ref.watch(pendingApprovalsCountProvider);
+    final approvals = ref.watch(pendingApprovalsCountProvider).value ?? 0;
+    final referrals = ref.watch(openReferralsProvider).value ?? const [];
+    final sessions = ref.watch(openSessionsProvider).value ?? const [];
+    final kids = children.value ?? const <Child>[];
 
     return Scaffold(
       backgroundColor: colorCream,
       appBar: AppBar(
-        title: const Text('Ikibondo — Nurse'),
+        title: const Text('Ikibondo'),
         actions: const [SwitchRoleButton(), SignOutButton()],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(nurseCampChildrenProvider);
           ref.invalidate(pendingApprovalsCountProvider);
+          ref.invalidate(openReferralsProvider);
+          ref.invalidate(openSessionsProvider);
+          ref.invalidate(announcementsProvider);
         },
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
-            Text('Welcome, ${user?.fullName.split(' ').first ?? 'Nurse'}',
-                style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700, color: colorInk)),
-            const SizedBox(height: 4),
-            Text(user?.campName ?? '', style: GoogleFonts.inter(fontSize: 13, color: colorMuted)),
-            const SizedBox(height: 16),
+            HeroHeader(
+              icon: Icons.local_hospital_outlined,
+              title: 'Welcome, ${user?.fullName.split(' ').first ?? 'Nurse'}',
+              subtitle: [user?.campName, 'Nurse'].whereType<String>().join(' · '),
+            ),
+            const SizedBox(height: 14),
             const AnnouncementBanner(),
 
-            // Pending approvals alert
-            approvals.maybeWhen(
-              data: (count) => count > 0
-                ? GestureDetector(
-                    onTap: () => context.go('/nurse/approvals'),
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: colorMedBg,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: colorWarn.withOpacity(0.4)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.pending_actions, color: colorWarn),
-                          const SizedBox(width: 10),
-                          Expanded(child: Text('$count parent account${count == 1 ? '' : 's'} awaiting approval',
-                              style: GoogleFonts.inter(fontSize: 13, color: colorWarn, fontWeight: FontWeight.w600))),
-                          const Icon(Icons.chevron_right, color: colorWarn),
-                        ],
-                      ),
-                    ),
-                  )
-                : const SizedBox.shrink(),
-              orElse: () => const SizedBox.shrink(),
-            ),
-
-            // Away-from-the-laptop work
-            Row(children: [
-              Expanded(child: _QuickAction(
-                icon: Icons.vaccines_outlined,
-                label: 'Vaccination session',
-                onTap: () => context.push('/nurse/sessions'),
-              )),
-              const SizedBox(width: 12),
-              Expanded(child: _QuickAction(
-                icon: Icons.local_hospital_outlined,
-                label: 'Referrals',
-                onTap: () => context.push('/nurse/referrals'),
-              )),
-            ]),
-            const SizedBox(height: 16),
-
-            // KPI cards
-            children.when(
-              loading: () => const Row(children: [
-                Expanded(child: LoadingSkeleton(height: 80)),
-                SizedBox(width: 12),
-                Expanded(child: LoadingSkeleton(height: 80)),
-                SizedBox(width: 12),
-                Expanded(child: LoadingSkeleton(height: 80)),
-              ]),
-              error: (_, __) => const SizedBox.shrink(),
-              data: (kids) {
-                final high = kids.where((c) => c.riskLevel == 'HIGH').length;
-                final sam  = kids.where((c) => c.nutritionStatus == 'SAM').length;
-                return Row(
-                  children: [
-                    _KpiCard(label: 'Registered', value: '${kids.length}', icon: Icons.people, color: colorInk),
-                    const SizedBox(width: 12),
-                    _KpiCard(label: 'High Risk', value: '$high', icon: Icons.warning_amber, color: colorDanger),
-                    const SizedBox(width: 12),
-                    _KpiCard(label: 'SAM', value: '$sam', icon: Icons.local_hospital, color: colorDanger),
-                  ],
-                );
-              },
-            ),
-
-            const SizedBox(height: 20),
-
-            // Scan banner
-            GestureDetector(
-              onTap: () => context.go('/nurse/scan'),
-              child: Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(color: colorInk, borderRadius: BorderRadius.circular(16)),
+            if (approvals > 0) ...[
+              SoftCard(
+                accent: colorWarn,
+                onTap: () => context.go('/nurse/approvals'),
                 child: Row(
                   children: [
-                    const Icon(Icons.qr_code_scanner, color: colorGold, size: 28),
-                    const SizedBox(width: 14),
-                    Expanded(child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Scan child QR', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorCream)),
-                        Text('Instant record lookup', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF8BBFB0))),
-                      ],
-                    )),
-                    const Icon(Icons.chevron_right, color: colorGold),
+                    const Icon(Icons.how_to_reg_outlined, color: colorWarn),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text('$approvals parent account${approvals == 1 ? '' : 's'} waiting for approval',
+                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: colorInk)),
+                    ),
+                    const Icon(Icons.chevron_right, color: colorMuted),
                   ],
                 ),
               ),
+              const SizedBox(height: 14),
+            ],
+
+            Row(
+              children: [
+                StatTile(icon: Icons.child_care, value: '${kids.length}', label: 'Registered',
+                    onTap: () => context.go('/nurse/children')),
+                const SizedBox(width: 10),
+                StatTile(icon: Icons.call_split, value: '${referrals.length}', label: 'Open referrals',
+                    color: colorDanger, onTap: () => context.go('/nurse/referrals')),
+                const SizedBox(width: 10),
+                StatTile(icon: Icons.vaccines_outlined, value: '${sessions.length}', label: 'Open sessions',
+                    color: colorGold, onTap: () => context.go('/nurse/sessions')),
+              ],
             ),
+            const SizedBox(height: 14),
 
-            const SizedBox(height: 16),
+            Material(
+              borderRadius: BorderRadius.circular(18),
+              color: colorInk,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(18),
+                onTap: () => context.go('/nurse/scan'),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
+                        child: const Icon(Icons.qr_code_scanner, color: Colors.white),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Scan a child\'s card',
+                                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                            Text('Open the record in one step',
+                                style: GoogleFonts.inter(fontSize: 12, color: Colors.white70)),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.white70),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                ActionTile(icon: Icons.person_add_alt, label: 'Register newborn', onTap: () => context.go('/nurse/register')),
+                const SizedBox(width: 10),
+                ActionTile(icon: Icons.vaccines_outlined, label: 'Vaccination session', onTap: () => context.go('/nurse/sessions')),
+                const SizedBox(width: 10),
+                ActionTile(icon: Icons.call_split, label: 'Referrals', badge: referrals.length,
+                    onTap: () => context.go('/nurse/referrals')),
+                const SizedBox(width: 10),
+                ActionTile(icon: Icons.how_to_reg_outlined, label: 'Approvals', badge: approvals,
+                    onTap: () => context.go('/nurse/approvals')),
+              ],
+            ),
+            const SizedBox(height: 18),
 
-            // Quick actions
-            Row(children: [
-              _ActionBtn(label: 'Children', icon: Icons.people, onTap: () => context.go('/nurse/children')),
-              const SizedBox(width: 10),
-              _ActionBtn(label: 'Register', icon: Icons.person_add, onTap: () => context.go('/nurse/register')),
-              const SizedBox(width: 10),
-              _ActionBtn(label: 'Approvals', icon: Icons.check_circle, onTap: () => context.go('/nurse/approvals')),
-            ]),
+            SectionTitle('Recently registered', action: 'All children', onAction: () => context.go('/nurse/children')),
+            children.when(
+              loading: () => Column(
+                children: List.generate(
+                    3, (_) => const Padding(padding: EdgeInsets.only(bottom: 10), child: SkeletonCard())),
+              ),
+              error: (_, __) => const EmptyState(
+                  icon: Icons.cloud_off_outlined, title: 'Could not load children', text: 'Pull down to try again.'),
+              data: (all) => all.isEmpty
+                  ? const EmptyState(icon: Icons.child_care, title: 'No children registered yet')
+                  : Column(
+                      children: [
+                        for (final c in all.take(5))
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: SoftCard(
+                              onTap: () => context.go('/nurse/children/${c.id}'),
+                              child: Row(
+                                children: [
+                                  InitialAvatar(c.fullName),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(c.fullName,
+                                            style: GoogleFonts.inter(
+                                                fontSize: 15, fontWeight: FontWeight.w700, color: colorInk)),
+                                        Text('${c.registrationNumber} · ${c.ageDisplay ?? ''}',
+                                            style: GoogleFonts.inter(fontSize: 12, color: colorMuted)),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.chevron_right, color: colorMuted),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _KpiCard extends StatelessWidget {
-  final String label, value;
-  final IconData icon;
-  final Color color;
-  const _KpiCard({required this.label, required this.value, required this.icon, required this.color});
-
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: colorBgElev, borderRadius: BorderRadius.circular(14), boxShadow: softShadow),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(height: 8),
-        Text(value, style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700, color: colorInk)),
-        Text(label, style: GoogleFonts.inter(fontSize: 11, color: colorMuted)),
-      ]),
-    ),
-  );
-}
-
-class _ActionBtn extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-  const _ActionBtn({required this.label, required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(color: colorBgElev, borderRadius: BorderRadius.circular(12), boxShadow: softShadow),
-        child: Column(children: [
-          Icon(icon, color: colorInk, size: 22),
-          const SizedBox(height: 6),
-          Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: colorInk), textAlign: TextAlign.center),
-        ]),
-      ),
-    ),
-  );
-}
-
-class _QuickAction extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  const _QuickAction({required this.icon, required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: colorBgElev,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: softShadow,
-          ),
-          child: Row(children: [
-            Icon(icon, color: colorInk),
-            const SizedBox(width: 10),
-            Expanded(child: Text(label,
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: colorInk))),
-          ]),
         ),
       ),
     );

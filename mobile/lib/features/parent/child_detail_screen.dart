@@ -399,6 +399,7 @@ class _GrowthTab extends ConsumerWidget {
                 ),
               const SizedBox(height: 14),
               GrowthChart(
+                childId: childId,
                 entries: [
                   for (final r in records)
                     (

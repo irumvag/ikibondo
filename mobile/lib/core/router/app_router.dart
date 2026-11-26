@@ -14,6 +14,7 @@ import '../../features/chw/vaccine_queue_screen.dart';
 import '../../features/chw/sync_screen.dart';
 import '../../features/chw/child_detail_screen.dart';
 import '../../features/chw/daily_plan_screen.dart';
+import '../../features/chw/visit_requests_screen.dart';
 import '../../features/parent/dashboard_screen.dart';
 import '../../features/parent/child_detail_screen.dart';
 import '../../features/parent/certificate_screen.dart';
@@ -94,6 +95,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/chw/scan',      builder: (_, __) => const ChwScanScreen()),
           GoRoute(path: '/chw/vaccines',  builder: (_, __) => const VaccineQueueScreen()),
           GoRoute(path: '/chw/sync',      builder: (_, __) => const SyncScreen()),
+          GoRoute(path: '/chw/requests',  builder: (_, __) => const VisitRequestsScreen()),
           GoRoute(
             path: '/chw/children/:id',
             builder: (_, state) => ChwChildDetailScreen(childId: state.pathParameters['id']!),

@@ -68,6 +68,9 @@ class Endpoints {
   static final visitRequests    = '$kBaseUrl/children/visit-requests/';
   static String visitRequest(String id) => '$kBaseUrl/children/visit-requests/$id/';
   static String childQr(String id) => '$kBaseUrl/children/$id/qr/';
+  static String campZones(String campId) => '$kBaseUrl/camps/$campId/zones/';
+  static final users              = '$kBaseUrl/auth/users/';
+  static String linkGuardianAccount(String guardianId) => '$kBaseUrl/children/guardians/$guardianId/link-account/';
 
   // ── Health Records ─────────────────────────────────────────────────────
   static final healthRecords    = '$kBaseUrl/health-records/';
@@ -96,6 +99,8 @@ class Endpoints {
   // ── Notifications ──────────────────────────────────────────────────────
   static final notifications    = '$kBaseUrl/notifications/';
   static String markRead(String id) => '$kBaseUrl/notifications/$id/read/';
+  static String markUnread(String id) => '$kBaseUrl/notifications/$id/unread/';
+  static final notificationSummary = '$kBaseUrl/notifications/summary/';
   static final markAllRead      = '$kBaseUrl/notifications/read-all/';
   static String dismissNotif(String id) => '$kBaseUrl/notifications/$id/dismiss/';
   static final devices          = '$kBaseUrl/notifications/devices/';

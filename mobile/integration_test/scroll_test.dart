@@ -1,5 +1,6 @@
 // Every screen whose content is taller than the phone must scroll with a finger drag.
 //   flutter test integration_test/scroll_test.dart -d "iPhone 17"   (seeded local backend)
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,7 +16,7 @@ const _accounts = {
 };
 const _screens = {
   'parent': ['/parent', '/parent/vaccines', '/parent/request-visit', '/parent/notifications'],
-  'chw': ['/chw', '/chw/plan', '/chw/vaccines', '/chw/sync'],
+  'chw': ['/chw', '/chw/plan', '/chw/vaccines', '/chw/sync', '/chw/requests', '/chw/visit'],
   'nurse': ['/nurse', '/nurse/children', '/nurse/register', '/nurse/referrals', '/nurse/sessions'],
 };
 
@@ -28,17 +29,40 @@ void main() {
     }
   }
 
-  /// Drags the main vertical list up; returns a problem description or null.
-  Future<String?> check(WidgetTester t, String name) async {
+  /// Scrolls the main vertical list with a finger, a trackpad and a mouse wheel;
+  /// returns problem descriptions (empty when every input scrolls).
+  Future<List<String>> check(WidgetTester t, String name) async {
     final lists = find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down);
-    if (lists.evaluate().isEmpty) return null; // nothing to scroll
-    final state = t.state<ScrollableState>(lists.first);
-    final pos = state.position;
-    if (pos.maxScrollExtent <= 0) return null; // fits on screen
-    final before = pos.pixels;
-    await t.dragFrom(t.getCenter(find.byType(Scaffold).last), const Offset(0, -300));
-    await settle(t, 1);
-    return pos.pixels > before ? null : '$name: content is longer than the screen but does not scroll';
+    if (lists.evaluate().isEmpty) return const []; // nothing to scroll
+    final pos = t.state<ScrollableState>(lists.first).position;
+    if (pos.maxScrollExtent <= 0) return const []; // fits on screen
+    final centre = t.getCenter(find.byType(Scaffold).last);
+    final problems = <String>[];
+
+    Future<void> tryInput(String how, Future<void> Function() scroll) async {
+      pos.jumpTo(0);
+      await settle(t, 1);
+      await scroll();
+      await settle(t, 1);
+      if (pos.pixels <= 0) problems.add('$name: does not scroll with $how');
+    }
+
+    await tryInput('a finger', () => t.dragFrom(centre, const Offset(0, -300)));
+    await tryInput('a trackpad', () async {
+      final pad = TestPointer(7, PointerDeviceKind.trackpad);
+      await t.sendEventToBinding(pad.panZoomStart(centre));
+      for (var i = 1; i <= 10; i++) {
+        await t.sendEventToBinding(pad.panZoomUpdate(centre, pan: Offset(0, -30.0 * i)));
+        await t.pump(const Duration(milliseconds: 16));
+      }
+      await t.sendEventToBinding(pad.panZoomEnd());
+    });
+    await tryInput('a mouse wheel', () async {
+      final mouse = TestPointer(8, PointerDeviceKind.mouse);
+      await t.sendEventToBinding(mouse.hover(centre));
+      await t.sendEventToBinding(mouse.scroll(const Offset(0, 300)));
+    });
+    return problems;
   }
 
   testWidgets('long screens scroll', (t) async {
@@ -60,8 +84,7 @@ void main() {
       for (final path in _screens[role]!) {
         router.go(path);
         await settle(t);
-        final p = await check(t, path);
-        if (p != null) problems.add(p);
+        problems.addAll(await check(t, path));
       }
       if (role == 'parent') {
         router.go('/parent');
@@ -71,8 +94,26 @@ void main() {
         for (final tab in ['Overview', 'Growth', 'Vaccines', 'QR Card']) {
           await t.tap(find.widgetWithText(Tab, tab).first);
           await settle(t, 2);
-          final p = await check(t, 'child tab $tab');
-          if (p != null) problems.add(p);
+          problems.addAll(await check(t, 'parent child tab $tab'));
+        }
+        await t.tap(find.widgetWithText(Tab, 'Vaccines').first);
+        await settle(t, 2);
+        await t.tap(find.text('Vaccination certificate').first);
+        await settle(t);
+        problems.addAll(await check(t, 'certificate'));
+      }
+      if (role != 'parent') {
+        router.go(role == 'nurse' ? '/nurse/children' : '/chw');
+        await settle(t);
+        await t.tap(find.text('Uwimana Jean').first);
+        await settle(t);
+        problems.addAll(await check(t, '$role child page'));
+        for (final tab in ['Records', 'Vaccines', 'Notes']) {
+          final f = find.widgetWithText(Tab, tab);
+          if (f.evaluate().isEmpty) continue;
+          await t.tap(f.first);
+          await settle(t, 2);
+          problems.addAll(await check(t, '$role child tab $tab'));
         }
       }
       await container.read(authProvider.notifier).logout();

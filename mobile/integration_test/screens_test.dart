@@ -21,7 +21,7 @@ const _accounts = {
 
 const _screens = {
   'parent': ['/parent', '/parent/vaccines', '/parent/request-visit', '/parent/notifications'],
-  'chw': ['/chw', '/chw/plan', '/chw/vaccines', '/chw/scan', '/chw/sync'],
+  'chw': ['/chw', '/chw/requests', '/chw/plan', '/chw/vaccines', '/chw/scan', '/chw/sync'],
   'nurse': ['/nurse', '/nurse/children', '/nurse/register', '/nurse/approvals',
             '/nurse/referrals', '/nurse/sessions', '/nurse/scan'],
 };

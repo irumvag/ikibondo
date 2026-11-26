@@ -194,7 +194,7 @@ class ChwChildDetailScreen extends ConsumerWidget {
 
             // ── Growth ────────────────────────────────────────────────────
             ref.watch(_recordsProvider(childId)).maybeWhen(
-                  data: (records) => GrowthChart(entries: [
+                  data: (records) => GrowthChart(childId: childId, entries: [
                     for (final r in records) (date: r.measurementDate, weightKg: r.weightKg, heightCm: r.heightCm),
                   ]),
                   orElse: () => const SizedBox.shrink(),
