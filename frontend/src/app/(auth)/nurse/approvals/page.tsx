@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { CheckCircle, UserCheck } from 'lucide-react';
 import { usePendingApprovals } from '@/lib/api/queries';
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
 
 export default function NurseApprovalsPage() {
+  const t = useTranslations('nurse.approvals');
   const queryClient = useQueryClient();
   const { data: pending, isLoading } = usePendingApprovals();
   const [approving, setApproving] = useState<string | null>(null);
@@ -23,7 +25,7 @@ export default function NurseApprovalsPage() {
     try {
       await approveUser(userId);
       const name = pending?.find((u) => u.id === userId)?.full_name;
-      toast.success(name ? `${name} can now sign in` : 'Account approved');
+      toast.success(name ? t('canNowSignIn', { name }) : t('accountApproved'));
       // Let the row slide out before it leaves the list
       setLeaving((prev) => new Set([...prev, userId]));
       setTimeout(() => {
@@ -31,7 +33,7 @@ export default function NurseApprovalsPage() {
         queryClient.invalidateQueries({ queryKey: ['pending-approvals'] });
       }, 280);
     } catch {
-      setError('Failed to approve. Please try again.');
+      setError(t('failedToApprovePlease'));
     } finally {
       setApproving(null);
     }
@@ -45,12 +47,8 @@ export default function NurseApprovalsPage() {
         <h2
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          Parent approvals
-        </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Review and approve pending parent accounts in your camp.
-        </p>
+        >{t('parentApprovals')}</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('reviewAndApprovePending')}</p>
       </div>
 
       {error && (
@@ -70,8 +68,8 @@ export default function NurseApprovalsPage() {
       {!isLoading && visible.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
           <CheckCircle size={40} className="animate-pop" style={{ color: 'var(--success, #22c55e)' }} />
-          <p className="font-semibold" style={{ color: 'var(--ink)' }}>All clear</p>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No pending parent approvals in your camp.</p>
+          <p className="font-semibold" style={{ color: 'var(--ink)' }}>{t('allClear')}</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noPendingParentApprovals')}</p>
         </div>
       )}
 
@@ -102,9 +100,7 @@ export default function NurseApprovalsPage() {
                 loading={approving === u.id}
                 onClick={() => handleApprove(u.id)}
               >
-                <UserCheck size={14} className="mr-1.5" />
-                Approve
-              </Button>
+                <UserCheck size={14} className="mr-1.5" />{t('approve')}</Button>
             </div>
           ))}
         </div>

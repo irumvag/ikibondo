@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { use } from 'react';
 import Link from 'next/link';
@@ -73,9 +74,11 @@ function buildChartData(growth: GrowthData, mode: ChartMode) {
 // Generates a complete self-contained SVG string from raw data. Works in any
 // context (new window, iframe, download) without needing React or CSS variables.
 
-function buildPrintSVG(growth: GrowthData, mode: ChartMode, w = 740, h = 280): string {
+type PrintLabels = { noData: string; noMeasurements: string; axis: string };
+
+function buildPrintSVG(growth: GrowthData, mode: ChartMode, labels: PrintLabels, w = 740, h = 280): string {
   const data = buildChartData(growth, mode);
-  if (data.length === 0) return '<text x="10" y="20" font-size="12" fill="#999">No data</text>';
+  if (data.length === 0) return `<text x="10" y="20" font-size="12" fill="#999">${labels.noData}</text>`;
 
   const ML = { top: 28, right: 20, bottom: 46, left: 54 }; // margins
   const cw = w - ML.left - ML.right;
@@ -90,7 +93,7 @@ function buildPrintSVG(growth: GrowthData, mode: ChartMode, w = 740, h = 280): s
       .map((k) => d[k] as number | undefined)
       .filter((v): v is number => v != null && isFinite(v)),
   );
-  if (allVals.length === 0) return '<text x="10" y="20" font-size="12" fill="#999">No measurements</text>';
+  if (allVals.length === 0) return `<text x="10" y="20" font-size="12" fill="#999">${labels.noMeasurements}</text>`;
 
   const rawMin = Math.min(...allVals);
   const rawMax = Math.max(...allVals);
@@ -134,7 +137,7 @@ function buildPrintSVG(growth: GrowthData, mode: ChartMode, w = 740, h = 280): s
   const xTicksArr: number[] = [];
   for (let a = Math.ceil(minAge / xStep) * xStep; a <= maxAge; a += xStep) xTicksArr.push(a);
 
-  const yLabel = mode === 'weight' ? 'Weight (kg)' : 'Height (cm)';
+  const yLabel = labels.axis;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
   <rect width="${w}" height="${h}" fill="#fff"/>
@@ -174,17 +177,19 @@ function buildPrintSVG(growth: GrowthData, mode: ChartMode, w = 740, h = 280): s
 }
 
 function GrowthChart({ growth, childName }: { growth: GrowthData; childName: string }) {
+  const tt = useTranslations('nurse.children.detail');
   const [mode, setMode] = useState<ChartMode>('weight');
 
   const data   = buildChartData(growth, mode);
-  const yLabel = mode === 'weight' ? 'Weight (kg)' : 'Height (cm)';
+  const yLabel = mode === 'weight' ? tt('print.weightAxis') : tt('print.heightAxis');
   const p3min  = Math.min(...data.map((d) => (d.p3  as number) ?? Infinity).filter(isFinite));
   const p97max = Math.max(...data.map((d) => (d.p97 as number) ?? -Infinity).filter(isFinite));
 
   const handlePrint = () => {
     // Generate both charts as pure SVG strings — no DOM capture needed
-    const weightSvg = buildPrintSVG(growth, 'weight');
-    const heightSvg = buildPrintSVG(growth, 'height');
+    const printLabels = { noData: tt('print.noData'), noMeasurements: tt('print.noMeasurements') };
+    const weightSvg = buildPrintSVG(growth, 'weight', { ...printLabels, axis: tt('print.weightAxis') });
+    const heightSvg = buildPrintSVG(growth, 'height', { ...printLabels, axis: tt('print.heightAxis') });
 
     const printWindow = window.open('', '_blank', 'width=860,height=800');
     if (!printWindow) return;
@@ -193,7 +198,7 @@ function GrowthChart({ growth, childName }: { growth: GrowthData; childName: str
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>WHO Growth Chart — ${childName}</title>
+  <title>${tt('print.title', { name: childName })}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, Helvetica, sans-serif; padding: 24px 32px; color: #111; background: #fff; }
@@ -213,31 +218,31 @@ function GrowthChart({ growth, childName }: { growth: GrowthData; childName: str
   </style>
 </head>
 <body>
-  <h1>WHO Growth Chart</h1>
-  <p class="meta">Printed ${new Date().toLocaleDateString()}</p>
+  <h1>${tt('print.heading')}</h1>
+  <p class="meta">${tt('print.printed', { date: new Date().toLocaleDateString() })}</p>
   <p class="name">${childName}</p>
-  <p class="meta">Weight-for-age and Height-for-age vs WHO Child Growth Standards (p3/p50/p97)</p>
+  <p class="meta">${tt('print.subtitle')}</p>
 
-  <p class="chart-title">Weight for age</p>
+  <p class="chart-title">${tt('print.weightForAge')}</p>
   ${weightSvg}
 
-  <p class="chart-title">Height for age</p>
+  <p class="chart-title">${tt('print.heightForAge')}</p>
   ${heightSvg}
 
   <div class="legend">
     <div class="li">
       <svg width="28" height="6"><line x1="0" y1="3" x2="28" y2="3" stroke="#1d4ed8" stroke-width="2.5"/><circle cx="14" cy="3" r="3" fill="#1d4ed8"/></svg>
-      Child measurements
+      ${tt('print.childMeasurements')}
     </div>
     <div class="li">
       <svg width="28" height="6"><line x1="0" y1="3" x2="28" y2="3" stroke="#16a34a" stroke-width="2" stroke-dasharray="7,3"/></svg>
-      p50 median (WHO)
+      ${tt('print.median')}
     </div>
     <div class="li">
       <svg width="28" height="6"><line x1="0" y1="3" x2="28" y2="3" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="5,3"/></svg>
-      p3 / p97 limits
+      ${tt('print.limits')}
     </div>
-    <div class="li"><div class="band-swatch"></div> Normal range (p3–p97)</div>
+    <div class="li"><div class="band-swatch"></div> ${tt('print.normalRange')}</div>
   </div>
   <script>window.onload=function(){window.print();};<\/script>
 </body>
@@ -261,7 +266,7 @@ function GrowthChart({ growth, childName }: { growth: GrowthData; childName: str
                 color: mode === m ? 'var(--bg)' : 'var(--text-muted)',
               }}
             >
-              {m === 'weight' ? 'Weight for age' : 'Height for age'}
+              {m === 'weight' ? tt('weightForAge') : tt('heightForAge')}
             </button>
           ))}
         </div>
@@ -270,11 +275,9 @@ function GrowthChart({ growth, childName }: { growth: GrowthData; childName: str
           onClick={handlePrint}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-colors hover:opacity-80"
           style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', backgroundColor: 'var(--bg-sand)' }}
-          title="Print both charts (weight + height)"
+          title={tt('printBothChartsWeight')}
         >
-          <Printer size={14} aria-hidden="true" />
-          Print charts
-        </button>
+          <Printer size={14} aria-hidden="true" />{tt('printCharts')}</button>
       </div>
 
       {/* Interactive chart (ResponsiveContainer — visible on screen) */}
@@ -301,7 +304,7 @@ function GrowthChart({ growth, childName }: { growth: GrowthData; childName: str
                 : name === 'p50' ? 'p50 — median'
                 : 'p97 — upper limit',
             ]}
-            labelFormatter={(v) => `Age: ${v} months`}
+            labelFormatter={(v) => tt('ageMonthsTooltip', { months: String(v) })}
           />
           <Legend
             formatter={(v) =>
@@ -322,9 +325,9 @@ function GrowthChart({ growth, childName }: { growth: GrowthData; childName: str
       {/* Legend explainer */}
       <div className="flex flex-wrap gap-4 mt-3">
         {[
-          { color: WHO.actual, label: 'Child measurements', solid: true },
-          { color: WHO.p50,    label: 'p50 median (WHO)',   solid: false },
-          { color: WHO.p3,     label: 'p3 / p97 limits',   solid: false },
+          { color: WHO.actual, label: tt('childMeasurements'), solid: true },
+          { color: WHO.p50,    label: tt('p50MedianWho'),   solid: false },
+          { color: WHO.p3,     label: tt('p3P97Limits'),   solid: false },
         ].map(({ color, label, solid }) => (
           <div key={label} className="flex items-center gap-1.5">
             <svg width="24" height="4" aria-hidden="true">
@@ -338,7 +341,7 @@ function GrowthChart({ growth, childName }: { growth: GrowthData; childName: str
         ))}
         <div className="flex items-center gap-1.5">
           <div className="w-6 h-3 rounded-sm" style={{ backgroundColor: WHO.band, border: `1px solid ${WHO.p50}` }} />
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Normal range (p3–p97)</span>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('normalRangeP3P97')}</span>
         </div>
       </div>
 
@@ -357,6 +360,7 @@ function riskVariant(r: string) {
 }
 
 function HistoryRow({ record }: { record: HealthRecordDetail }) {
+  const tt = useTranslations('nurse.children.detail');
   const [open, setOpen] = useState(false);
   const factors = record.risk_factors as Record<string, number> | string[] | null;
 
@@ -392,9 +396,7 @@ function HistoryRow({ record }: { record: HealthRecordDetail }) {
             </span>
           )}
           {record.muac_cm && (
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              MUAC {parseFloat(record.muac_cm).toFixed(1)} cm
-            </span>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('muacCm', { value: parseFloat(record.muac_cm).toFixed(1) })}</span>
           )}
           {record.zone_name && (
             <span
@@ -406,7 +408,7 @@ function HistoryRow({ record }: { record: HealthRecordDetail }) {
           )}
         </div>
         <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>
-          {open ? 'Hide' : 'SHAP'}
+          {open ? tt('hide') : 'SHAP'}
         </span>
       </button>
 
@@ -415,11 +417,10 @@ function HistoryRow({ record }: { record: HealthRecordDetail }) {
           {factorMap ? (
             <RiskExplainer factors={factorMap} riskLevel={record.risk_level ?? 'LOW'} limit={5} />
           ) : (
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No feature breakdown available.</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('noFeatureBreakdownAvailable')}</p>
           )}
           {record.ml_confidence && (
-            <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
-              Confidence: <strong style={{ color: 'var(--ink)' }}>{Math.round(parseFloat(record.ml_confidence) * 100)}%</strong>
+            <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>{tt('confidence')}{' '}<strong style={{ color: 'var(--ink)' }}>{Math.round(parseFloat(record.ml_confidence) * 100)}%</strong>
             </p>
           )}
         </div>
@@ -430,14 +431,11 @@ function HistoryRow({ record }: { record: HealthRecordDetail }) {
 
 // ── Notes panel ───────────────────────────────────────────────────────────────
 
-const NOTE_TYPES = [
-  { value: 'GENERAL',     label: 'General'           },
-  { value: 'OBSERVATION', label: 'Observation'        },
-  { value: 'FOLLOW_UP',   label: 'Follow-Up Required' },
-  { value: 'REFERRAL',    label: 'Referral'           },
-];
+// Saved as these codes; names: messages/en.json nurse.children.detail.noteTypes.<value>
+const NOTE_TYPES = ['GENERAL', 'OBSERVATION', 'FOLLOW_UP', 'REFERRAL'] as const;
 
 function NotesPanel({ childId }: { childId: string }) {
+  const tt = useTranslations('nurse.children.detail');
   const qc = useQueryClient();
   const { data: notes, isLoading } = useChildNotes(childId);
   const [noteType, setNoteType] = useState('GENERAL');
@@ -464,23 +462,21 @@ function NotesPanel({ childId }: { childId: string }) {
           onChange={(e) => setNoteType(e.target.value)}
           className="text-sm px-3 py-2 rounded-lg border outline-none"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
-          aria-label="Note type"
+          aria-label={tt('noteType')}
         >
-          {NOTE_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>{t.label}</option>
+          {NOTE_TYPES.map((v) => (
+            <option key={v} value={v}>{tt(`noteTypes.${v}`)}</option>
           ))}
         </select>
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Write a clinical note..."
+          placeholder={tt('writeAClinicalNote')}
           rows={3}
           className="text-sm px-3 py-2 rounded-lg border outline-none resize-none"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
         />
-        <Button variant="primary" size="sm" onClick={handleSave} loading={saving} disabled={!content.trim()}>
-          Save note
-        </Button>
+        <Button variant="primary" size="sm" onClick={handleSave} loading={saving} disabled={!content.trim()}>{tt('saveNote')}</Button>
       </div>
 
       {isLoading ? (
@@ -513,7 +509,7 @@ function NotesPanel({ childId }: { childId: string }) {
           ))}
         </div>
       ) : (
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No notes yet.</p>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{tt('noNotesYet')}</p>
       )}
     </div>
   );
@@ -541,6 +537,7 @@ interface RunHistoryEntry {
 }
 
 function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | undefined; childId: string }) {
+  const tt = useTranslations('nurse.children.detail');
   const [riskResult, setRiskResult]     = useState<PredictRiskResult | null>(null);
   const [growthResult, setGrowthResult] = useState<GrowthForecastResult | null>(null);
   const [vaxResult, setVaxResult]       = useState<VaxDropoutResult | null>(null);
@@ -630,29 +627,25 @@ function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | 
       {/* Latest record summary */}
       {latestRecord ? (
         <div className="rounded-xl border p-4 text-sm" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-sand)' }}>
-          <p className="font-semibold mb-2" style={{ color: 'var(--ink)' }}>Latest record features</p>
+          <p className="font-semibold mb-2" style={{ color: 'var(--ink)' }}>{tt('latestRecordFeatures')}</p>
           <div className="flex flex-wrap gap-4 text-xs" style={{ color: 'var(--text-muted)' }}>
-            {latestRecord.weight_kg && <span>Weight: <strong style={{ color: 'var(--ink)' }}>{latestRecord.weight_kg} kg</strong></span>}
-            {latestRecord.height_cm && <span>Height: <strong style={{ color: 'var(--ink)' }}>{latestRecord.height_cm} cm</strong></span>}
-            {latestRecord.muac_cm   && <span>MUAC: <strong style={{ color: 'var(--ink)' }}>{latestRecord.muac_cm} cm</strong></span>}
-            <span>Date: <strong style={{ color: 'var(--ink)' }}>{new Date(latestRecord.measurement_date).toLocaleDateString()}</strong></span>
+            {latestRecord.weight_kg && <span>{tt('weight')}{' '}<strong style={{ color: 'var(--ink)' }}>{latestRecord.weight_kg} kg</strong></span>}
+            {latestRecord.height_cm && <span>{tt('height')}{' '}<strong style={{ color: 'var(--ink)' }}>{latestRecord.height_cm} cm</strong></span>}
+            {latestRecord.muac_cm   && <span>{tt('muac')}{' '}<strong style={{ color: 'var(--ink)' }}>{latestRecord.muac_cm} cm</strong></span>}
+            <span>{tt('date')}{' '}<strong style={{ color: 'var(--ink)' }}>{new Date(latestRecord.measurement_date).toLocaleDateString()}</strong></span>
           </div>
         </div>
       ) : (
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          No health records available to run prediction. Record a visit first.
-        </p>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{tt('noHealthRecordsAvailable')}</p>
       )}
 
       <Button variant="primary" onClick={handlePredict} loading={running} disabled={!latestRecord} className="self-start">
-        <Cpu size={15} className="mr-1.5" aria-hidden="true" />
-        Run predictions
-      </Button>
+        <Cpu size={15} className="mr-1.5" aria-hidden="true" />{tt('runPredictions')}</Button>
 
       {/* Recent runs */}
       {runHistory.length > 0 && (
         <div className="flex flex-col gap-1">
-          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Recent runs</p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{tt('recentRuns')}</p>
           <div className="flex flex-wrap gap-2">
             {runHistory.map((entry, i) => (
               <span
@@ -675,15 +668,13 @@ function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | 
       {riskError && <p className="text-sm" style={{ color: 'var(--danger)' }}>{riskError}</p>}
       {riskResult && (
         <div className="rounded-xl border p-5 flex flex-col gap-4" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
-          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Risk assessment</p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{tt('riskAssessment')}</p>
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <Badge variant={riskResult.risk_level === 'HIGH' ? 'danger' : riskResult.risk_level === 'MEDIUM' ? 'warn' : 'success'} className="text-sm px-3 py-1">
-                {riskResult.risk_level} risk
-              </Badge>
+              <Badge variant={riskResult.risk_level === 'HIGH' ? 'danger' : riskResult.risk_level === 'MEDIUM' ? 'warn' : 'success'} className="text-sm px-3 py-1">{tt('risk', { risk_level: riskResult.risk_level })}</Badge>
             </div>
             <div className="text-right">
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Confidence</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('confidence2')}</p>
               <p className="text-3xl font-bold" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>
                 {Math.round(riskResult.confidence * 100)}%
               </p>
@@ -694,7 +685,7 @@ function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | 
               </div>
             </div>
           </div>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Model: {riskResult.model_version}</p>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('model', { model_version: riskResult.model_version })}</p>
           {factorEntries.length > 0 && (
             <RiskExplainer
               factors={Object.fromEntries(factorEntries)}
@@ -710,33 +701,33 @@ function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | 
       {growthResult && (
         <div className="rounded-xl border p-5 flex flex-col gap-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Growth forecast</p>
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{tt('growthForecast')}</p>
             {growthResult.risk_flag && (
-              <Badge variant="warn">Growth risk flagged</Badge>
+              <Badge variant="warn">{tt('growthRiskFlagged')}</Badge>
             )}
           </div>
           <div className="flex flex-wrap gap-4 text-sm">
             {growthResult.predicted_whz_30d != null && (
               <div className="flex flex-col">
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>30-day WHZ</span>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('n30DayWhz')}</span>
                 <span className="font-bold" style={{ color: 'var(--ink)' }}>{growthResult.predicted_whz_30d.toFixed(2)}</span>
               </div>
             )}
             {growthResult.predicted_whz_60d != null && (
               <div className="flex flex-col">
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>60-day WHZ</span>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('n60DayWhz')}</span>
                 <span className="font-bold" style={{ color: 'var(--ink)' }}>{growthResult.predicted_whz_60d.toFixed(2)}</span>
               </div>
             )}
             {growthResult.predicted_whz_90d != null && (
               <div className="flex flex-col">
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>90-day WHZ</span>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('n90DayWhz')}</span>
                 <span className="font-bold" style={{ color: 'var(--ink)' }}>{growthResult.predicted_whz_90d.toFixed(2)}</span>
               </div>
             )}
           </div>
           {growthResult.method && (
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Method: {growthResult.method}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('method', { method: growthResult.method })}</p>
           )}
         </div>
       )}
@@ -745,10 +736,10 @@ function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | 
       {vaxError && <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{vaxError}</p>}
       {vaxResult && (
         <div className="rounded-xl border p-5 flex flex-col gap-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
-          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Vaccination dropout</p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{tt('vaccinationDropout')}</p>
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex flex-col gap-1">
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Dropout probability</span>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('dropoutProbability')}</span>
               <span className="text-2xl font-bold" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>
                 {Math.round(vaxResult.dropout_probability * 100)}%
               </span>
@@ -756,9 +747,7 @@ function MLPredictPanel({ history, childId }: { history: HealthRecordDetail[] | 
             <Badge variant={
               vaxResult.risk_tier === 'HIGH' ? 'danger' :
               vaxResult.risk_tier === 'MEDIUM' ? 'warn' : 'success'
-            }>
-              {vaxResult.risk_tier} tier
-            </Badge>
+            }>{tt('tier', { risk_tier: vaxResult.risk_tier })}</Badge>
           </div>
           <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-sand)' }}>
             <div
@@ -792,18 +781,17 @@ interface VaxRecord {
   is_overdue: boolean;
 }
 
+// Status names: messages/en.json nurse.children.detail.vaxStatus.<STATUS>
 const VAX_STATUS_META = {
-  DONE:      { label: 'Given',     variant: 'success' as const, icon: CheckCircle,  bg: '#f0fdf4', border: '#86efac' },
-  SCHEDULED: { label: 'Upcoming',  variant: 'info'    as const, icon: Clock,        bg: '#eff6ff', border: '#93c5fd' },
-  MISSED:    { label: 'Missed',    variant: 'danger'  as const, icon: XCircle,      bg: '#fef2f2', border: '#fca5a5' },
-  SKIPPED:   { label: 'Skipped',   variant: 'warn'    as const, icon: SkipForward,  bg: '#fffbeb', border: '#fcd34d' },
+  DONE:      { variant: 'success' as const, icon: CheckCircle,  bg: '#f0fdf4', border: '#86efac' },
+  SCHEDULED: { variant: 'info'    as const, icon: Clock,        bg: '#eff6ff', border: '#93c5fd' },
+  MISSED:    { variant: 'danger'  as const, icon: XCircle,      bg: '#fef2f2', border: '#fca5a5' },
+  SKIPPED:   { variant: 'warn'    as const, icon: SkipForward,  bg: '#fffbeb', border: '#fcd34d' },
 };
 
+// Days until (positive) or since (negative) a date; shown with messages nurse.children.detail.due.*
 function daysFromNow(iso: string) {
-  const diff = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
-  if (diff === 0) return 'Today';
-  if (diff > 0)  return `In ${diff}d`;
-  return `${Math.abs(diff)}d ago`;
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
 }
 
 function VaccinationsTab({
@@ -817,6 +805,7 @@ function VaccinationsTab({
   guardianPhone: string | null;
   guardianHasAccount: boolean;
 }) {
+  const tt = useTranslations('nurse.children.detail');
   const qc    = useQueryClient();
   const toast = useToast();
   const [filter, setFilter]         = useState<'ALL' | 'SCHEDULED' | 'DONE' | 'MISSED' | 'SKIPPED'>('ALL');
@@ -856,9 +845,9 @@ function VaccinationsTab({
     setReminding(record.id);
     try {
       await apiClient.post('/vaccinations/bulk-remind/', {});
-      toast.success('SMS reminder queued for guardian');
+      toast.success(tt('smsReminderQueuedFor'));
     } catch {
-      toast.error('Could not queue reminder — check server logs');
+      toast.error(tt('couldNotQueueReminder'));
     }
     setReminderSent((s) => new Set([...s, record.id]));
     setReminding(null);
@@ -881,7 +870,7 @@ function VaccinationsTab({
         ...(adminBatch ? { batch_number: adminBatch } : {}),
       });
       qc.invalidateQueries({ queryKey: ['child-vaccinations', childId] });
-      toast.success(`${adminRec.vaccine_name} recorded as given`);
+      toast.success(tt('recordedAsGiven', { vaccine: adminRec.vaccine_name }));
       setAdminRec(null);
       setAdminBatch('');
     } catch (err: unknown) {
@@ -897,11 +886,11 @@ function VaccinationsTab({
 
   // Summary pills
   const pills = [
-    { label: 'Overdue',  count: overdue.length,  color: 'var(--danger)' },
-    { label: 'Upcoming', count: upcoming.length,  color: 'var(--ink)' },
-    { label: 'Given',    count: given.length,     color: 'var(--success)' },
-    { label: 'Missed',   count: missed.length,    color: 'var(--danger)' },
-    { label: 'Skipped',  count: skipped.length,   color: 'var(--warn)' },
+    { label: tt('overdue'),  count: overdue.length,  color: 'var(--danger)' },
+    { label: tt('upcoming'), count: upcoming.length,  color: 'var(--ink)' },
+    { label: tt('given'),    count: given.length,     color: 'var(--success)' },
+    { label: tt('missed'),   count: missed.length,    color: 'var(--danger)' },
+    { label: tt('skipped'),  count: skipped.length,   color: 'var(--warn)' },
   ];
 
   if (isLoading) {
@@ -933,7 +922,7 @@ function VaccinationsTab({
               {coveragePct}%
             </text>
           </svg>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Coverage</p>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('coverage')}</p>
         </div>
 
         {/* Pills */}
@@ -949,8 +938,7 @@ function VaccinationsTab({
         {/* Guardian reminder CTA */}
         {overdue.length > 0 && (
           <div className="flex flex-col gap-1.5 shrink-0">
-            <p className="text-xs font-medium" style={{ color: 'var(--danger)' }}>
-              {overdue.length} overdue dose{overdue.length !== 1 ? 's' : ''}
+            <p className="text-xs font-medium" style={{ color: 'var(--danger)' }}>{tt('overdueDoses', { count: overdue.length })}
             </p>
             {guardianHasAccount ? (
               <Button
@@ -958,16 +946,14 @@ function VaccinationsTab({
                 onClick={async () => {
                   try {
                     await apiClient.post('/vaccinations/bulk-remind/', {});
-                    toast.success('SMS reminder queued for guardian');
-                  } catch { toast.error('Could not queue reminder'); }
+                    toast.success(tt('smsReminderQueuedFor'));
+                  } catch { toast.error(tt('couldNotQueueReminder2')); }
                 }}
               >
-                <Bell size={13} className="mr-1" /> Send SMS reminder
-              </Button>
+                <Bell size={13} className="mr-1" />{' '}{tt('sendSmsReminder')}</Button>
             ) : (
               <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-                <BellOff size={13} />
-                No app account — call {guardianPhone ?? 'guardian'}
+                <BellOff size={13} />{guardianPhone ? tt('noAppAccountCallPhone', { phone: guardianPhone }) : tt('noAppAccountCallGuardian')}
               </div>
             )}
           </div>
@@ -987,20 +973,19 @@ function VaccinationsTab({
               borderColor: filter === f ? 'var(--ink)' : 'var(--border)',
             }}
           >
-            {f === 'ALL' ? `All (${records.length})` :
-             f === 'SCHEDULED' ? `Upcoming (${records.filter(r => r.status === 'SCHEDULED').length})` :
-             f === 'MISSED' ? `Missed (${missed.length})` :
-             f === 'DONE' ? `Given (${given.length})` :
-             `Skipped (${skipped.length})`}
+            {tt(`vaxFilter.${f}`, { count:
+              f === 'ALL' ? records.length :
+              f === 'SCHEDULED' ? records.filter(r => r.status === 'SCHEDULED').length :
+              f === 'MISSED' ? missed.length :
+              f === 'DONE' ? given.length :
+              skipped.length })}
           </button>
         ))}
       </div>
 
       {/* Table */}
       {filtered.length === 0 ? (
-        <p className="text-sm py-6 text-center" style={{ color: 'var(--text-muted)' }}>
-          No vaccination records match this filter.
-        </p>
+        <p className="text-sm py-6 text-center" style={{ color: 'var(--text-muted)' }}>{tt('noVaccinationRecordsMatch')}</p>
       ) : (
         <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}>
           {/* Header */}
@@ -1013,15 +998,16 @@ function VaccinationsTab({
               background: 'var(--bg)',
             }}
           >
-            <span>Vaccine</span>
-            <span>Scheduled</span>
-            <span>Status</span>
-            <span>Dropout risk</span>
-            <span className="text-right">Action</span>
+            <span>{tt('vaccine')}</span>
+            <span>{tt('scheduled')}</span>
+            <span>{tt('status')}</span>
+            <span>{tt('dropoutRisk')}</span>
+            <span className="text-right">{tt('action')}</span>
           </div>
 
           {filtered.map((rec) => {
-            const meta = VAX_STATUS_META[rec.status] ?? VAX_STATUS_META.SCHEDULED;
+            const vaxStatus = rec.status in VAX_STATUS_META ? (rec.status as keyof typeof VAX_STATUS_META) : 'SCHEDULED';
+            const meta = VAX_STATUS_META[vaxStatus];
             const Icon = meta.icon;
             const isOverdueRow = rec.is_overdue;
             const sent = reminderSent.has(rec.id);
@@ -1040,8 +1026,8 @@ function VaccinationsTab({
                   <p className="font-medium" style={{ color: 'var(--ink)' }}>{rec.vaccine_name}</p>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                     {rec.vaccine_code}
-                    {rec.administered_date && ` · Given ${new Date(rec.administered_date).toLocaleDateString()}`}
-                    {rec.batch_number && ` · Batch ${rec.batch_number}`}
+                    {rec.administered_date && tt('givenOn', { date: new Date(rec.administered_date).toLocaleDateString() })}
+                    {rec.batch_number && tt('batchNo', { batch: rec.batch_number })}
                   </p>
                 </div>
 
@@ -1052,7 +1038,7 @@ function VaccinationsTab({
                   </p>
                   {rec.status === 'SCHEDULED' && (
                     <p className="text-xs" style={{ color: isOverdueRow ? 'var(--danger)' : 'var(--text-muted)' }}>
-                      {daysFromNow(rec.scheduled_date)}
+                      {(() => { const d = daysFromNow(rec.scheduled_date); return d === 0 ? tt('due.today') : d > 0 ? tt('due.inDays', { days: d }) : tt('due.daysAgo', { days: Math.abs(d) }); })()}
                     </p>
                   )}
                 </div>
@@ -1064,8 +1050,8 @@ function VaccinationsTab({
                     style={{ background: meta.bg, color: meta.bg === '#f0fdf4' ? '#16a34a' : meta.bg === '#eff6ff' ? '#1d4ed8' : meta.bg === '#fef2f2' ? '#dc2626' : '#92400e', border: `1px solid ${meta.border}` }}
                   >
                     <Icon size={11} />
-                    {meta.label}
-                    {isOverdueRow && rec.status === 'SCHEDULED' && ' · OVERDUE'}
+                    {tt(`vaxStatus.${vaxStatus}`)}
+                    {isOverdueRow && rec.status === 'SCHEDULED' && tt('overdue2')}
                   </span>
                 </div>
 
@@ -1092,8 +1078,7 @@ function VaccinationsTab({
                         variant="primary"
                         onClick={() => openAdminModal(rec)}
                       >
-                        <CheckCircle size={12} className="mr-1" /> Mark given
-                      </Button>
+                        <CheckCircle size={12} className="mr-1" />{' '}{tt('markGiven')}</Button>
                       {guardianHasAccount && (
                         <Button
                           size="sm"
@@ -1101,20 +1086,18 @@ function VaccinationsTab({
                           disabled={sent || reminding === rec.id}
                           onClick={() => sendReminder(rec)}
                         >
-                          {sent ? <><BellOff size={12} className="mr-1" /> Sent</> : reminding === rec.id ? 'Sending…' : <><Bell size={12} className="mr-1" /> Remind</>}
+                          {sent ? <><BellOff size={12} className="mr-1" /> Sent</> : reminding === rec.id ? tt('sending') : <><Bell size={12} className="mr-1" /> Remind</>}
                         </Button>
                       )}
                     </>
                   )}
                   {rec.status === 'DONE' && (
                     <span className="text-xs flex items-center gap-1" style={{ color: 'var(--success)' }}>
-                      <CheckCircle size={12} /> Completed
-                    </span>
+                      <CheckCircle size={12} />{' '}{tt('completed')}</span>
                   )}
                   {rec.status === 'MISSED' && (
                     <Button size="sm" variant="ghost" onClick={() => openAdminModal(rec)}>
-                      <CheckCircle size={12} className="mr-1" /> Record late dose
-                    </Button>
+                      <CheckCircle size={12} className="mr-1" />{' '}{tt('recordLateDose')}</Button>
                   )}
                 </div>
               </div>
@@ -1127,12 +1110,12 @@ function VaccinationsTab({
       <Modal
         open={!!adminRec}
         onClose={() => !adminLoading && setAdminRec(null)}
-        title={`Record Dose — ${childName}`}
+        title={tt('recordDoseTitle', { name: childName })}
         size="sm"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setAdminRec(null)} disabled={adminLoading}>Cancel</Button>
-            <Button variant="primary" onClick={markAdministered} loading={adminLoading}>Save dose</Button>
+            <Button variant="ghost" onClick={() => setAdminRec(null)} disabled={adminLoading}>{tt('cancel')}</Button>
+            <Button variant="primary" onClick={markAdministered} loading={adminLoading}>{tt('saveDose')}</Button>
           </>
         }
       >
@@ -1143,7 +1126,7 @@ function VaccinationsTab({
             </p>
           )}
           <div className="flex flex-col gap-1">
-            <label htmlFor="children-administration-date" className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Administration date *</label>
+            <label htmlFor="children-administration-date" className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{tt('administrationDate')}</label>
             <input id="children-administration-date"
               type="date"
               value={adminDate}
@@ -1154,10 +1137,10 @@ function VaccinationsTab({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="children-batch-number-optional" className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Batch number (optional)</label>
+            <label htmlFor="children-batch-number-optional" className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{tt('batchNumberOptional')}</label>
             <input id="children-batch-number-optional"
               type="text"
-              placeholder="e.g. BCG-2025-RW-001"
+              placeholder={tt('eGBcg2025')}
               value={adminBatch}
               onChange={(e) => setAdminBatch(e.target.value)}
               className="text-sm px-3 py-2 rounded-lg border outline-none"
@@ -1176,6 +1159,7 @@ function VaccinationsTab({
 const TODAY = new Date().toISOString().split('T')[0];
 
 function RecordMeasurementModal({ childId, onClose }: { childId: string; onClose: () => void }) {
+  const tt = useTranslations('nurse.children.detail');
   const qc = useQueryClient();
   const [form, setForm] = useState({
     measurement_date: TODAY,
@@ -1199,7 +1183,7 @@ function RecordMeasurementModal({ childId, onClose }: { childId: string; onClose
       onClose();
     },
     onError: () => {
-      setError('Failed to save measurement. Please check your inputs and try again.');
+      setError(tt('failedToSaveMeasurement'));
     },
   });
 
@@ -1255,15 +1239,13 @@ function RecordMeasurementModal({ childId, onClose }: { childId: string; onClose
         className="rounded-2xl border w-full max-w-md flex flex-col gap-4 p-6 max-h-[90vh] overflow-y-auto"
         style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
       >
-        <h3 className="text-lg font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-          Record measurement
-        </h3>
+        <h3 className="text-lg font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{tt('recordMeasurement')}</h3>
 
-        {field('Measurement date', 'measurement_date', 'date')}
-        {field('Weight (kg)', 'weight_kg', 'number', '0.1')}
-        {field('Height (cm)', 'height_cm', 'number', '0.1')}
-        {field('MUAC (cm)', 'muac_cm', 'number', '0.1')}
-        {field('Temperature (°C, optional)', 'temperature_c', 'number', '0.1')}
+        {field(tt('field.measurementDate'), 'measurement_date', 'date')}
+        {field(tt('field.weightKg'), 'weight_kg', 'number', '0.1')}
+        {field(tt('field.heightCm'), 'height_cm', 'number', '0.1')}
+        {field(tt('field.muacCm'), 'muac_cm', 'number', '0.1')}
+        {field(tt('field.temperature'), 'temperature_c', 'number', '0.1')}
 
         <div className="flex items-center gap-2">
           <input
@@ -1273,22 +1255,16 @@ function RecordMeasurementModal({ childId, onClose }: { childId: string; onClose
             onChange={(e) => setForm((f) => ({ ...f, oedema: e.target.checked }))}
             className="w-4 h-4"
           />
-          <label htmlFor="oedema-check" className="text-sm" style={{ color: 'var(--ink)' }}>
-            Oedema present
-          </label>
+          <label htmlFor="oedema-check" className="text-sm" style={{ color: 'var(--ink)' }}>{tt('oedemaPresent')}</label>
         </div>
 
-        {field('Notes (optional)', 'notes', 'textarea')}
+        {field(tt('field.notesOptional'), 'notes', 'textarea')}
 
         {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
 
         <div className="flex gap-2 pt-1">
-          <Button variant="secondary" onClick={onClose} disabled={mutation.isPending} className="flex-1">
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={handleSubmit} loading={mutation.isPending} className="flex-1">
-            Save
-          </Button>
+          <Button variant="secondary" onClick={onClose} disabled={mutation.isPending} className="flex-1">{tt('cancel')}</Button>
+          <Button variant="primary" onClick={handleSubmit} loading={mutation.isPending} className="flex-1">{tt('save')}</Button>
         </div>
       </div>
     </div>
@@ -1317,6 +1293,7 @@ const URGENCY_COLOR: Record<string, string> = {
 };
 
 function ReferralsTab({ childId }: { childId: string }) {
+  const tt = useTranslations('nurse.children.detail');
   const { data: referrals, isLoading } = useQuery<ReferralItem[]>({
     queryKey: ['child-referrals', childId],
     queryFn: async () => {
@@ -1329,7 +1306,7 @@ function ReferralsTab({ childId }: { childId: string }) {
   if (!referrals || referrals.length === 0) {
     return (
       <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No referrals on record.</p>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{tt('noReferralsOnRecord')}</p>
       </div>
     );
   }
@@ -1343,7 +1320,7 @@ function ReferralsTab({ childId }: { childId: string }) {
             <div>
               <p className="font-semibold text-sm">{r.target_facility}</p>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {r.referring_user_name ?? 'Unknown'} · {new Date(r.referred_at).toLocaleDateString()}
+                {r.referring_user_name ?? tt('unknown')} · {new Date(r.referred_at).toLocaleDateString()}
               </p>
             </div>
             <div className="flex gap-2 shrink-0">
@@ -1361,9 +1338,7 @@ function ReferralsTab({ childId }: { childId: string }) {
             </p>
           )}
           {r.outcome && (
-            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-              Outcome: {r.outcome}
-            </p>
+            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{tt('outcome', { outcome: r.outcome })}</p>
           )}
         </div>
       ))}
@@ -1385,6 +1360,7 @@ function ChildQRPanel({
   childName: string;
   registrationNumber: string;
 }) {
+  const tt = useTranslations('nurse.children.detail');
   const qrValue = childId; // UUID used for navigation after scan
 
   const handlePrint = () => {
@@ -1396,7 +1372,7 @@ function ChildQRPanel({
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>QR Card — ${childName}</title>
+  <title>${tt('print.qrTitle', { name: childName })}</title>
   <style>
     body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 24px; text-align: center; }
     h1 { font-size: 18px; margin-bottom: 4px; }
@@ -1433,14 +1409,11 @@ function ChildQRPanel({
         />
       </div>
 
-      <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
-        Scan with Ikibondo app to open this child&apos;s health record instantly.
-      </p>
+      <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>{tt('scanWithIkibondoApp')}</p>
 
       <div className="flex gap-2 w-full">
         <Button variant="secondary" className="flex-1" onClick={handlePrint}>
-          <Printer size={14} className="mr-1.5" /> Print card
-        </Button>
+          <Printer size={14} className="mr-1.5" />{' '}{tt('printCard')}</Button>
       </div>
     </div>
   );
@@ -1453,6 +1426,7 @@ function DeletePanel({ childId, childName, deletionRequestedAt }: {
   childName: string;
   deletionRequestedAt: string | null;
 }) {
+  const tt = useTranslations('nurse.children.detail');
   const qc = useQueryClient();
   const [confirm, setConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -1472,7 +1446,7 @@ function DeletePanel({ childId, childName, deletionRequestedAt }: {
       qc.invalidateQueries({ queryKey: QK.child(childId) });
       setConfirm(false);
     } catch {
-      setError('Could not request deletion. Please try again.');
+      setError(tt('couldNotRequestDeletion'));
     } finally {
       setLoading(false);
     }
@@ -1485,7 +1459,7 @@ function DeletePanel({ childId, childName, deletionRequestedAt }: {
       await apiClient.post(`/children/${childId}/cancel-deletion/`);
       qc.invalidateQueries({ queryKey: QK.child(childId) });
     } catch {
-      setError('Could not cancel deletion.');
+      setError(tt('couldNotCancelDeletion'));
     } finally {
       setLoading(false);
     }
@@ -1497,20 +1471,14 @@ function DeletePanel({ childId, childName, deletionRequestedAt }: {
         <div className="flex items-start gap-3">
           <AlertTriangle size={18} style={{ color: 'var(--danger)', marginTop: 2 }} aria-hidden="true" />
           <div>
-            <p className="font-semibold text-sm" style={{ color: 'var(--danger)' }}>
-              Deletion pending — {daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining` : 'due today'}
+            <p className="font-semibold text-sm" style={{ color: 'var(--danger)' }}>{daysLeft > 0 ? tt('deletionDaysLeft', { count: daysLeft }) : tt('deletionDueToday')}
             </p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              {childName}&apos;s record will be permanently deleted on {dueDate?.toLocaleDateString()}.
-              All health records, visit history, and notes will be removed. This cannot be undone.
-            </p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{tt('sRecordWillBe', { childName: childName, dueDate: dueDate?.toLocaleDateString() ?? '' })}</p>
           </div>
         </div>
         {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
         <Button variant="secondary" onClick={cancelDeletion} loading={loading}>
-          <RotateCcw size={14} className="mr-1.5" aria-hidden="true" />
-          Cancel deletion
-        </Button>
+          <RotateCcw size={14} className="mr-1.5" aria-hidden="true" />{tt('cancelDeletion')}</Button>
       </div>
     );
   }
@@ -1518,10 +1486,8 @@ function DeletePanel({ childId, childName, deletionRequestedAt }: {
   return (
     <div className="rounded-2xl border p-5 flex flex-col gap-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
       <div>
-        <p className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>Delete child record</p>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          The record will be permanently removed after a 3-day grace period. You can cancel at any time before then.
-        </p>
+        <p className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{tt('deleteChildRecord')}</p>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{tt('theRecordWillBe')}</p>
       </div>
       {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
 
@@ -1532,23 +1498,15 @@ function DeletePanel({ childId, childName, deletionRequestedAt }: {
           className="self-start flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors hover:opacity-80"
           style={{ borderColor: 'var(--danger)', color: 'var(--danger)', backgroundColor: 'transparent' }}
         >
-          <Trash2 size={13} aria-hidden="true" />
-          Request deletion
-        </button>
+          <Trash2 size={13} aria-hidden="true" />{tt('requestDeletion')}</button>
       ) : (
         <div className="flex flex-col gap-3">
           <div className="rounded-xl border p-3" style={{ borderColor: '#fca5a5', backgroundColor: 'var(--high-bg)' }}>
-            <p className="text-sm font-semibold" style={{ color: 'var(--danger)' }}>
-              Are you sure you want to delete {childName}?
-            </p>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-              All associated records will be permanently removed after 3 days. This action affects all linked health data.
-            </p>
+            <p className="text-sm font-semibold" style={{ color: 'var(--danger)' }}>{tt('areYouSureYou', { childName: childName })}</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{tt('allAssociatedRecordsWill')}</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setConfirm(false)} disabled={loading} className="flex-1">
-              Cancel
-            </Button>
+            <Button variant="secondary" onClick={() => setConfirm(false)} disabled={loading} className="flex-1">{tt('cancel')}</Button>
             <button
               type="button"
               onClick={requestDeletion}
@@ -1556,7 +1514,7 @@ function DeletePanel({ childId, childName, deletionRequestedAt }: {
               className="flex-1 flex items-center justify-center gap-1.5 text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-60"
               style={{ backgroundColor: 'var(--danger)', color: '#fff' }}
             >
-              {loading ? 'Requesting…' : 'Yes, request deletion'}
+              {loading ? tt('requesting') : tt('yesRequestDeletion')}
             </button>
           </div>
         </div>
@@ -1568,6 +1526,7 @@ function DeletePanel({ childId, childName, deletionRequestedAt }: {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ChildDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const tt = useTranslations('nurse.children.detail');
   const { id } = use(params);
   const [activeTab, setActiveTab] = useState<'chart' | 'vaccines' | 'history' | 'notes' | 'ml' | 'referrals' | 'qr'>('chart');
   const [showMeasurementModal, setShowMeasurementModal] = useState(false);
@@ -1600,16 +1559,12 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
         className="no-print flex items-center gap-1.5 text-sm w-fit"
         style={{ color: 'var(--text-muted)' }}
       >
-        <ArrowLeft size={14} aria-hidden="true" />
-        Children
-      </Link>
+        <ArrowLeft size={14} aria-hidden="true" />{tt('children')}</Link>
 
       {/* Deletion pending banner */}
       {deletionRequestedAt && (
         <div className="no-print flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm" style={{ backgroundColor: 'var(--high-bg)', color: 'var(--danger)' }}>
-          <AlertTriangle size={15} aria-hidden="true" />
-          This record is scheduled for deletion.
-        </div>
+          <AlertTriangle size={15} aria-hidden="true" />{tt('thisRecordIsScheduled')}</div>
       )}
 
       {/* ── Child + Guardian card ───────────────────────────────────────── */}
@@ -1632,7 +1587,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
             </h2>
             <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
               {str('registration_number')} &middot; {str('age_display')} &middot;{' '}
-              {str('sex') === 'M' ? 'Male' : str('sex') === 'F' ? 'Female' : '—'}
+              {str('sex') === 'M' ? tt('male') : str('sex') === 'F' ? tt('female') : '—'}
             </p>
             <div className="flex flex-wrap gap-2 mt-1.5">
               {str('camp_name') && (
@@ -1641,14 +1596,13 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
                 </span>
               )}
               {str('zone_name') && (
-                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                  Zone: {str('zone_name')}
+                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>{tt('zoneName', { zone: str('zone_name') })}
                 </span>
               )}
             </div>
           </div>
           <Badge variant={bool('is_active') ? 'success' : 'default'}>
-            {bool('is_active') ? 'Active' : 'Inactive'}
+            {bool('is_active') ? tt('active') : tt('inactive')}
           </Badge>
         </div>
 
@@ -1669,13 +1623,10 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
             {/* Details */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                  Parent / Guardian
-                </span>
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{tt('parentGuardian')}</span>
                 {bool('guardian_has_account') && (
                   <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full" style={{ background: '#dcfce7', color: '#16a34a' }}>
-                    <UserCheck size={11} /> App account
-                  </span>
+                    <UserCheck size={11} />{' '}{tt('appAccount')}</span>
                 )}
               </div>
               <p className="font-semibold text-sm mt-0.5" style={{ color: 'var(--ink)' }}>
@@ -1693,9 +1644,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
                   </a>
                 )}
                 <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                  <Users size={12} />
-                  Guardian
-                </span>
+                  <Users size={12} />{tt('guardian')}</span>
               </div>
             </div>
 
@@ -1705,9 +1654,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
               className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0"
               style={{ background: 'var(--ink)', color: 'var(--bg)' }}
             >
-              <ExternalLink size={13} />
-              Family profile
-            </Link>
+              <ExternalLink size={13} />{tt('familyProfile')}</Link>
           </div>
         )}
       </div>
@@ -1718,13 +1665,11 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
           className="rounded-2xl border px-5 py-4 no-print"
           style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}
         >
-          <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-            Neonatal details
-          </p>
+          <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{tt('neonatalDetails')}</p>
           <div className="flex flex-wrap gap-6">
             {c?.birth_weight != null && (
               <div>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Birth weight</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('birthWeight')}</p>
                 <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
                   {Number(c.birth_weight).toFixed(2)} kg
                 </p>
@@ -1732,15 +1677,13 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
             )}
             {c?.gestational_age != null && (
               <div>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Gestational age</p>
-                <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-                  {String(c.gestational_age)} wks
-                </p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('gestationalAge')}</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{tt('wks', { String: String(c.gestational_age) })}</p>
               </div>
             )}
             {!!c?.feeding_type && (
               <div>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Feeding type</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('feedingType')}</p>
                 <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
                   {{ BREAST: 'Breastfed', FORMULA: 'Formula', MIXED: 'Mixed' }[c.feeding_type as string] ?? String(c.feeding_type)}
                 </p>
@@ -1756,13 +1699,13 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
         active={activeTab}
         onChange={(k) => setActiveTab(k as typeof activeTab)}
         tabs={[
-          { key: 'chart',    label: 'Growth chart',   icon: <TrendingUp size={14} />    },
-          { key: 'vaccines', label: 'Vaccinations',   icon: <Syringe size={14} />       },
-          { key: 'history',  label: 'Visit history',  icon: <ClipboardList size={14} /> },
-          { key: 'notes',    label: 'Clinical notes', icon: <Pin size={14} />           },
-          { key: 'ml',       label: 'ML Prediction',  icon: <Cpu size={14} />           },
-          { key: 'referrals',label: 'Referrals',      icon: <ExternalLink size={14} />  },
-          { key: 'qr',       label: 'QR Card',        icon: <QrCode size={14} />        },
+          { key: 'chart',    label: tt('growthChart'),   icon: <TrendingUp size={14} />    },
+          { key: 'vaccines', label: tt('vaccinations'),   icon: <Syringe size={14} />       },
+          { key: 'history',  label: tt('visitHistory'),  icon: <ClipboardList size={14} /> },
+          { key: 'notes',    label: tt('clinicalNotes'), icon: <Pin size={14} />           },
+          { key: 'ml',       label: tt('mlPrediction'),  icon: <Cpu size={14} />           },
+          { key: 'referrals',label: tt('referrals'),      icon: <ExternalLink size={14} />  },
+          { key: 'qr',       label: tt('qrCard'),        icon: <QrCode size={14} />        },
         ]}
       />
 
@@ -1777,7 +1720,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
                   <GrowthChart growth={growth} childName={str('full_name')} />
                 </div>
               )
-              : <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No growth data available yet.</p>
+              : <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{tt('noGrowthDataAvailable')}</p>
         )}
 
         {activeTab === 'vaccines' && (
@@ -1792,16 +1735,14 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
         {activeTab === 'history' && (
           <div className="flex flex-col gap-3">
             <div className="flex justify-end">
-              <Button variant="primary" size="sm" onClick={() => setShowMeasurementModal(true)}>
-                Record measurement
-              </Button>
+              <Button variant="primary" size="sm" onClick={() => setShowMeasurementModal(true)}>{tt('recordMeasurement')}</Button>
             </div>
             <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
               {historyLoading
                 ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-14 m-2 rounded-lg" />)
                 : history && history.length > 0
                   ? history.map((r: HealthRecordDetail) => <HistoryRow key={r.id} record={r} />)
-                  : <p className="p-6 text-sm" style={{ color: 'var(--text-muted)' }}>No visit history yet.</p>
+                  : <p className="p-6 text-sm" style={{ color: 'var(--text-muted)' }}>{tt('noVisitHistoryYet')}</p>
               }
             </div>
           </div>
@@ -1834,9 +1775,7 @@ export default function ChildDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* ── Danger zone ─── */}
       <div className="no-print mt-4 flex flex-col gap-2">
-        <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-          Danger zone
-        </p>
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{tt('dangerZone')}</p>
         <DeletePanel
           childId={id}
           childName={str('full_name') || 'this child'}

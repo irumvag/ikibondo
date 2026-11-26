@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -52,11 +53,12 @@ async function sendBulkReminder(campId: string) {
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function StatusBadge({ status, overdue }: { status: string; overdue: boolean }) {
-  if (status === 'DONE') return <Badge variant="success">Done</Badge>;
-  if (status === 'MISSED') return <Badge variant="danger">Missed</Badge>;
-  if (status === 'SKIPPED') return <Badge variant="default">Skipped</Badge>;
-  if (overdue) return <Badge variant="danger">Overdue</Badge>;
-  return <Badge variant="warn">Scheduled</Badge>;
+  const t = useTranslations('nurse.vaccines');
+  if (status === 'DONE') return <Badge variant="success">{t('done')}</Badge>;
+  if (status === 'MISSED') return <Badge variant="danger">{t('missed')}</Badge>;
+  if (status === 'SKIPPED') return <Badge variant="default">{t('skipped')}</Badge>;
+  if (overdue) return <Badge variant="danger">{t('overdue')}</Badge>;
+  return <Badge variant="warn">{t('scheduled')}</Badge>;
 }
 
 // ── Edit vaccination record modal ─────────────────────────────────────────────
@@ -66,6 +68,7 @@ function EditVaxModal({ record, onClose, onSaved }: {
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations('nurse.vaccines');
   const [status, setStatus]       = useState(record.status);
   const [adminDate, setAdminDate] = useState(record.administered_date ?? '');
   const [batch, setBatch]         = useState(record.batch_number ?? '');
@@ -82,7 +85,7 @@ function EditVaxModal({ record, onClose, onSaved }: {
     onSuccess: () => { onSaved(); onClose(); },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? 'Failed to save.');
+      setError(msg ?? t('failedToSave'));
     },
   });
 
@@ -94,28 +97,26 @@ function EditVaxModal({ record, onClose, onSaved }: {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-fraunces)' }}>Edit Vaccination</h2>
+          <h2 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-fraunces)' }}>{t('editVaccination')}</h2>
           <button type="button" onClick={onClose}><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
         </div>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          {record.child_name} · {record.vaccine_name} (Dose {record.dose_number})
-        </p>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('dose', { child_name: record.child_name, vaccine_name: record.vaccine_name, dose_number: record.dose_number })}</p>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="vaccines-status" className="text-sm font-medium">Status</label>
+          <label htmlFor="vaccines-status" className="text-sm font-medium">{t('status')}</label>
           <select id="vaccines-status" value={status} onChange={(e) => setStatus(e.target.value as VaccinationRecord['status'])}
             className="rounded-lg border px-3 py-2 text-sm outline-none"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}>
-            <option value="SCHEDULED">Scheduled</option>
-            <option value="DONE">Done</option>
-            <option value="MISSED">Missed</option>
-            <option value="SKIPPED">Skipped</option>
+            <option value="SCHEDULED">{t('scheduled')}</option>
+            <option value="DONE">{t('done')}</option>
+            <option value="MISSED">{t('missed')}</option>
+            <option value="SKIPPED">{t('skipped')}</option>
           </select>
         </div>
 
         {status === 'DONE' && (
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="vaccines-administered-date" className="text-sm font-medium">Administered date</label>
+            <label htmlFor="vaccines-administered-date" className="text-sm font-medium">{t('administeredDate')}</label>
             <input id="vaccines-administered-date" type="date" value={adminDate} onChange={(e) => setAdminDate(e.target.value)}
               className="rounded-lg border px-3 py-2 text-sm outline-none"
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }} />
@@ -123,9 +124,9 @@ function EditVaxModal({ record, onClose, onSaved }: {
         )}
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="vaccines-batch-number" className="text-sm font-medium">Batch number</label>
+          <label htmlFor="vaccines-batch-number" className="text-sm font-medium">{t('batchNumber')}</label>
           <input id="vaccines-batch-number" type="text" value={batch} onChange={(e) => setBatch(e.target.value)}
-            placeholder="e.g. BN-2024-001"
+            placeholder={t('eGBn2024')}
             className="rounded-lg border px-3 py-2 text-sm outline-none"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }} />
         </div>
@@ -133,10 +134,8 @@ function EditVaxModal({ record, onClose, onSaved }: {
         {error && <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>}
 
         <div className="flex gap-2 pt-1">
-          <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" className="flex-1" onClick={() => mut.mutate()} loading={mut.isPending}>
-            Save
-          </Button>
+          <Button variant="secondary" className="flex-1" onClick={onClose}>{t('cancel')}</Button>
+          <Button variant="primary" className="flex-1" onClick={() => mut.mutate()} loading={mut.isPending}>{t('save')}</Button>
         </div>
       </div>
     </div>
@@ -150,6 +149,7 @@ function DeleteVaxConfirm({ record, onClose, onDeleted }: {
   onClose: () => void;
   onDeleted: () => void;
 }) {
+  const t = useTranslations('nurse.vaccines');
   const mut = useMutation({
     mutationFn: () => apiClient.delete(`/vaccinations/${record.id}/`),
     onSuccess: onDeleted,
@@ -162,19 +162,16 @@ function DeleteVaxConfirm({ record, onClose, onDeleted }: {
         style={{ backgroundColor: 'var(--bg-elev)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="font-semibold" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>Delete record?</p>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Remove <strong>{record.vaccine_name}</strong> record for <strong>{record.child_name}</strong>?
-          This action cannot be undone.
-        </p>
-        {mut.isError && <p className="text-sm" style={{ color: 'var(--danger)' }}>Delete failed. Do you have supervisor permissions?</p>}
+        <p className="font-semibold" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>{t('deleteRecord')}</p>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('remove')}{' '}<strong>{record.vaccine_name}</strong>{' '}{t('recordFor')}{' '}<strong>{record.child_name}</strong>{t('thisActionCannotBe')}</p>
+        {mut.isError && <p className="text-sm" style={{ color: 'var(--danger)' }}>{t('deleteFailedDoYou')}</p>}
         <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" className="flex-1" onClick={onClose}>{t('cancel')}</Button>
           <Button
             variant="primary" className="flex-1" loading={mut.isPending}
             style={{ backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }}
             onClick={() => mut.mutate()}
-          >Delete</Button>
+          >{t('delete')}</Button>
         </div>
       </div>
     </div>
@@ -193,6 +190,7 @@ function VaxTable({
   editable?: boolean;
   onRefresh?: () => void;
 }) {
+  const t = useTranslations('nurse.vaccines');
   const [editRecord, setEditRecord]     = useState<VaccinationRecord | null>(null);
   const [deleteRecord, setDeleteRecord] = useState<VaccinationRecord | null>(null);
 
@@ -225,11 +223,9 @@ function VaxTable({
                   </p>
                   <StatusBadge status={r.status} overdue={r.is_overdue} />
                 </div>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {r.vaccine_name} · Dose {r.dose_number}
-                  {r.administered_date
-                    ? ` · Given ${new Date(r.administered_date).toLocaleDateString()}`
-                    : ` · Due ${new Date(r.scheduled_date).toLocaleDateString()}`}
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{r.administered_date
+                    ? t('doseGiven', { vaccine: r.vaccine_name, dose: r.dose_number, date: new Date(r.administered_date).toLocaleDateString() })
+                    : t('vaccineDoseDue', { vaccine: r.vaccine_name, dose: r.dose_number, date: new Date(r.scheduled_date).toLocaleDateString() })}
                   {r.administered_by_name && ` · by ${r.administered_by_name}`}
                   {r.batch_number && ` · Batch: ${r.batch_number}`}
                 </p>
@@ -238,7 +234,7 @@ function VaxTable({
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     type="button"
-                    title="Edit record"
+                    title={t('editRecord')}
                     onClick={() => setEditRecord(r)}
                     className="p-1.5 rounded-lg border transition-opacity hover:opacity-70"
                     style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
@@ -247,7 +243,7 @@ function VaxTable({
                   </button>
                   <button
                     type="button"
-                    title="Delete record (supervisor only)"
+                    title={t('deleteRecordSupervisorOnly')}
                     onClick={() => setDeleteRecord(r)}
                     className="p-1.5 rounded-lg border transition-opacity hover:opacity-70"
                     style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}
@@ -281,16 +277,18 @@ function VaxTable({
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
+// Tab names: messages/en.json nurse.vaccines.tab.<key>
 const TABS = [
-  { key: 'today',    label: 'Today',    icon: <Clock size={14} /> },
-  { key: 'overdue',  label: 'Overdue',  icon: <AlertTriangle size={14} /> },
-  { key: 'upcoming', label: 'Upcoming', icon: <CalendarDays size={14} /> },
-  { key: 'history',  label: 'History',  icon: <CheckCircle2 size={14} /> },
+  { key: 'today',    icon: <Clock size={14} /> },
+  { key: 'overdue',  icon: <AlertTriangle size={14} /> },
+  { key: 'upcoming', icon: <CalendarDays size={14} /> },
+  { key: 'history',  icon: <CheckCircle2 size={14} /> },
 ] as const;
 
 type Tab = typeof TABS[number]['key'];
 
 export default function NurseVaccinesPage() {
+  const t = useTranslations('nurse.vaccines');
   const user   = useAuthStore((s) => s.user);
   const campId = user?.camp ?? undefined;
   const qc     = useQueryClient();
@@ -381,12 +379,8 @@ export default function NurseVaccinesPage() {
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-            Vaccinations
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Track scheduled, overdue, and completed doses for your camp.
-          </p>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('vaccinations')}</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('trackScheduledOverdueAnd')}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {overdueCount > 0 && (
@@ -396,20 +390,16 @@ export default function NurseVaccinesPage() {
               onClick={() => bulkRemindMut.mutate()}
               loading={bulkRemindMut.isPending}
               disabled={!campId}
-              title="Send SMS reminders to parents of overdue children"
+              title={t('sendSmsRemindersTo')}
             >
-              <Send size={13} className="mr-1.5" aria-hidden="true" />
-              Remind {overdueCount} overdue
-            </Button>
+              <Send size={13} className="mr-1.5" aria-hidden="true" />{t('remindOverdue', { overdueCount: overdueCount })}</Button>
           )}
           <Link
             href="/nurse/vaccines/session"
             className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-xl border transition-colors hover:opacity-80"
             style={{ borderColor: 'var(--ink)', color: 'var(--ink)', backgroundColor: 'transparent' }}
           >
-            <Syringe size={13} aria-hidden="true" />
-            Clinic sessions
-            <ArrowRight size={13} aria-hidden="true" />
+            <Syringe size={13} aria-hidden="true" />{t('clinicSessions')}<ArrowRight size={13} aria-hidden="true" />
           </Link>
         </div>
       </div>
@@ -417,10 +407,10 @@ export default function NurseVaccinesPage() {
       {/* KPI strip */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: 'Today',    value: todayCount,           color: 'var(--primary)',  bg: 'var(--bg-elev)'  },
-          { label: 'Overdue',  value: overdueCount,         color: 'var(--danger)',   bg: 'var(--high-bg)'  },
-          { label: 'Upcoming', value: upcomingItems.length, color: 'var(--warn)',     bg: 'var(--med-bg)'   },
-          { label: 'Done',     value: historyItems.length,  color: 'var(--success)',  bg: 'var(--low-bg)'   },
+          { label: t('today'),    value: todayCount,           color: 'var(--primary)',  bg: 'var(--bg-elev)'  },
+          { label: t('overdue'),  value: overdueCount,         color: 'var(--danger)',   bg: 'var(--high-bg)'  },
+          { label: t('upcoming'), value: upcomingItems.length, color: 'var(--warn)',     bg: 'var(--med-bg)'   },
+          { label: t('done'),     value: historyItems.length,  color: 'var(--success)',  bg: 'var(--low-bg)'   },
         ].map(({ label, value, color, bg }) => (
           <div key={label} className="rounded-2xl border p-4 flex flex-col gap-1" style={{ borderColor: 'var(--border)', backgroundColor: bg }}>
             <p className="text-2xl font-bold" style={{ color, fontFamily: 'var(--font-fraunces)' }}>{value}</p>
@@ -431,7 +421,7 @@ export default function NurseVaccinesPage() {
 
       {/* Tabs — scrollable on narrow screens so no tab is unreachable */}
       <div className="flex gap-1 border-b overflow-x-auto" style={{ borderColor: 'var(--border)' }}>
-        {TABS.map(({ key, label, icon }) => (
+        {TABS.map(({ key, icon }) => (
           <button
             key={key}
             type="button"
@@ -443,7 +433,7 @@ export default function NurseVaccinesPage() {
             }}
           >
             {icon}
-            {label}
+            {t(`tab.${key}`)}
             {key === 'today' && todayCount > 0 && (
               <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full font-semibold" style={{ backgroundColor: 'var(--ink)', color: 'var(--bg)' }}>
                 {todayCount}
@@ -466,14 +456,12 @@ export default function NurseVaccinesPage() {
             <div className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm flex-1" style={{ backgroundColor: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
               <Clock size={14} style={{ color: 'var(--primary)' }} aria-hidden="true" />
               <span style={{ color: 'var(--ink)' }}>
-                <strong>{todayCount}</strong> vaccination{todayCount !== 1 ? 's' : ''} scheduled for today
-              </span>
+                <strong>{todayCount}</strong>{' '}{t('vaccination')}{todayCount !== 1 ? 's' : ''}{' '}{t('scheduledForToday')}</span>
             </div>
             <div className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm flex-1" style={{ backgroundColor: 'var(--low-bg)', border: '1px solid var(--border)' }}>
               <CheckCircle2 size={14} style={{ color: 'var(--success)' }} aria-hidden="true" />
               <span style={{ color: 'var(--ink)' }}>
-                <strong>{todayDoneItems.length}</strong> already done today
-              </span>
+                <strong>{todayDoneItems.length}</strong>{' '}{t('alreadyDoneToday')}</span>
             </div>
           </div>
 
@@ -483,21 +471,20 @@ export default function NurseVaccinesPage() {
             </div>
           ) : todayCount === 0 && todayDoneItems.length === 0 ? (
             <EmptyState
-              title="No vaccinations scheduled today"
-              description="No doses are scheduled for today in your camp."
+              title={t('noVaccinationsScheduledToday')}
+              description={t('noDosesAreScheduled')}
             />
           ) : (
             <div className="flex flex-col gap-5">
               {/* Grouped by vaccine */}
               {Object.keys(todayByVaccine).length > 0 && (
                 <div className="flex flex-col gap-4">
-                  <h3 className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Scheduled today</h3>
+                  <h3 className="text-base font-semibold" style={{ color: 'var(--ink)' }}>{t('scheduledToday')}</h3>
                   {Object.entries(todayByVaccine).map(([vaccineName, records]) => (
                     <div key={vaccineName} className="flex flex-col gap-2">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{vaccineName}</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' }}>
-                          {records.length} child{records.length !== 1 ? 'ren' : ''}
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' }}>{t('childCount', { count: records.length })}
                         </span>
                       </div>
                       <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
@@ -512,9 +499,7 @@ export default function NurseVaccinesPage() {
                                 <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>{r.child_name}</p>
                                 <StatusBadge status={r.status} overdue={r.is_overdue} />
                               </div>
-                              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                                Dose {r.dose_number} · Due {new Date(r.scheduled_date).toLocaleDateString()}
-                              </p>
+                              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('doseDue', { dose: r.dose_number, date: new Date(r.scheduled_date).toLocaleDateString() })}</p>
                             </div>
                           </div>
                         ))}
@@ -527,7 +512,7 @@ export default function NurseVaccinesPage() {
               {/* Done today */}
               {todayDoneItems.length > 0 && (
                 <div className="flex flex-col gap-2">
-                  <h3 className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Completed today</h3>
+                  <h3 className="text-base font-semibold" style={{ color: 'var(--ink)' }}>{t('completedToday')}</h3>
                   <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
                     {todayDoneItems.map((r, idx) => (
                       <div
@@ -540,9 +525,7 @@ export default function NurseVaccinesPage() {
                             <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>{r.child_name}</p>
                             <StatusBadge status={r.status} overdue={false} />
                           </div>
-                          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                            {r.vaccine_name} · Dose {r.dose_number}
-                            {r.administered_by_name && ` · by ${r.administered_by_name}`}
+                          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{r.administered_by_name ? t('doseBy', { vaccine: r.vaccine_name, dose: r.dose_number, name: r.administered_by_name }) : t('dose2', { vaccine_name: r.vaccine_name, dose_number: r.dose_number })}
                             {r.batch_number && ` · Batch: ${r.batch_number}`}
                           </p>
                         </div>
@@ -555,9 +538,7 @@ export default function NurseVaccinesPage() {
               {/* Missed today */}
               {todayMissedItems.length > 0 && (
                 <div className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm" style={{ backgroundColor: 'var(--high-bg)', color: 'var(--danger)' }}>
-                  <AlertTriangle size={14} aria-hidden="true" />
-                  {todayMissedItems.length} child{todayMissedItems.length !== 1 ? 'ren' : ''} missed their appointment today.
-                </div>
+                  <AlertTriangle size={14} aria-hidden="true" />{t('missedToday', { count: todayMissedItems.length })}</div>
               )}
             </div>
           )}
@@ -568,13 +549,10 @@ export default function NurseVaccinesPage() {
         <div className="flex flex-col gap-4">
           {overdueCount > 0 && (
             <div className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm" style={{ backgroundColor: 'var(--high-bg)', color: 'var(--danger)' }}>
-              <AlertTriangle size={14} aria-hidden="true" />
-              {overdueCount} child{overdueCount !== 1 ? 'ren' : ''} missed their scheduled vaccination.
-              Use &ldquo;Remind overdue&rdquo; to send SMS reminders to their guardians.
-            </div>
+              <AlertTriangle size={14} aria-hidden="true" />{t('child2', { overdueCount: overdueCount })}{overdueCount !== 1 ? 'ren' : ''}{' '}{t('missedTheirScheduledVaccination')}</div>
           )}
           <VaxTable
-            title="Overdue vaccinations"
+            title={t('overdueVaccinations')}
             icon={<AlertTriangle size={16} />}
             items={overdueItems}
             isLoading={overdueLoading}
@@ -586,7 +564,7 @@ export default function NurseVaccinesPage() {
 
       {tab === 'upcoming' && (
         <VaxTable
-          title="Upcoming (next 30 days)"
+          title={t('upcomingNext30Days')}
           icon={<Clock size={16} />}
           items={upcomingItems}
           isLoading={upcomingLoading}
@@ -597,7 +575,7 @@ export default function NurseVaccinesPage() {
 
       {tab === 'history' && (
         <VaxTable
-          title="Vaccination history"
+          title={t('vaccinationHistory')}
           icon={<CheckCircle2 size={16} />}
           items={historyItems}
           isLoading={historyLoading}

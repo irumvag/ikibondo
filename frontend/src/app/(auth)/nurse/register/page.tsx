@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -62,7 +63,8 @@ const EMPTY_NEWBORN: NewbornForm = {
   guardian_full_name: '', guardian_phone: '', guardian_relationship: '',
 };
 
-const RELATIONSHIPS = ['Mother', 'Father', 'Grandmother', 'Grandfather', 'Aunt', 'Uncle', 'Sibling', 'Other'];
+// Saved in English; shown as messages/en.json nurse.register.relationshipOption.<value>
+const RELATIONSHIPS = ['Mother', 'Father', 'Grandmother', 'Grandfather', 'Aunt', 'Uncle', 'Sibling', 'Other'] as const;
 
 // ── Account setup (parent sets their own password) ─────────────────────────────
 
@@ -80,15 +82,17 @@ type RegistrationResult = {
   account_created: boolean;
 };
 
-function deliveryText(d: SetupDelivery | undefined, name: string): string {
-  if (!d) return `${name} has not set a password yet.`;
-  if (d.sms && d.email) return `A link to set a password was sent to ${name} by SMS and email.`;
-  if (d.sms) return `A link to set a password was sent to ${name} by SMS.`;
-  if (d.email) return `A link to set a password was sent to ${name} by email.`;
-  return `No SMS or email could be sent. Ask ${name} to scan this code with their phone to set a password.`;
+// Which message (messages/en.json nurse.register.delivery.<key>) describes how the set-password link went out
+function deliveryKey(d: SetupDelivery | undefined): 'none' | 'smsEmail' | 'sms' | 'email' | 'noneSent' {
+  if (!d) return 'none';
+  if (d.sms && d.email) return 'smsEmail';
+  if (d.sms) return 'sms';
+  if (d.email) return 'email';
+  return 'noneSent';
 }
 
 function SetupLinkPanel({ result }: { result: RegistrationResult }) {
+  const t = useTranslations('nurse.register');
   const [delivery, setDelivery] = useState<SetupDelivery | undefined>(result.setup_delivery);
   const [link, setLink]         = useState<string | undefined>(result.setup_link);
   const [sending, setSending]   = useState(false);
@@ -103,7 +107,7 @@ function SetupLinkPanel({ result }: { result: RegistrationResult }) {
       setLink(updated.setup_link);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg ?? 'Could not send a new link. Try again.');
+      setError(msg ?? t('couldNotSendA'));
     } finally {
       setSending(false);
     }
@@ -117,26 +121,22 @@ function SetupLinkPanel({ result }: { result: RegistrationResult }) {
       <div className="flex items-start gap-2">
         <KeyRound size={16} style={{ color: 'var(--ink)', marginTop: 2 }} aria-hidden="true" />
         <div>
-          <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-            {result.parent_name} chooses their own password
-          </p>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {deliveryText(delivery, result.parent_name)} The link works once and expires in 3 days.
-            They sign in with <strong>{result.login_id || 'their phone number'}</strong>.
+          <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{t('choosesTheirOwnPassword', { parent_name: result.parent_name })}</p>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t.rich('linkWorksOnce', { delivery: t(`delivery.${deliveryKey(delivery)}`, { name: result.parent_name }), login: result.login_id || t('theirPhoneNumber'), b: (chunks) => <strong>{chunks}</strong> })}
           </p>
         </div>
       </div>
 
       {link && (
         <div className="flex justify-center rounded-xl p-4" style={{ backgroundColor: '#fff' }}>
-          <QRCodeSVG value={link} size={180} level="M" aria-label="Set-password link for the parent" />
+          <QRCodeSVG value={link} size={180} level="M" aria-label={t('setPasswordLinkFor')} />
         </div>
       )}
 
       {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
 
       <Button variant="secondary" onClick={resend} disabled={sending}>
-        {sending ? 'Sending…' : 'Send a new link'}
+        {sending ? t('sending') : t('sendANewLink')}
       </Button>
     </div>
   );
@@ -151,6 +151,7 @@ function SuccessScreen({
   onReset: () => void;
   onBack: () => void;
 }) {
+  const t = useTranslations('nurse.register');
   return (
     <div className="flex flex-col gap-5 max-w-md mx-auto w-full">
       {/* Header */}
@@ -162,12 +163,8 @@ function SuccessScreen({
           <CheckCircle size={24} aria-hidden="true" />
         </div>
         <div>
-          <h2 className="text-xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-            Child registered!
-          </h2>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {result.child_name} has been added and linked to {result.parent_name}.
-          </p>
+          <h2 className="text-xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('childRegistered')}</h2>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('hasBeenAddedAnd', { child_name: result.child_name, parent_name: result.parent_name })}</p>
         </div>
       </div>
 
@@ -176,9 +173,7 @@ function SuccessScreen({
         className="rounded-2xl border px-5 py-4"
         style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
       >
-        <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>
-          Registration number
-        </p>
+        <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{t('registrationNumber')}</p>
         <p className="text-2xl font-mono font-bold" style={{ color: 'var(--ink)' }}>{result.reg_number}</p>
       </div>
 
@@ -187,18 +182,15 @@ function SuccessScreen({
 
       {/* Actions */}
       <div className="flex gap-3">
-        <Button variant="primary" className="flex-1" onClick={onReset}>
-          Register another
-        </Button>
-        <Button variant="secondary" className="flex-1" onClick={onBack}>
-          Back to children
-        </Button>
+        <Button variant="primary" className="flex-1" onClick={onReset}>{t('registerAnother')}</Button>
+        <Button variant="secondary" className="flex-1" onClick={onBack}>{t('backToChildren')}</Button>
       </div>
     </div>
   );
 }
 
 export default function NurseRegisterPage() {
+  const t = useTranslations('nurse.register');
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const campId = user?.camp ?? '';
@@ -396,7 +388,7 @@ export default function NurseRegisterPage() {
       });
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data;
-      setError(data?.error ?? data?.message ?? 'Registration failed. Please check the form and try again.');
+      setError(data?.error ?? data?.message ?? t('registrationFailedPleaseCheck'));
     } finally {
       setSubmitting(false);
       submitLock.current = false;
@@ -410,29 +402,26 @@ export default function NurseRegisterPage() {
 
   // ── Step indicators ────────────────────────────────────────────────────────
   const steps: { key: Step; label: string }[] = [
-    { key: 'parent',  label: 'Parent account' },
-    { key: 'newborn', label: 'Newborn info'    },
-    { key: 'confirm', label: 'Confirm'          },
+    { key: 'parent',  label: t('parentAccount') },
+    { key: 'newborn', label: t('newbornInfo')    },
+    { key: 'confirm', label: t('confirm')          },
   ];
   const stepIdx = steps.findIndex((s) => s.key === step);
 
   return (
     <div className="flex flex-col gap-6 max-w-lg mx-auto w-full">
       <div>
-        <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-          Register child
-        </h2>
+        <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('registerChild')}</h2>
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          {user?.camp_name ?? ''} &middot; Step {stepIdx + 1} of {steps.length}
-        </p>
+          {user?.camp_name ?? ''}{' '}{t('stepOf', { value: stepIdx + 1, length: steps.length })}</p>
       </div>
 
       {/* Mode toggle — only on step 1 (before entering child details) */}
       {step === 'parent' && (
         <div className="flex gap-2">
           {([
-            { value: 'newborn',  label: 'Newborn (today)' },
-            { value: 'existing', label: 'Existing child'   },
+            { value: 'newborn',  label: t('newbornToday') },
+            { value: 'existing', label: t('existingChild')   },
           ] as const).map(({ value, label }) => (
             <button
               key={value}
@@ -479,9 +468,7 @@ export default function NurseRegisterPage() {
             <>
               {/* Search existing */}
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="register-search-parent" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
-                  Search existing parent
-                </label>
+                <label htmlFor="register-search-parent" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('searchExistingParent')}</label>
                 <div className="relative">
                   <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
                   <input
@@ -489,7 +476,7 @@ export default function NurseRegisterPage() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => { setSearchQuery(e.target.value); doSearch(e.target.value); }}
-                    placeholder="Search by name or phone…"
+                    placeholder={t('searchByNameOr')}
                     className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border outline-none"
                     style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
                   />
@@ -500,10 +487,10 @@ export default function NurseRegisterPage() {
                     style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
                   >
                     {searching && (
-                      <p className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>Searching…</p>
+                      <p className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>{t('searching')}</p>
                     )}
                     {!searching && searchResults.length === 0 && searchQuery.trim() && (
-                      <p className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>No parents found.</p>
+                      <p className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>{t('noParentsFound')}</p>
                     )}
                     {searchResults.map((p) => (
                       <button
@@ -517,7 +504,7 @@ export default function NurseRegisterPage() {
                           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{p.phone_number} · {p.email}</p>
                         </div>
                         <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' }}>
-                          {p.is_approved ? 'Active' : 'Pending'}
+                          {p.is_approved ? t('active') : t('pending')}
                         </span>
                       </button>
                     ))}
@@ -527,38 +514,36 @@ export default function NurseRegisterPage() {
 
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px" style={{ backgroundColor: 'var(--border)' }} />
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>or create new</span>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('orCreateNew')}</span>
                 <div className="flex-1 h-px" style={{ backgroundColor: 'var(--border)' }} />
               </div>
 
               {!showNewForm ? (
                 <Button variant="secondary" onClick={() => setShowNewForm(true)}>
-                  <UserPlus size={15} className="mr-2" />
-                  New parent account
-                </Button>
+                  <UserPlus size={15} className="mr-2" />{t('newParentAccount')}</Button>
               ) : (
                 <div className="flex flex-col gap-3">
                   <Input
-                    label="Full name"
+                    label={t('fullName')}
                     value={parentForm.full_name}
                     onChange={(e) => setP('full_name', e.target.value)}
                     required
                   />
                   <Input
-                    label="Email address"
+                    label={t('emailAddress')}
                     type="email"
                     value={parentForm.email}
                     onChange={(e) => setP('email', e.target.value)}
                     required
                   />
                   <Input
-                    label="Phone number"
+                    label={t('phoneNumber')}
                     type="tel"
                     value={parentForm.phone_number}
                     onChange={(e) => setP('phone_number', e.target.value)}
                     required
                   />
-                  <Button variant="secondary" onClick={() => setShowNewForm(false)}>Cancel</Button>
+                  <Button variant="secondary" onClick={() => setShowNewForm(false)}>{t('cancel')}</Button>
                 </div>
               )}
             </>
@@ -581,9 +566,7 @@ export default function NurseRegisterPage() {
           )}
 
           {error && <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>}
-          <Button variant="primary" onClick={() => setStep('newborn')} disabled={!parentReady}>
-            Next: Child info
-          </Button>
+          <Button variant="primary" onClick={() => setStep('newborn')} disabled={!parentReady}>{t('nextChildInfo')}</Button>
         </div>
       )}
 
@@ -595,10 +578,8 @@ export default function NurseRegisterPage() {
             <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 flex gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-amber-800">Possible duplicate detected</p>
-                <p className="text-xs text-amber-700 mt-0.5">
-                  {duplicates.length} existing record{duplicates.length > 1 ? 's' : ''} match this date of birth and guardian phone:
-                </p>
+                <p className="text-sm font-semibold text-amber-800">{t('possibleDuplicateDetected')}</p>
+                <p className="text-xs text-amber-700 mt-0.5">{t('existingRecords', { count: duplicates.length })}</p>
                 <ul className="mt-1 space-y-0.5">
                   {duplicates.map((d) => (
                     <li key={d.id} className="text-xs text-amber-700 font-medium">
@@ -606,29 +587,28 @@ export default function NurseRegisterPage() {
                     </li>
                   ))}
                 </ul>
-                <p className="text-xs text-amber-600 mt-1">Confirm this is a new child before proceeding.</p>
+                <p className="text-xs text-amber-600 mt-1">{t('confirmThisIsA')}</p>
               </div>
             </div>
           )}
           <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-            {regMode === 'newborn' ? 'Newborn' : 'Child'}
+            {regMode === 'newborn' ? t('newborn') : t('child')}
           </p>
           <Input
-            label="Full name"
+            label={t('fullName')}
             value={newbornForm.full_name}
             onChange={(e) => setN('full_name', e.target.value)}
             required
           />
           <Input
-            label={regMode === 'newborn' ? 'Date of birth (today)' : 'Date of birth (known)'}
+            label={regMode === 'newborn' ? t('dateOfBirthToday') : t('dateOfBirthKnown')}
             type="date"
             value={newbornForm.date_of_birth}
             onChange={(e) => setN('date_of_birth', e.target.value)}
             required
           />
           <div className="flex flex-col gap-1.5">
-            <p id="register-sex-label" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
-              Sex <span style={{ color: 'var(--danger)' }}>*</span>
+            <p id="register-sex-label" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('sex')}{' '}<span style={{ color: 'var(--danger)' }}>*</span>
             </p>
             <div role="group" aria-labelledby="register-sex-label" className="flex gap-3">
               {(['M', 'F'] as const).map((s) => (
@@ -644,19 +624,18 @@ export default function NurseRegisterPage() {
                     color: newbornForm.sex === s ? 'var(--bg)' : 'var(--text-muted)',
                   }}
                 >
-                  {s === 'M' ? 'Male' : 'Female'}
+                  {s === 'M' ? t('male') : t('female')}
                 </button>
               ))}
             </div>
           </div>
 
           {/* ── Neonatal clinical details (optional) ─────────────────────── */}
-          <p className="text-xs font-semibold mt-1" style={{ color: 'var(--text-muted)' }}>
-            Clinical details <span className="font-normal normal-case">(optional)</span>
+          <p className="text-xs font-semibold mt-1" style={{ color: 'var(--text-muted)' }}>{t('clinicalDetails')}{' '}<span className="font-normal normal-case">{t('optional')}</span>
           </p>
           <div className="flex gap-3">
             <Input
-              label="Birth weight (kg)"
+              label={t('birthWeightKg')}
               type="number"
               inputMode="decimal"
               value={newbornForm.birth_weight}
@@ -664,7 +643,7 @@ export default function NurseRegisterPage() {
               placeholder="e.g. 3.25"
             />
             <Input
-              label="Gestational age (wks)"
+              label={t('gestationalAgeWks')}
               type="number"
               inputMode="numeric"
               value={newbornForm.gestational_age}
@@ -673,12 +652,12 @@ export default function NurseRegisterPage() {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <p id="register-feeding-label" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Feeding type</p>
+            <p id="register-feeding-label" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('feedingType')}</p>
             <div role="group" aria-labelledby="register-feeding-label" className="flex gap-2">
               {([
-                { value: 'BREAST',  label: 'Breastfed'  },
-                { value: 'FORMULA', label: 'Formula'     },
-                { value: 'MIXED',   label: 'Mixed'       },
+                { value: 'BREAST',  label: t('breastfed')  },
+                { value: 'FORMULA', label: t('formula')     },
+                { value: 'MIXED',   label: t('mixed')       },
               ] as const).map(({ value, label }) => (
                 <button
                   key={value}
@@ -700,14 +679,14 @@ export default function NurseRegisterPage() {
 
           {zones.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="register-zone-optional" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Zone (optional)</label>
+              <label htmlFor="register-zone-optional" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('zoneOptional')}</label>
               <select id="register-zone-optional"
                 value={newbornForm.zone}
                 onChange={(e) => setN('zone', e.target.value)}
                 className="text-sm px-3 py-2 rounded-lg border outline-none"
                 style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
               >
-                <option value="">No zone assigned</option>
+                <option value="">{t('noZoneAssigned')}</option>
                 {zones.map((z) => (
                   <option key={z.id} value={z.id}>{z.name}</option>
                 ))}
@@ -716,12 +695,12 @@ export default function NurseRegisterPage() {
           )}
 
           <Input
-            label="Notes (optional)"
+            label={t('notesOptional')}
             value={newbornForm.notes}
             onChange={(e) => setN('notes', e.target.value)}
           />
 
-          <p className="text-xs font-semibold mt-2" style={{ color: 'var(--text-muted)' }}>Guardian</p>
+          <p className="text-xs font-semibold mt-2" style={{ color: 'var(--text-muted)' }}>{t('guardian')}</p>
 
           {/* When an existing parent is selected, name/phone are pre-filled and read-only */}
           {selectedParent ? (
@@ -729,9 +708,7 @@ export default function NurseRegisterPage() {
               className="rounded-xl border px-4 py-3 flex flex-col gap-1"
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-sand)' }}
             >
-              <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                Pre-filled from parent account
-              </p>
+              <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('preFilledFromParent')}</p>
               <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
                 {selectedParent.full_name}
               </p>
@@ -752,12 +729,10 @@ export default function NurseRegisterPage() {
                   className="self-start flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-[var(--bg-sand)]"
                   style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
                 >
-                  <Copy size={13} aria-hidden="true" />
-                  Same as parent (copy parent info to guardian)
-                </button>
+                  <Copy size={13} aria-hidden="true" />{t('sameAsParentCopy')}</button>
               )}
               <Input
-                label="Guardian phone"
+                label={t('guardianPhone')}
                 type="tel"
                 value={newbornForm.guardian_phone}
                 onChange={(e) => handleGuardianPhone(e.target.value)}
@@ -774,24 +749,20 @@ export default function NurseRegisterPage() {
                 >
                   <UserCheck size={16} style={{ color: 'var(--success)', marginTop: 2 }} className="shrink-0" />
                   <div>
-                    <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-                      Existing guardian found — no duplicate will be created
-                    </p>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{t('existingGuardianFoundNo')}</p>
                     <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                       {existingGuardian.full_name} · {existingGuardian.phone_number}
                       {existingGuardian.children_count > 0
-                        ? ` · ${existingGuardian.children_count} child${existingGuardian.children_count !== 1 ? 'ren' : ''} already registered`
+                        ? t('alreadyRegistered', { count: existingGuardian.children_count })
                         : ''}
-                      {existingGuardian.has_account ? ' · Has app account' : ''}
+                      {existingGuardian.has_account ? t('hasAppAccount') : ''}
                     </p>
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                      This new child will be linked to this guardian automatically.
-                    </p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{t('thisNewChildWill')}</p>
                   </div>
                 </div>
               )}
               <Input
-                label="Guardian full name"
+                label={t('guardianFullName')}
                 value={newbornForm.guardian_full_name}
                 onChange={(e) => setN('guardian_full_name', e.target.value)}
                 required
@@ -800,8 +771,7 @@ export default function NurseRegisterPage() {
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="register-relationship" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
-              Relationship <span style={{ color: 'var(--danger)' }}>*</span>
+            <label htmlFor="register-relationship" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('relationship')}{' '}<span style={{ color: 'var(--danger)' }}>*</span>
             </label>
             <select id="register-relationship"
               value={newbornForm.guardian_relationship}
@@ -809,23 +779,21 @@ export default function NurseRegisterPage() {
               className="text-sm px-3 py-2 rounded-lg border outline-none"
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
             >
-              <option value="">Select relationship</option>
+              <option value="">{t('selectRelationship')}</option>
               {RELATIONSHIPS.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <option key={r} value={r}>{t(`relationshipOption.${r}`)}</option>
               ))}
             </select>
           </div>
 
           <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => setStep('parent')} className="flex-1">Back</Button>
+            <Button variant="secondary" onClick={() => setStep('parent')} className="flex-1">{t('back')}</Button>
             <Button
               variant="primary"
               onClick={() => setStep('confirm')}
               disabled={!newbornReady}
               className="flex-1"
-            >
-              Review &amp; confirm
-            </Button>
+            >{t('reviewConfirm')}</Button>
           </div>
         </div>
       )}
@@ -837,7 +805,7 @@ export default function NurseRegisterPage() {
             className="rounded-2xl border p-5 flex flex-col gap-3"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
           >
-            <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Parent account</p>
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('parentAccount')}</p>
             {[
               ['Name',  selectedParent?.full_name ?? parentForm.full_name],
               ['Email', selectedParent?.email ?? parentForm.email],
@@ -850,15 +818,15 @@ export default function NurseRegisterPage() {
               </div>
             ))}
 
-            <p className="text-xs font-semibold mt-2" style={{ color: 'var(--text-muted)' }}>Newborn</p>
+            <p className="text-xs font-semibold mt-2" style={{ color: 'var(--text-muted)' }}>{t('newborn')}</p>
             {[
-              ['Name',             newbornForm.full_name],
-              ['DOB',              newbornForm.date_of_birth],
-              ['Sex',              newbornForm.sex === 'M' ? 'Male' : 'Female'],
-              ['Camp',             user?.camp_name ?? campId],
-              ...(newbornForm.birth_weight    ? [['Birth weight',    `${newbornForm.birth_weight} kg`]]   : []),
-              ...(newbornForm.gestational_age ? [['Gestational age', `${newbornForm.gestational_age} wks`]] : []),
-              ...(newbornForm.feeding_type    ? [['Feeding type',    { BREAST: 'Breastfed', FORMULA: 'Formula', MIXED: 'Mixed' }[newbornForm.feeding_type]]] : []),
+              [t('summaryRow.name'),             newbornForm.full_name],
+              [t('summaryRow.dob'),              newbornForm.date_of_birth],
+              [t('summaryRow.sex'),              newbornForm.sex === 'M' ? t('summaryRow.male') : t('summaryRow.female')],
+              [t('summaryRow.camp'),             user?.camp_name ?? campId],
+              ...(newbornForm.birth_weight    ? [[t('summaryRow.birthWeight'),    t('summaryRow.kg', { value: newbornForm.birth_weight })]]   : []),
+              ...(newbornForm.gestational_age ? [[t('summaryRow.gestationalAge'), t('summaryRow.weeks', { value: newbornForm.gestational_age })]] : []),
+              ...(newbornForm.feeding_type    ? [[t('summaryRow.feedingType'),    t(`summaryRow.feeding.${newbornForm.feeding_type}`)]] : []),
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between text-sm border-b last:border-b-0 pb-2 last:pb-0" style={{ borderColor: 'var(--border)' }}>
                 <span style={{ color: 'var(--text-muted)' }}>{k}</span>
@@ -866,11 +834,11 @@ export default function NurseRegisterPage() {
               </div>
             ))}
 
-            <p className="text-xs font-semibold mt-2" style={{ color: 'var(--text-muted)' }}>Guardian</p>
+            <p className="text-xs font-semibold mt-2" style={{ color: 'var(--text-muted)' }}>{t('guardian')}</p>
             {[
-              ['Name',         newbornForm.guardian_full_name],
-              ['Phone',        newbornForm.guardian_phone],
-              ['Relationship', newbornForm.guardian_relationship],
+              [t('summaryRow.name'),         newbornForm.guardian_full_name],
+              [t('summaryRow.phone'),        newbornForm.guardian_phone],
+              [t('summaryRow.relationship'), newbornForm.guardian_relationship ? t(`relationshipOption.${newbornForm.guardian_relationship as (typeof RELATIONSHIPS)[number]}`) : ''],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between text-sm border-b last:border-b-0 pb-2 last:pb-0" style={{ borderColor: 'var(--border)' }}>
                 <span style={{ color: 'var(--text-muted)' }}>{k}</span>
@@ -881,11 +849,9 @@ export default function NurseRegisterPage() {
 
           {error && <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>}
           <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => setStep('newborn')} className="flex-1">Back</Button>
+            <Button variant="secondary" onClick={() => setStep('newborn')} className="flex-1">{t('back')}</Button>
             <Button variant="primary" loading={submitting} onClick={handleSubmit} className="flex-1">
-              <UserPlus size={15} className="mr-2" aria-hidden="true" />
-              Register &amp; link
-            </Button>
+              <UserPlus size={15} className="mr-2" aria-hidden="true" />{t('registerLink')}</Button>
           </div>
         </div>
       )}

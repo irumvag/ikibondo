@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ClipboardList, Plus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,19 +19,22 @@ import type { HealthRecordDetail } from '@/lib/api/nurse';
 
 // ── Filters ───────────────────────────────────────────────────────────────────
 
-const RISK_OPTIONS = [
-  { value: '',        label: 'All risk levels' },
+type RecordsT = ReturnType<typeof useTranslations<'nurse.records'>>;
+
+// Filter options use translated text, so they are built from t.
+const riskOptions = (t: RecordsT) => [
+  { value: '',        label: t('allRiskLevels') },
   { value: 'HIGH',    label: 'HIGH'    },
   { value: 'MEDIUM',  label: 'MEDIUM'  },
   { value: 'LOW',     label: 'LOW'     },
-  { value: 'UNKNOWN', label: 'Unknown' },
+  { value: 'UNKNOWN', label: t('unknown') },
 ];
 
-const STATUS_OPTIONS = [
-  { value: '',       label: 'All statuses' },
+const statusOptions = (t: RecordsT) => [
+  { value: '',       label: t('allStatuses') },
   { value: 'SAM',    label: 'SAM'    },
   { value: 'MAM',    label: 'MAM'    },
-  { value: 'NORMAL', label: 'Normal' },
+  { value: 'NORMAL', label: t('normal') },
 ];
 
 function riskVariant(r: string) {
@@ -43,6 +47,7 @@ function riskVariant(r: string) {
 // ── SHAP detail drawer ────────────────────────────────────────────────────────
 
 function ShapPanel({ record, onClose }: { record: HealthRecordDetail; onClose: () => void }) {
+  const t = useTranslations('nurse.records');
   const factors = record.risk_factors;
   const entries: [string, number][] = (() => {
     if (!factors) return [];
@@ -83,9 +88,7 @@ function ShapPanel({ record, onClose }: { record: HealthRecordDetail; onClose: (
           className="text-sm px-3 py-1.5 rounded-lg hover:bg-[var(--bg-sand)]"
           style={{ color: 'var(--text-muted)' }}
           onClick={onClose}
-        >
-          Close
-        </button>
+        >{t('close')}</button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5">
@@ -111,9 +114,7 @@ function ShapPanel({ record, onClose }: { record: HealthRecordDetail; onClose: (
 
         {/* SHAP bars */}
         <div>
-          <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-            Feature contributions (SHAP)
-          </p>
+          <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{t('featureContributionsShap')}</p>
           {entries.length > 0 ? (
             <div className="flex flex-col gap-3">
               {entries.map(([name, val]) => (
@@ -139,18 +140,14 @@ function ShapPanel({ record, onClose }: { record: HealthRecordDetail; onClose: (
               ))}
             </div>
           ) : (
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              No SHAP data available for this record.
-            </p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noShapDataAvailable')}</p>
           )}
         </div>
 
         {/* Symptom flags */}
         {record.symptom_flags?.length > 0 && (
           <div>
-            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>
-              Symptom flags
-            </p>
+            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>{t('symptomFlags')}</p>
             <div className="flex flex-wrap gap-1.5">
               {record.symptom_flags.map((f) => (
                 <Badge key={f} variant="warn">{f}</Badge>
@@ -162,9 +159,7 @@ function ShapPanel({ record, onClose }: { record: HealthRecordDetail; onClose: (
         {/* Z-scores */}
         {(record.weight_for_height_z || record.height_for_age_z || record.weight_for_age_z) && (
           <div>
-            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>
-              Z-scores
-            </p>
+            <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>{t('zScores')}</p>
             <div className="flex flex-col gap-1">
               {[
                 ['WHZ (weight/height)', record.weight_for_height_z],
@@ -196,6 +191,7 @@ const TODAY_STR = new Date().toISOString().split('T')[0];
 interface ChildOption { id: string; full_name: string; registration_number: string; }
 
 function AddHealthRecordModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useTranslations('nurse.records');
   const qc    = useQueryClient();
   const toast = useToast();
   const [form, setForm] = useState({
@@ -220,20 +216,20 @@ function AddHealthRecordModal({ open, onClose }: { open: boolean; onClose: () =>
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['health-records'] });
-      toast.success('Health record added');
+      toast.success(t('healthRecordAdded'));
       onClose();
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? 'Failed to save record. Please try again.');
+      setError(msg ?? t('failedToSaveRecord'));
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.child) { setError('Please select a child.'); return; }
+    if (!form.child) { setError(t('pleaseSelectAChild')); return; }
     if (!form.weight_kg && !form.height_cm && !form.muac_cm) {
-      setError('Enter at least one measurement (weight, height, or MUAC).'); return;
+      setError(t('enterAtLeastOne')); return;
     }
     setError('');
     const body: Record<string, unknown> = { child: form.child, measurement_date: form.measurement_date, oedema: form.oedema };
@@ -251,43 +247,41 @@ function AddHealthRecordModal({ open, onClose }: { open: boolean; onClose: () =>
     <Modal
       open={open}
       onClose={onClose}
-      title="Add Health Record"
+      title={t('addHealthRecord')}
       size="md"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" loading={mutation.isPending} onClick={(e) => handleSubmit(e as unknown as React.FormEvent)}>
-            Save record
-          </Button>
+          <Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+          <Button variant="primary" loading={mutation.isPending} onClick={(e) => handleSubmit(e as unknown as React.FormEvent)}>{t('saveRecord')}</Button>
         </>
       }
     >
       <form onSubmit={handleSubmit} id="add-record-form" className="flex flex-col gap-4">
         {error && <Alert variant="danger">{error}</Alert>}
         <Select
-          label="Child *"
+          label={t('child')}
           value={form.child}
           onChange={(e) => set('child', e.target.value)}
           required
           options={children.map((c) => ({ value: c.id, label: `${c.full_name} (${c.registration_number})` }))}
-          placeholder="Select child…"
+          placeholder={t('selectChild')}
         />
-        <Input label="Date *" type="date" value={form.measurement_date} onChange={(e) => set('measurement_date', e.target.value)} required />
+        <Input label={t('date')} type="date" value={form.measurement_date} onChange={(e) => set('measurement_date', e.target.value)} required />
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Weight (kg)" type="number" step="0.01" value={form.weight_kg} onChange={(e) => set('weight_kg', e.target.value)} placeholder="e.g. 7.5" />
-          <Input label="Height (cm)" type="number" step="0.1"  value={form.height_cm} onChange={(e) => set('height_cm', e.target.value)} placeholder="e.g. 72.0" />
+          <Input label={t('weightKg')} type="number" step="0.01" value={form.weight_kg} onChange={(e) => set('weight_kg', e.target.value)} placeholder="e.g. 7.5" />
+          <Input label={t('heightCm')} type="number" step="0.1"  value={form.height_cm} onChange={(e) => set('height_cm', e.target.value)} placeholder="e.g. 72.0" />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Input label="MUAC (cm)"   type="number" step="0.1"  value={form.muac_cm}       onChange={(e) => set('muac_cm', e.target.value)}       placeholder="e.g. 12.5" />
-          <Input label="Temp (°C)"   type="number" step="0.1"  value={form.temperature_c} onChange={(e) => set('temperature_c', e.target.value)} placeholder="e.g. 37.0" />
+          <Input label={t('muacCm')}   type="number" step="0.1"  value={form.muac_cm}       onChange={(e) => set('muac_cm', e.target.value)}       placeholder="e.g. 12.5" />
+          <Input label={t('tempC')}   type="number" step="0.1"  value={form.temperature_c} onChange={(e) => set('temperature_c', e.target.value)} placeholder="e.g. 37.0" />
         </div>
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input type="checkbox" checked={form.oedema} onChange={(e) => set('oedema', e.target.checked)} className="w-4 h-4 rounded" />
-          <span className="text-sm" style={{ color: 'var(--ink)' }}>Bilateral pitting oedema</span>
+          <span className="text-sm" style={{ color: 'var(--ink)' }}>{t('bilateralPittingOedema')}</span>
         </label>
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="records-notes" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Notes</label>
-          <textarea id="records-notes" value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={2} placeholder="Optional clinical notes…"
+          <label htmlFor="records-notes" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('notes')}</label>
+          <textarea id="records-notes" value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={2} placeholder={t('optionalClinicalNotes')}
             className="rounded-xl border px-3 py-2.5 text-sm outline-none resize-none focus:ring-2 focus:ring-[var(--ink)] focus:border-transparent"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }} />
         </div>
@@ -301,6 +295,7 @@ function AddHealthRecordModal({ open, onClose }: { open: boolean; onClose: () =>
 function AmendModal({ record, open, onDone, onCancel }: {
   record: HealthRecordDetail; open: boolean; onDone: () => void; onCancel: () => void;
 }) {
+  const t = useTranslations('nurse.records');
   const toast = useToast();
   const [weightKg, setWeightKg] = useState('');
   const [heightCm, setHeightCm] = useState('');
@@ -316,45 +311,42 @@ function AmendModal({ record, open, onDone, onCancel }: {
       ...(notes    ? { notes }                           : {}),
       amendment_reason: reason,
     }),
-    onSuccess: () => { toast.success('Record amended'); onDone(); },
-    onError: () => { toast.error('Amendment failed. Please try again.'); },
+    onSuccess: () => { toast.success(t('recordAmended')); onDone(); },
+    onError: () => { toast.error(t('amendmentFailedPleaseTry')); },
   });
 
   return (
     <Modal
       open={open}
       onClose={onCancel}
-      title={`Amend — ${record.child_name}`}
-      description="Leave fields blank to keep current values."
+      title={t('amendTitle', { name: record.child_name })}
+      description={t('leaveFieldsBlankTo')}
       size="sm"
       footer={
         <>
-          <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+          <Button variant="ghost" onClick={onCancel}>{t('cancel')}</Button>
           <Button variant="primary" loading={mut.isPending}
-            onClick={() => mut.mutate()} disabled={!reason.trim()}>
-            Save amendment
-          </Button>
+            onClick={() => mut.mutate()} disabled={!reason.trim()}>{t('saveAmendment')}</Button>
         </>
       }
     >
       <div className="flex flex-col gap-4">
-        {mut.isError && <Alert variant="danger">Amendment failed. Please try again.</Alert>}
+        {mut.isError && <Alert variant="danger">{t('amendmentFailedPleaseTry')}</Alert>}
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Weight (kg)" type="number" step="0.01" value={weightKg} onChange={e => setWeightKg(e.target.value)} placeholder="e.g. 7.5" />
-          <Input label="Height (cm)" type="number" step="0.1"  value={heightCm} onChange={e => setHeightCm(e.target.value)} placeholder="e.g. 72.0" />
+          <Input label={t('weightKg')} type="number" step="0.01" value={weightKg} onChange={e => setWeightKg(e.target.value)} placeholder="e.g. 7.5" />
+          <Input label={t('heightCm')} type="number" step="0.1"  value={heightCm} onChange={e => setHeightCm(e.target.value)} placeholder="e.g. 72.0" />
         </div>
-        <Input label="MUAC (cm)" type="number" step="0.1" value={muacCm} onChange={e => setMuacCm(e.target.value)} placeholder="e.g. 12.5" />
+        <Input label={t('muacCm')} type="number" step="0.1" value={muacCm} onChange={e => setMuacCm(e.target.value)} placeholder="e.g. 12.5" />
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="records-notes-2" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Notes</label>
-          <textarea id="records-notes-2" value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Optional update…"
+          <label htmlFor="records-notes-2" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('notes')}</label>
+          <textarea id="records-notes-2" value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder={t('optionalUpdate')}
             className="rounded-xl border px-3 py-2.5 text-sm outline-none resize-none"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="records-amendment-reason" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
-            Amendment reason <span style={{ color: 'var(--danger)' }}>*</span>
+          <label htmlFor="records-amendment-reason" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('amendmentReason')}{' '}<span style={{ color: 'var(--danger)' }}>*</span>
           </label>
-          <textarea id="records-amendment-reason" value={reason} onChange={e => setReason(e.target.value)} rows={2} placeholder="Why is this record being corrected?"
+          <textarea id="records-amendment-reason" value={reason} onChange={e => setReason(e.target.value)} rows={2} placeholder={t('whyIsThisRecord')}
             className="rounded-xl border px-3 py-2.5 text-sm outline-none resize-none"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }} />
         </div>
@@ -366,11 +358,12 @@ function AmendModal({ record, open, onDone, onCancel }: {
 // ── Table columns ─────────────────────────────────────────────────────────────
 
 const buildColumns = (
+  t: RecordsT,
   onSelect: (r: HealthRecordDetail) => void,
   onAmend: (r: HealthRecordDetail) => void,
 ) => [
   {
-    key: 'child_name', header: 'Child', width: '160px',
+    key: 'child_name', header: t('colChild'), width: '160px',
     render: (_: unknown, row: unknown) => {
       const r = row as HealthRecordDetail;
       return (
@@ -386,16 +379,16 @@ const buildColumns = (
     },
   },
   {
-    key: 'measurement_date', header: 'Date', width: '110px',
+    key: 'measurement_date', header: t('colDate'), width: '110px',
     render: (v: unknown) => new Date(v as string).toLocaleDateString(),
   },
-  { key: 'zone_name', header: 'Zone', width: '120px', render: (v: unknown) => (v as string) || '—' },
+  { key: 'zone_name', header: t('colZone'), width: '120px', render: (v: unknown) => (v as string) || '—' },
   {
-    key: 'risk_level', header: 'Risk', width: '100px',
+    key: 'risk_level', header: t('colRisk'), width: '100px',
     render: (v: unknown) => <Badge variant={riskVariant(v as string)}>{v as string}</Badge>,
   },
   {
-    key: 'nutrition_status_display', header: 'Status', width: '100px',
+    key: 'nutrition_status_display', header: t('colStatus'), width: '100px',
     render: (v: unknown, row: unknown) => {
       const r = row as HealthRecordDetail;
       const variant = r.nutrition_status === 'SAM' ? 'danger' : r.nutrition_status === 'MAM' ? 'warn' : 'success';
@@ -403,11 +396,11 @@ const buildColumns = (
     },
   },
   {
-    key: 'weight_kg', header: 'Weight', width: '90px',
+    key: 'weight_kg', header: t('colWeight'), width: '90px',
     render: (v: unknown) => v ? `${parseFloat(v as string).toFixed(1)} kg` : '—',
   },
   {
-    key: 'muac_cm', header: 'MUAC', width: '90px',
+    key: 'muac_cm', header: t('colMuac'), width: '90px',
     render: (v: unknown) => v ? `${parseFloat(v as string).toFixed(1)} cm` : '—',
   },
   {
@@ -422,7 +415,7 @@ const buildColumns = (
           </button>
           <button type="button" className="text-xs font-medium hover:underline"
             style={{ color: 'var(--ink)' }} onClick={() => onAmend(r)}>
-            Amend
+            {t('amend')}
           </button>
         </div>
       );
@@ -433,6 +426,7 @@ const buildColumns = (
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function RecordsPage() {
+  const t = useTranslations('nurse.records');
   const qc = useQueryClient();
   const [riskFilter, setRiskFilter]     = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -454,17 +448,13 @@ export default function RecordsPage() {
           <h2
             className="text-2xl font-bold"
             style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            Health Records
-          </h2>
+          >{t('healthRecords')}</h2>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {data ? `${data.count.toLocaleString()} records` : 'All health records — click any row to view SHAP explanations.'}
+            {data ? t('recordsCount', { count: data.count }) : t('allHealthRecordsClick')}
           </p>
         </div>
         <Button variant="primary" onClick={() => setShowAdd(true)}>
-          <Plus size={15} className="mr-1.5" aria-hidden="true" />
-          Add record
-        </Button>
+          <Plus size={15} className="mr-1.5" aria-hidden="true" />{t('addRecord')}</Button>
       </div>
 
       {/* Filters */}
@@ -473,21 +463,21 @@ export default function RecordsPage() {
         <Select
           value={riskFilter}
           onChange={(e) => { setRiskFilter(e.target.value); setPage(1); }}
-          options={RISK_OPTIONS}
-          aria-label="Filter by risk level"
+          options={riskOptions(t)}
+          aria-label={t('filterByRiskLevel')}
           className="w-40"
         />
         <Select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          options={STATUS_OPTIONS}
-          aria-label="Filter by nutrition status"
+          options={statusOptions(t)}
+          aria-label={t('filterByNutritionStatus')}
           className="w-36"
         />
       </div>
 
       <DataTable
-        columns={buildColumns(setSelected, setAmendTarget) as Parameters<typeof DataTable>[0]['columns']}
+        columns={buildColumns(t, setSelected, setAmendTarget) as Parameters<typeof DataTable>[0]['columns']}
         data={(data?.items ?? []) }
         keyField="id"
         isLoading={isLoading}

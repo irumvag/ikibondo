@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { Baby, ClipboardList, AlertTriangle, Syringe, UserCheck, UserPlus, Users, QrCode } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -9,15 +10,17 @@ import { useCampChildren, useHighRiskRecords, usePendingApprovals } from '@/lib/
 import { getCampStats } from '@/lib/api/admin';
 import { useQuery } from '@tanstack/react-query';
 
+// Action names and descriptions: messages/en.json nurse.home.actions.<msgKey>
 const QUICK_LINKS = [
-  { href: '/nurse/register',  icon: UserPlus,  label: 'Admit newborn',    desc: 'Register a newborn and link to a parent account.' },
-  { href: '/nurse/approvals', icon: UserCheck, label: 'Parent approvals', desc: 'Review and approve pending parent accounts.' },
-  { href: '/nurse/children',  icon: Users,     label: 'Children in camp', desc: 'Browse all registered children in your camp.' },
-  { href: '/nurse/referrals', icon: ClipboardList, label: 'Referrals',   desc: 'Manage facility referrals and outcomes.' },
-  { href: '/nurse/scan',      icon: QrCode,        label: 'Scan QR',     desc: 'Scan a child\'s QR card to open their record instantly.' },
-];
+  { href: '/nurse/register',  icon: UserPlus,  msgKey: 'admitNewborn' },
+  { href: '/nurse/approvals', icon: UserCheck, msgKey: 'parentApprovals' },
+  { href: '/nurse/children',  icon: Users,     msgKey: 'childrenInCamp' },
+  { href: '/nurse/referrals', icon: ClipboardList, msgKey: 'referrals' },
+  { href: '/nurse/scan',      icon: QrCode,        msgKey: 'scanQr' },
+] as const;
 
 export default function NurseDashboard() {
+  const t = useTranslations('nurse.home');
   const user   = useAuthStore((s) => s.user);
   const campId = user?.camp ?? null;
 
@@ -47,11 +50,8 @@ export default function NurseDashboard() {
         <h2
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          Camp Overview
-        </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Welcome back, {user?.full_name ?? 'Nurse'} · {user?.camp_name ?? '—'}
+        >{t('campOverview')}</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('welcomeBackName', { name: user?.full_name ?? t('nurse'), camp: user?.camp_name ?? '—' })}
         </p>
       </div>
 
@@ -65,8 +65,8 @@ export default function NurseDashboard() {
           <QrCode size={20} />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-semibold">Scan child QR card</p>
-          <p className="text-xs mt-0.5" style={{ opacity: 0.7 }}>Open camera to look up a child&apos;s record instantly</p>
+          <p className="text-sm font-semibold">{t('scanChildQrCard')}</p>
+          <p className="text-xs mt-0.5" style={{ opacity: 0.7 }}>{t('openCameraToLook')}</p>
         </div>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.6 }}>
           <path d="M6 12l4-4-4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -77,17 +77,13 @@ export default function NurseDashboard() {
       {(samCount > 0 || pendingCount > 0) && (
         <div className="flex flex-col gap-3">
           {samCount > 0 && (
-            <Alert variant="danger" title={`${samCount} child${samCount !== 1 ? 'ren' : ''} with severe acute malnutrition (SAM)`}>
-              <Link href="/nurse/records?nutrition=SAM" className="underline font-medium">
-                View SAM cases →
-              </Link>
+            <Alert variant="danger" title={t('samChildren', { count: samCount })}>
+              <Link href="/nurse/records?nutrition=SAM" className="underline font-medium">{t('viewSamCases')}</Link>
             </Alert>
           )}
           {pendingCount > 0 && (
-            <Alert variant="warn" title={`${pendingCount} parent account${pendingCount !== 1 ? 's' : ''} awaiting approval`}>
-              <Link href="/nurse/approvals" className="underline font-medium">
-                Review approvals →
-              </Link>
+            <Alert variant="warn" title={t('parentAccountsAwaiting', { count: pendingCount })}>
+              <Link href="/nurse/approvals" className="underline font-medium">{t('reviewApprovals')}</Link>
             </Alert>
           )}
         </div>
@@ -97,7 +93,7 @@ export default function NurseDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <Link href="/nurse/children" className="group">
           <KPICard
-            label="Children registered"
+            label={t('childrenRegistered')}
             value={children ? children.count.toLocaleString() : '—'}
             icon={<Baby size={18} />}
             isLoading={childrenLoading}
@@ -105,49 +101,49 @@ export default function NurseDashboard() {
         </Link>
         <Link href="/nurse/records?nutrition=SAM" className="group">
           <KPICard
-            label="SAM cases"
+            label={t('samCases')}
             value={campStats ? samCount.toString() : '—'}
             icon={<ClipboardList size={18} />}
             variant={samCount > 0 ? 'danger' : 'default'}
-            subtext={campStats ? `${mamCount} MAM` : undefined}
+            subtext={campStats ? t('mamCount', { count: mamCount }) : undefined}
             isLoading={statsLoading}
           />
         </Link>
         <Link href="/nurse/approvals" className="group">
           <KPICard
-            label="Pending parent approvals"
+            label={t('pendingParentApprovals')}
             value={pendingLoading ? '—' : pendingCount.toString()}
             icon={<UserCheck size={18} />}
             variant={pendingCount > 0 ? 'warn' : 'default'}
-            subtext={pendingCount > 0 ? 'Needs review' : 'All clear'}
+            subtext={pendingCount > 0 ? t('needsReview') : t('allClear')}
             isLoading={pendingLoading}
           />
         </Link>
         <Link href="/nurse/records?risk=HIGH" className="group">
           <KPICard
-            label="HIGH-risk flagged"
+            label={t('highRiskFlagged')}
             value={highRiskCount.toString()}
             icon={<AlertTriangle size={18} />}
             variant={highRiskCount > 0 ? 'danger' : 'default'}
-            subtext="By ML model"
+            subtext={t('byMlModel')}
             isLoading={riskLoading}
           />
         </Link>
         <KPICard
-          label="Vaccination coverage"
+          label={t('vaccinationCoverage')}
           value={campStats ? `${Math.round(coverage)}%` : '—'}
           icon={<Syringe size={18} />}
           variant={campStats ? coverageVariant : 'default'}
-          subtext="Camp average"
+          subtext={t('campAverage')}
           isLoading={statsLoading}
         />
       </div>
 
       {/* ── Quick actions ─────────────────────────────────────────────── */}
       <div>
-        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--ink)' }}>Quick actions</h3>
+        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--ink)' }}>{t('quickActions')}</h3>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {QUICK_LINKS.map(({ href, icon: Icon, label, desc }) => (
+          {QUICK_LINKS.map(({ href, icon: Icon, msgKey }) => (
             <Link
               key={href}
               href={href}
@@ -161,8 +157,8 @@ export default function NurseDashboard() {
                 <Icon size={18} aria-hidden="true" />
               </div>
               <div>
-                <p className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{label}</p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{desc}</p>
+                <p className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{t(`actions.${msgKey}.label`)}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t(`actions.${msgKey}.desc`)}</p>
               </div>
             </Link>
           ))}

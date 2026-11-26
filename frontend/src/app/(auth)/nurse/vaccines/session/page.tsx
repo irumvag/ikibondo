@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -92,9 +93,10 @@ function sortSessions(sessions: ClinicSession[]): ClinicSession[] {
 }
 
 function AttendeeStatusBadge({ status }: { status: string }) {
-  if (status === 'DONE')    return <Badge variant="success">Done</Badge>;
-  if (status === 'MISSED')  return <Badge variant="danger">Missed</Badge>;
-  if (status === 'SKIPPED') return <Badge variant="default">Skipped</Badge>;
+  const t = useTranslations('nurse.vaccines.session');
+  if (status === 'DONE')    return <Badge variant="success">{t('done')}</Badge>;
+  if (status === 'MISSED')  return <Badge variant="danger">{t('missed')}</Badge>;
+  if (status === 'SKIPPED') return <Badge variant="default">{t('skipped')}</Badge>;
   return <Badge variant="default">{status}</Badge>;
 }
 
@@ -111,6 +113,7 @@ function SessionFormModal({
   onClose: () => void;
   onSaved: (s: ClinicSession) => void;
 }) {
+  const t = useTranslations('nurse.vaccines.session');
   const isEdit = !!session;
   const [vaccine, setVaccine] = useState(session?.vaccine ?? vaccines[0]?.id ?? '');
   const [date, setDate]       = useState(session?.session_date ?? new Date().toISOString().split('T')[0]);
@@ -136,7 +139,7 @@ function SessionFormModal({
     onSuccess: (s) => onSaved(s),
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? 'Failed to save. Please try again.');
+      setError(msg ?? t('failedToSavePlease'));
     },
   });
 
@@ -149,15 +152,15 @@ function SessionFormModal({
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-fraunces)' }}>
-            {isEdit ? 'Edit Session' : 'Open Clinic Session'}
+            {isEdit ? t('editSession') : t('openClinicSession')}
           </h2>
-          <button type="button" onClick={onClose} aria-label="Close">
+          <button type="button" onClick={onClose} aria-label={t('close')}>
             <X size={18} style={{ color: 'var(--text-muted)' }} />
           </button>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="session-vaccine" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Vaccine *</label>
+          <label htmlFor="session-vaccine" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('vaccine')}</label>
           <select id="session-vaccine"
             value={vaccine}
             onChange={(e) => setVaccine(e.target.value)}
@@ -168,12 +171,12 @@ function SessionFormModal({
             {vaccines.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
           </select>
           {isEdit && session?.status === 'OPEN' && (
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Vaccine cannot be changed on an open session.</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('vaccineCannotBeChanged')}</p>
           )}
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="session-session-date" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Session date *</label>
+          <label htmlFor="session-session-date" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('sessionDate')}</label>
           <input id="session-session-date"
             type="date"
             value={date}
@@ -186,7 +189,7 @@ function SessionFormModal({
         {error && <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>}
 
         <div className="flex gap-2 pt-1">
-          <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" className="flex-1" onClick={onClose}>{t('cancel')}</Button>
           <Button
             variant="primary"
             className="flex-1"
@@ -194,7 +197,7 @@ function SessionFormModal({
             disabled={!vaccine || !date || mutation.isPending}
             loading={mutation.isPending}
           >
-            {isEdit ? 'Save changes' : 'Open session'}
+            {isEdit ? t('saveChanges') : t('openSession')}
           </Button>
         </div>
       </div>
@@ -213,6 +216,7 @@ function DeleteConfirmDialog({
   onClose: () => void;
   onDeleted: () => void;
 }) {
+  const t = useTranslations('nurse.vaccines.session');
   const mutation = useMutation({
     mutationFn: () => apiClient.delete(`/vaccinations/clinic-sessions/${session.id}/`),
     onSuccess: onDeleted,
@@ -225,24 +229,20 @@ function DeleteConfirmDialog({
         style={{ backgroundColor: 'var(--bg-elev)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="font-semibold" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>Delete session?</p>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          This will permanently delete the <strong>{session.vaccine_name}</strong> session on{' '}
-          {new Date(session.session_date).toLocaleDateString()}.{' '}
-          All recorded vaccinations from this session will be <strong>reverted to Scheduled</strong>.
+        <p className="font-semibold" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>{t('deleteSession')}</p>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('thisWillPermanentlyDelete')}{' '}<strong>{session.vaccine_name}</strong>{' '}{t('sessionOn')}{' '}
+          {new Date(session.session_date).toLocaleDateString()}.{' '}{t('allRecordedVaccinationsFrom')}{' '}<strong>{t('revertedToScheduled')}</strong>.
         </p>
-        {mutation.isError && <p className="text-sm" style={{ color: 'var(--danger)' }}>Failed to delete. Please try again.</p>}
+        {mutation.isError && <p className="text-sm" style={{ color: 'var(--danger)' }}>{t('failedToDeletePlease')}</p>}
         <div className="flex gap-2">
-          <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" className="flex-1" onClick={onClose}>{t('cancel')}</Button>
           <Button
             variant="primary"
             className="flex-1"
             style={{ backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }}
             onClick={() => mutation.mutate()}
             loading={mutation.isPending}
-          >
-            Delete
-          </Button>
+          >{t('delete')}</Button>
         </div>
       </div>
     </div>
@@ -252,6 +252,7 @@ function DeleteConfirmDialog({
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ClinicSessionPage() {
+  const t = useTranslations('nurse.vaccines.session');
   const toast = useToast();
   const qc = useQueryClient();
 
@@ -314,7 +315,7 @@ export default function ClinicSessionPage() {
       await apiClient.post(`/vaccinations/clinic-sessions/${selectedId}/record-attendance/`, { attendances });
     },
     onSuccess: () => {
-      toast.success('Attendance saved');
+      toast.success(t('attendanceSaved'));
       qc.invalidateQueries({ queryKey: ['nurse', 'clinic-sessions'] });
       qc.invalidateQueries({ queryKey: ['clinic-session', selectedId, 'eligible'] });
       setAttendance({});
@@ -326,7 +327,7 @@ export default function ClinicSessionPage() {
   const closeMut = useMutation({
     mutationFn: () => apiClient.post(`/vaccinations/clinic-sessions/${selectedId}/close/`, {}),
     onSuccess: () => {
-      toast.success('Session closed');
+      toast.success(t('sessionClosed'));
       qc.invalidateQueries({ queryKey: ['nurse', 'clinic-sessions'] });
       qc.invalidateQueries({ queryKey: ['clinic-session', selectedId, 'attendees'] });
     },
@@ -336,7 +337,7 @@ export default function ClinicSessionPage() {
     mutationFn: (childId: string) =>
       apiClient.delete(`/vaccinations/clinic-sessions/${selectedId}/attendees/${childId}/`),
     onSuccess: () => {
-      toast.success('Removed from this session');
+      toast.success(t('removedFromThisSession'));
       qc.invalidateQueries({ queryKey: ['clinic-session', selectedId, 'eligible'] });
       qc.invalidateQueries({ queryKey: ['clinic-session', selectedId, 'attendees'] });
       qc.invalidateQueries({ queryKey: ['nurse', 'clinic-sessions'] });
@@ -396,17 +397,11 @@ export default function ClinicSessionPage() {
       {/* Page header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-            Clinic Sessions
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Open a session for a vaccine, record attendance, then close it.
-          </p>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('clinicSessions')}</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('openASessionFor')}</p>
         </div>
         <Button variant="primary" onClick={() => { setEditSession(null); setShowForm(true); }}>
-          <Plus size={15} className="mr-1.5" aria-hidden="true" />
-          New session
-        </Button>
+          <Plus size={15} className="mr-1.5" aria-hidden="true" />{t('newSession')}</Button>
       </div>
 
       <div className="flex gap-5" style={{ minHeight: 520 }}>
@@ -418,15 +413,13 @@ export default function ClinicSessionPage() {
           {sessionsLoading ? (
             <>{[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</>
           ) : sessions.length === 0 ? (
-            <EmptyState icon={<Syringe size={22} />} title="No sessions" description="Open a new session to start." />
+            <EmptyState icon={<Syringe size={22} />} title={t('noSessions')} description={t('openANewSession')} />
           ) : (
             <>
               {openSessions.length > 0 && (
                 <>
                   <p className="text-xs font-semibold px-1 mt-1 mb-0.5 flex items-center gap-1" style={{ color: 'var(--success)' }}>
-                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: 'var(--success)' }} />
-                    Open ({openSessions.length})
-                  </p>
+                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: 'var(--success)' }} />{t('open', { length: openSessions.length })}</p>
                   {openSessions.map((s) => (
                     <SessionItem
                       key={s.id}
@@ -441,9 +434,7 @@ export default function ClinicSessionPage() {
               )}
               {closedSessions.length > 0 && (
                 <>
-                  <p className="text-xs font-semibold px-1 mt-3 mb-0.5 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
-                    Closed ({closedSessions.length})
-                  </p>
+                  <p className="text-xs font-semibold px-1 mt-3 mb-0.5 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>{t('closed', { length: closedSessions.length })}</p>
                   {closedSessions.map((s) => (
                     <SessionItem
                       key={s.id}
@@ -468,9 +459,7 @@ export default function ClinicSessionPage() {
           {!selectedSession ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8">
               <CalendarDays size={32} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Select a session from the list, or open a new one.
-              </p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('selectASessionFrom')}</p>
             </div>
           ) : selectedSession.status === 'OPEN' ? (
             <>
@@ -481,37 +470,29 @@ export default function ClinicSessionPage() {
                     <p className="font-semibold" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>
                       {selectedSession.vaccine_name}
                     </p>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'var(--low-bg)', color: 'var(--success)' }}>
-                      Open
-                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'var(--low-bg)', color: 'var(--success)' }}>{t('open2')}</span>
                   </div>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                     {selectedSession.session_date} · {selectedSession.camp_name}
-                    {selectedSession.opened_by_name && ` · by ${selectedSession.opened_by_name}`}
+                    {selectedSession.opened_by_name && t('openedBy', { name: selectedSession.opened_by_name })}
                   </p>
                   {!eligibleLoading && (
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      {eligibleChildren.length} eligible ·{' '}
-                      {eligibleChildren.filter((c) => c.already_recorded).length} already recorded ·{' '}
-                      {eligibleChildren.filter((c) => !c.already_recorded && daysUntil(c.scheduled_date) > FAR_DATE_DAYS).length} scheduled far out
-                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('eligible', { length: eligibleChildren.length })}{' '}
+                      {eligibleChildren.filter((c) => c.already_recorded).length}{' '}{t('alreadyRecorded')}{' '}
+                      {eligibleChildren.filter((c) => !c.already_recorded && daysUntil(c.scheduled_date) > FAR_DATE_DAYS).length}{' '}{t('scheduledFarOut')}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   {doneCount > 0 && (
-                    <span className="text-xs px-2 py-1 rounded-lg" style={{ backgroundColor: 'var(--low-bg)', color: 'var(--success)' }}>
-                      {doneCount} done
-                    </span>
+                    <span className="text-xs px-2 py-1 rounded-lg" style={{ backgroundColor: 'var(--low-bg)', color: 'var(--success)' }}>{t('done2', { doneCount: doneCount })}</span>
                   )}
                   {missedCount > 0 && (
-                    <span className="text-xs px-2 py-1 rounded-lg" style={{ backgroundColor: 'var(--high-bg)', color: 'var(--danger)' }}>
-                      {missedCount} missed
-                    </span>
+                    <span className="text-xs px-2 py-1 rounded-lg" style={{ backgroundColor: 'var(--high-bg)', color: 'var(--danger)' }}>{t('missed2', { missedCount: missedCount })}</span>
                   )}
                   <input
                     value={batch}
                     onChange={(e) => setBatch(e.target.value)}
-                    placeholder="Batch #"
+                    placeholder={t('batch')}
                     className="rounded-lg border px-2 py-1.5 text-xs w-28 outline-none"
                     style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
                   />
@@ -522,17 +503,13 @@ export default function ClinicSessionPage() {
                     disabled={recordMut.isPending || Object.keys(attendance).length === 0}
                     loading={recordMut.isPending}
                   >
-                    <CheckCircle2 size={13} className="mr-1" aria-hidden="true" />
-                    Save ({Object.keys(attendance).length})
-                  </Button>
+                    <CheckCircle2 size={13} className="mr-1" aria-hidden="true" />{t('save', { length: Object.keys(attendance).length })}</Button>
                   <Button
                     variant="secondary"
                     size="sm"
                     onClick={() => closeMut.mutate()}
                     loading={closeMut.isPending}
-                  >
-                    Close session
-                  </Button>
+                  >{t('closeSession')}</Button>
                 </div>
               </div>
 
@@ -541,15 +518,12 @@ export default function ClinicSessionPage() {
                 <input
                   value={childSearch}
                   onChange={(e) => setChildSearch(e.target.value)}
-                  placeholder="Search by name or registration number…"
+                  placeholder={t('searchByNameOr')}
                   className="w-full rounded-xl border px-3 py-2 text-sm outline-none"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
                 />
 
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Only children with a scheduled <strong>{selectedSession.vaccine_name}</strong> dose are listed.
-                  Tap → <strong>Done</strong> · tap again → <strong>Missed</strong> · tap again → clear.
-                </p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('onlyChildrenWithA')}{' '}<strong>{selectedSession.vaccine_name}</strong>{' '}{t('doseAreListedTap')}{' '}<strong>{t('done')}</strong>{' '}{t('tapAgain')}{' '}<strong>{t('missed')}</strong>{' '}{t('tapAgainClear')}</p>
 
                 {eligibleLoading ? (
                   <div className="flex flex-col gap-2">
@@ -558,8 +532,8 @@ export default function ClinicSessionPage() {
                 ) : filteredEligible.length === 0 ? (
                   <EmptyState
                     icon={<Users size={24} />}
-                    title={childSearch ? 'No match' : 'No eligible children'}
-                    description={childSearch ? 'Try a different search.' : 'No children have a scheduled dose for this vaccine.'}
+                    title={childSearch ? t('noMatch') : t('noEligibleChildren')}
+                    description={childSearch ? t('tryADifferentSearch') : t('noChildrenHaveA')}
                   />
                 ) : (
                   <div className="flex flex-col gap-2">
@@ -600,20 +574,20 @@ export default function ClinicSessionPage() {
                                     <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold"
                                       style={{ backgroundColor: child.recorded_status === 'DONE' ? 'var(--low-bg)' : 'var(--high-bg)',
                                                color: child.recorded_status === 'DONE' ? 'var(--success)' : 'var(--danger)' }}>
-                                      {child.recorded_status === 'DONE' ? 'Recorded ✓' : 'Missed'}
+                                      {child.recorded_status === 'DONE' ? t('recorded') : t('missed')}
                                     </span>
                                   )}
                                   {!alreadyDone && child.is_overdue && (
-                                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--high-bg)', color: 'var(--danger)' }}>Overdue</span>
+                                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--high-bg)', color: 'var(--danger)' }}>{t('overdue')}</span>
                                   )}
                                   {!alreadyDone && isFar && !child.is_overdue && (
-                                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--med-bg)', color: 'var(--warn)' }}>{days}d away</span>
+                                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--med-bg)', color: 'var(--warn)' }}>{t('dAway', { days: days })}</span>
                                   )}
                                 </div>
                                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                                   {child.registration_number}
                                   {child.age_display && ` · ${child.age_display}`}
-                                  {child.scheduled_date && ` · Due ${new Date(child.scheduled_date).toLocaleDateString()}`}
+                                  {child.scheduled_date && t('dueDate', { date: new Date(child.scheduled_date).toLocaleDateString() })}
                                 </p>
                               </div>
                               <div className="shrink-0 ml-2">
@@ -632,9 +606,9 @@ export default function ClinicSessionPage() {
                             {alreadyDone && (
                               <button
                                 type="button"
-                                title="Remove from session (reverts vaccination record)"
+                                title={t('removeFromSessionReverts')}
                                 onClick={() => {
-                                  if (confirm(`Remove ${child.full_name} from this session? Their vaccination record will be reverted to scheduled.`))
+                                  if (confirm(t('confirmRemove', { name: child.full_name })))
                                     removeAttendeeMut.mutate(child.id);
                                 }}
                                 disabled={removeAttendeeMut.isPending}
@@ -653,14 +627,11 @@ export default function ClinicSessionPage() {
                               style={{ backgroundColor: 'var(--med-bg)', color: 'var(--warn)' }}
                             >
                               <AlertTriangle size={12} aria-hidden="true" />
-                              <span className="flex-1">
-                                {child.full_name}&apos;s dose is scheduled in <strong>{days} days</strong> ({new Date(child.scheduled_date).toLocaleDateString()}).
-                                Consider contacting the guardian to remind them before the date.
-                              </span>
+                              <span className="flex-1">{t('sDoseIsScheduled', { full_name: child.full_name })}{' '}<strong>{t('days', { days: days })}</strong>{' '}{t('considerContactingTheGuardian', { toLocaleDateString: new Date(child.scheduled_date).toLocaleDateString() })}</span>
                               <button
                                 type="button"
                                 onClick={() => setFarAlerts((fa) => { const s = new Set(fa); s.delete(child.id); return s; })}
-                                aria-label="Dismiss"
+                                aria-label={t('dismiss')}
                               >
                                 <X size={12} />
                               </button>
@@ -681,26 +652,23 @@ export default function ClinicSessionPage() {
                   <p className="font-semibold" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>
                     {selectedSession.vaccine_name}
                   </p>
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' }}>
-                    Closed
-                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' }}>{t('closed2')}</span>
                 </div>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                   {selectedSession.session_date} · {selectedSession.camp_name}
-                  {selectedSession.opened_by_name && ` · by ${selectedSession.opened_by_name}`}
-                  {' '}· {selectedSession.attendance_count} recorded
-                </p>
+                  {selectedSession.opened_by_name && t('openedBy', { name: selectedSession.opened_by_name })}
+                  {' '}{t('recorded2', { attendance_count: selectedSession.attendance_count })}</p>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-                <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Attendance list</p>
+                <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('attendanceList')}</p>
 
                 {attendeesLoading ? (
                   <div className="flex flex-col gap-2">
                     {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 rounded-xl" />)}
                   </div>
                 ) : attendees.length === 0 ? (
-                  <EmptyState icon={<Users size={24} />} title="No records" description="No attendance was recorded in this session." />
+                  <EmptyState icon={<Users size={24} />} title={t('noRecords')} description={t('noAttendanceWasRecorded')} />
                 ) : (
                   <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
                     {attendees.map((a, idx) => (
@@ -714,15 +682,15 @@ export default function ClinicSessionPage() {
                           <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                             {a.registration_number}
                             {a.age_display && ` · ${a.age_display}`}
-                            {a.batch_number && ` · Batch: ${a.batch_number}`}
+                            {a.batch_number && t('batchNumber', { batch: a.batch_number })}
                           </p>
                         </div>
                         <AttendeeStatusBadge status={a.status} />
                         <button
                           type="button"
-                          title="Remove from session (reverts vaccination record)"
+                          title={t('removeFromSessionReverts')}
                           onClick={() => {
-                            if (confirm(`Remove ${a.full_name} from this session? Their vaccination record will be reverted to scheduled.`))
+                            if (confirm(t('confirmRemove', { name: a.full_name })))
                               removeAttendeeMut.mutate(a.child_id);
                           }}
                           disabled={removeAttendeeMut.isPending}
@@ -782,6 +750,7 @@ function SessionItem({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations('nurse.vaccines.session');
   return (
     <div
       className="rounded-xl border transition-colors"
@@ -796,9 +765,7 @@ function SessionItem({
         className="text-left px-3 py-2.5 w-full"
       >
         <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>{s.vaccine_name}</p>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          {new Date(s.session_date).toLocaleDateString()} · {s.attendance_count} doses
-        </p>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('doses', { toLocaleDateString: new Date(s.session_date).toLocaleDateString(), attendance_count: s.attendance_count })}</p>
       </button>
 
       {/* CRUD actions */}
@@ -807,8 +774,8 @@ function SessionItem({
           type="button"
           onClick={(e) => { e.stopPropagation(); onEdit(); }}
           className="p-1 rounded-md hover:opacity-70 transition-opacity"
-          aria-label="Edit session"
-          title="Edit"
+          aria-label={t('editSession2')}
+          title={t('edit')}
         >
           <Pencil size={12} style={{ color: 'var(--text-muted)' }} />
         </button>
@@ -816,8 +783,8 @@ function SessionItem({
           type="button"
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
           className="p-1 rounded-md hover:opacity-70 transition-opacity"
-          aria-label="Delete session"
-          title="Delete"
+          aria-label={t('deleteSession2')}
+          title={t('delete')}
         >
           <Trash2 size={12} style={{ color: 'var(--danger)' }} />
         </button>

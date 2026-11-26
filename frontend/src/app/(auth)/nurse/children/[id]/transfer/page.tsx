@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { use } from 'react';
 import { useRouter } from 'next/navigation';
@@ -20,6 +21,7 @@ async function listZonesForCamp(campId: string): Promise<Zone[]> {
 }
 
 export default function TransferZonePage({ params }: { params: Promise<{ id: string }> }) {
+  const t = useTranslations('nurse.children.detail.transfer');
   const { id } = use(params);
   const router = useRouter();
 
@@ -46,7 +48,7 @@ export default function TransferZonePage({ params }: { params: Promise<{ id: str
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!toZone && !toCamp) {
-      setError('Select at least a destination zone or camp.');
+      setError(t('selectAtLeastA'));
       return;
     }
     setSubmitting(true);
@@ -60,7 +62,7 @@ export default function TransferZonePage({ params }: { params: Promise<{ id: str
       router.push(`/nurse/children/${id}`);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? 'Transfer failed. Please try again.');
+      setError(msg ?? t('transferFailedPleaseTry'));
     } finally {
       setSubmitting(false);
     }
@@ -73,22 +75,18 @@ export default function TransferZonePage({ params }: { params: Promise<{ id: str
         className="inline-flex items-center gap-1.5 text-sm hover:underline"
         style={{ color: 'var(--text-muted)' }}
       >
-        <ArrowLeft size={14} aria-hidden="true" />
-        Back to child record
-      </Link>
+        <ArrowLeft size={14} aria-hidden="true" />{t('backToChildRecord')}</Link>
 
       <div>
         <h2
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          Zone Transfer
-        </h2>
+        >{t('zoneTransfer')}</h2>
         {childLoading ? (
           <Skeleton className="h-5 w-40 mt-1 rounded" />
         ) : (
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {child?.full_name ?? 'Child'} · current zone: {child?.zone_name ?? 'Unassigned'}
+            {t('childCurrentZone', { child: child?.full_name ?? t('child'), zone: child?.zone_name ?? t('unassigned') })}
           </p>
         )}
       </div>
@@ -100,18 +98,18 @@ export default function TransferZonePage({ params }: { params: Promise<{ id: str
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
         >
           <div className="flex-1 text-center">
-            <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Current</p>
+            <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>{t('current')}</p>
             <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{child.camp_name}</p>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{child.zone_name ?? 'No zone'}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{child.zone_name ?? t('noZone')}</p>
           </div>
           <ArrowRight size={20} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           <div className="flex-1 text-center">
-            <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Destination</p>
+            <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>{t('destination')}</p>
             <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
               {camps.find((c) => c.id === toCamp)?.name ?? child.camp_name}
             </p>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {zones.find((z) => z.id === toZone)?.name ?? (toZone ? '—' : 'Select zone')}
+              {zones.find((z) => z.id === toZone)?.name ?? (toZone ? '—' : t('selectZone'))}
             </p>
           </div>
         </div>
@@ -120,8 +118,7 @@ export default function TransferZonePage({ params }: { params: Promise<{ id: str
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Camp (optional — for cross-camp) */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="transfer-destination-camp-leave" className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-            Destination camp <span className="font-normal" style={{ color: 'var(--text-muted)' }}>(leave unchanged for intra-camp)</span>
+          <label htmlFor="transfer-destination-camp-leave" className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{t('destinationCamp')}{' '}<span className="font-normal" style={{ color: 'var(--text-muted)' }}>{t('leaveUnchangedForIntra')}</span>
           </label>
           <select id="transfer-destination-camp-leave"
             value={toCamp}
@@ -129,7 +126,7 @@ export default function TransferZonePage({ params }: { params: Promise<{ id: str
             className="text-sm px-3 py-2 rounded-lg border outline-none"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
           >
-            <option value="">— Same camp —</option>
+            <option value="">{t('sameCamp')}</option>
             {camps.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -138,9 +135,7 @@ export default function TransferZonePage({ params }: { params: Promise<{ id: str
 
         {/* Zone */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="transfer-destination-zone" className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-            Destination zone
-          </label>
+          <label htmlFor="transfer-destination-zone" className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{t('destinationZone')}</label>
           {zonesLoading ? (
             <Skeleton className="h-10 rounded-lg" />
           ) : (
@@ -151,7 +146,7 @@ export default function TransferZonePage({ params }: { params: Promise<{ id: str
               className="text-sm px-3 py-2 rounded-lg border outline-none"
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
             >
-              <option value="">— Select zone —</option>
+              <option value="">{t('selectZone2')}</option>
               {zones.map((z) => (
                 <option key={z.id} value={z.id}>{z.name}</option>
               ))}
@@ -161,12 +156,11 @@ export default function TransferZonePage({ params }: { params: Promise<{ id: str
 
         {/* Reason */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="transfer-reason" className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-            Reason <span style={{ color: 'var(--danger)' }}>*</span>
+          <label htmlFor="transfer-reason" className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{t('reason')}{' '}<span style={{ color: 'var(--danger)' }}>*</span>
           </label>
           <textarea id="transfer-reason"
             rows={3}
-            placeholder="Reason for transfer (e.g. relocation, boundary revision, request from family)…"
+            placeholder={t('reasonForTransferE')}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             required
@@ -180,11 +174,9 @@ export default function TransferZonePage({ params }: { params: Promise<{ id: str
         )}
 
         <div className="flex gap-3">
-          <Button type="submit" variant="primary" loading={submitting}>
-            Confirm transfer
-          </Button>
+          <Button type="submit" variant="primary" loading={submitting}>{t('confirmTransfer')}</Button>
           <Link href={`/nurse/children/${id}`}>
-            <Button type="button" variant="secondary">Cancel</Button>
+            <Button type="button" variant="secondary">{t('cancel')}</Button>
           </Link>
         </div>
       </form>

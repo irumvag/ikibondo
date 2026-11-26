@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+import { useValidationMessage } from '@/i18n/useValidationMessage';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -46,9 +48,9 @@ async function listChildren(): Promise<{ id: string; full_name: string; registra
 }
 
 const schema = z.object({
-  child: z.string().min(1, 'Select a child'),
-  target_facility: z.string().min(2, 'Facility name required'),
-  reason: z.string().min(5, 'Reason required'),
+  child: z.string().min(1, 'chooseChild'),
+  target_facility: z.string().min(2, 'facilityRequired'),
+  reason: z.string().min(5, 'reasonRequired'),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -81,6 +83,8 @@ const inputStyle: React.CSSProperties = {
 };
 
 export default function NurseReferralsPage() {
+  const t = useTranslations('nurse.referrals');
+  const tv = useValidationMessage();
   const toast = useToast();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -96,12 +100,12 @@ export default function NurseReferralsPage() {
 
   const createMut = useMutation({
     mutationFn: createReferral,
-    onSuccess: () => { toast.success('Referral created'); qc.invalidateQueries({ queryKey: ['nurse', 'referrals'] }); reset(); setShowForm(false); },
+    onSuccess: () => { toast.success(t('referralCreated')); qc.invalidateQueries({ queryKey: ['nurse', 'referrals'] }); reset(); setShowForm(false); },
   });
 
   const completeMut = useMutation({
     mutationFn: ({ id, outcome }: { id: string; outcome: string }) => completeReferral(id, outcome),
-    onSuccess: () => { toast.success('Outcome recorded'); qc.invalidateQueries({ queryKey: ['nurse', 'referrals'] }); setCompletingId(null); setOutcome(''); },
+    onSuccess: () => { toast.success(t('outcomeRecorded')); qc.invalidateQueries({ queryKey: ['nurse', 'referrals'] }); setCompletingId(null); setOutcome(''); },
   });
 
   return (
@@ -111,17 +115,11 @@ export default function NurseReferralsPage() {
           <h1
             className="text-2xl font-bold"
             style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            Referrals
-          </h1>
-          <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-            Outgoing referrals to district facilities.
-          </p>
+          >{t('referrals')}</h1>
+          <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>{t('outgoingReferralsToDistrict')}</p>
         </div>
         <Button variant="primary" onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4" />
-          New referral
-        </Button>
+          <Plus className="h-4 w-4" />{t('newReferral')}</Button>
       </div>
 
       {/* Create form modal */}
@@ -136,35 +134,31 @@ export default function NurseReferralsPage() {
             style={{ backgroundColor: 'var(--bg-elev)', border: '1px solid var(--border)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>New Referral</h2>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>{t('newReferral2')}</h2>
             <form onSubmit={handleSubmit((v) => createMut.mutate(v))} className="space-y-4">
               <div>
-                <label htmlFor="referrals-child" style={labelStyle}>Child *</label>
+                <label htmlFor="referrals-child" style={labelStyle}>{t('child')}</label>
                 <select id="referrals-child" {...register('child')} style={inputStyle}>
-                  <option value="">Select child…</option>
+                  <option value="">{t('selectChild')}</option>
                   {children.map((c) => (
                     <option key={c.id} value={c.id}>{c.full_name} ({c.registration_number})</option>
                   ))}
                 </select>
-                {errors.child && <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.child.message}</p>}
+                {errors.child && <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{tv(errors.child.message)}</p>}
               </div>
               <div>
-                <label htmlFor="referrals-target-facility" style={labelStyle}>Target facility *</label>
-                <input id="referrals-target-facility" {...register('target_facility')} placeholder="e.g. Kigali University Hospital" style={inputStyle} />
-                {errors.target_facility && <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.target_facility.message}</p>}
+                <label htmlFor="referrals-target-facility" style={labelStyle}>{t('targetFacility')}</label>
+                <input id="referrals-target-facility" {...register('target_facility')} placeholder={t('eGKigaliUniversity')} style={inputStyle} />
+                {errors.target_facility && <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{tv(errors.target_facility.message)}</p>}
               </div>
               <div>
-                <label htmlFor="referrals-reason" style={labelStyle}>Reason *</label>
-                <textarea id="referrals-reason" {...register('reason')} rows={3} placeholder="Clinical reason for referral…" style={{ ...inputStyle, resize: 'none' }} />
-                {errors.reason && <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.reason.message}</p>}
+                <label htmlFor="referrals-reason" style={labelStyle}>{t('reason')}</label>
+                <textarea id="referrals-reason" {...register('reason')} rows={3} placeholder={t('clinicalReasonForReferral')} style={{ ...inputStyle, resize: 'none' }} />
+                {errors.reason && <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{tv(errors.reason.message)}</p>}
               </div>
               <div className="flex gap-2 pt-1">
-                <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowForm(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" variant="primary" className="flex-1" loading={createMut.isPending}>
-                  Create
-                </Button>
+                <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowForm(false)}>{t('cancel')}</Button>
+                <Button type="submit" variant="primary" className="flex-1" loading={createMut.isPending}>{t('create')}</Button>
               </div>
             </form>
           </div>
@@ -183,26 +177,22 @@ export default function NurseReferralsPage() {
             style={{ backgroundColor: 'var(--bg-elev)', border: '1px solid var(--border)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>Record outcome</h2>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>{t('recordOutcome')}</h2>
             <textarea
               value={outcome}
               onChange={(e) => setOutcome(e.target.value)}
               rows={3}
-              placeholder="Outcome at receiving facility…"
+              placeholder={t('outcomeAtReceivingFacility')}
               style={{ ...inputStyle, resize: 'none' }}
             />
             <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => setCompletingId(null)}>
-                Cancel
-              </Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setCompletingId(null)}>{t('cancel')}</Button>
               <Button
                 variant="primary"
                 className="flex-1"
                 loading={completeMut.isPending}
                 onClick={() => completeMut.mutate({ id: completingId, outcome })}
-              >
-                Save
-              </Button>
+              >{t('save')}</Button>
             </div>
           </div>
         </div>
@@ -213,7 +203,7 @@ export default function NurseReferralsPage() {
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
         </div>
       ) : referrals.length === 0 ? (
-        <EmptyState icon={<ExternalLink size={28} />} title="No referrals" description="Create a referral to send a child to another facility." />
+        <EmptyState icon={<ExternalLink size={28} />} title={t('noReferrals')} description={t('createAReferralTo')} />
       ) : (
         <div className="flex flex-col gap-3">
           {referrals.map((ref) => (
@@ -240,9 +230,7 @@ export default function NurseReferralsPage() {
                   <p
                     className="text-xs rounded px-2 py-1 mt-1"
                     style={{ backgroundColor: 'var(--low-bg)', color: 'var(--success)' }}
-                  >
-                    Outcome: {ref.outcome}
-                  </p>
+                  >{t('outcome', { outcome: ref.outcome })}</p>
                 )}
               </div>
               {ref.status === 'PENDING' && (
@@ -251,8 +239,7 @@ export default function NurseReferralsPage() {
                   onClick={() => setCompletingId(ref.id)}
                   className="shrink-0 text-xs"
                 >
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Complete
-                </Button>
+                  <CheckCircle2 className="h-3.5 w-3.5" />{' '}{t('complete')}</Button>
               )}
             </div>
           ))}

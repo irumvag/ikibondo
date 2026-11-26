@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send, Loader2, MessageSquare, CheckCircle2 } from 'lucide-react';
@@ -24,6 +25,7 @@ async function resolveConsultation(id: string): Promise<void> {
 }
 
 export default function NurseInboxPage() {
+  const t = useTranslations('nurse.inbox');
   const qc = useQueryClient();
   const [selected, setSelected] = useState<Consultation | null>(null);
   const [reply, setReply] = useState('');
@@ -63,12 +65,8 @@ export default function NurseInboxPage() {
         <h1
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          CHW Inbox
-        </h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          {open.length} open consultation{open.length !== 1 ? 's' : ''} from your field workers.
-        </p>
+        >{t('chwInbox')}</h1>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('openConsultations', { count: open.length })}</p>
       </div>
 
       <div className="flex gap-5" style={{ minHeight: '520px' }}>
@@ -84,17 +82,15 @@ export default function NurseInboxPage() {
           <p
             className="text-xs font-semibold px-1 mb-1"
             style={{ color: 'var(--text-muted)' }}
-          >
-            Open ({open.length})
-          </p>
+          >{t('open', { length: open.length })}</p>
 
           {isLoading ? (
             <>{[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</>
           ) : consultations.length === 0 ? (
             <EmptyState
               icon={<MessageSquare size={22} />}
-              title="No consultations"
-              description="CHWs in your camp will send queries here."
+              title={t('noConsultations')}
+              description={t('chwsInYourCamp')}
             />
           ) : (
             <>
@@ -111,9 +107,7 @@ export default function NurseInboxPage() {
                 <p
                   className="text-xs font-semibold px-1 mt-3 mb-1"
                   style={{ color: 'var(--text-muted)' }}
-                >
-                  Resolved ({others.length})
-                </p>
+                >{t('resolved', { length: others.length })}</p>
               )}
               {others.map((c) => (
                 <ConsultationRow
@@ -135,9 +129,7 @@ export default function NurseInboxPage() {
           {!selected ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8">
               <MessageSquare size={32} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                Select a consultation from the list.
-              </p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('selectAConsultationFrom')}</p>
             </div>
           ) : (
             <>
@@ -150,10 +142,7 @@ export default function NurseInboxPage() {
                   <p className="font-semibold" style={{ color: 'var(--ink)' }}>
                     {selected.child_name}
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    From: {selected.opened_by_name}
-                    &nbsp;·&nbsp;
-                    <span
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('from', { opened_by_name: selected.opened_by_name ?? '' })}{' '}<span
                       className="inline-block px-1.5 py-0.5 rounded-full text-xs"
                       style={{
                         backgroundColor: selected.status === 'OPEN' ? 'var(--low-bg)' : 'var(--bg-sand)',
@@ -172,18 +161,14 @@ export default function NurseInboxPage() {
                     onClick={() => resolveMut.mutate(selected.id)}
                     loading={resolveMut.isPending}
                   >
-                    <CheckCircle2 size={13} className="mr-1.5" aria-hidden="true" />
-                    Resolve
-                  </Button>
+                    <CheckCircle2 size={13} className="mr-1.5" aria-hidden="true" />{t('resolve')}</Button>
                 )}
               </div>
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
                 {selected.messages.length === 0 && (
-                  <p className="text-sm text-center mt-8" style={{ color: 'var(--text-muted)' }}>
-                    No messages yet.
-                  </p>
+                  <p className="text-sm text-center mt-8" style={{ color: 'var(--text-muted)' }}>{t('noMessagesYet')}</p>
                 )}
                 {selected.messages.map((msg) => {
                   const isNurse = msg.author_name !== selected.opened_by_name;
@@ -224,7 +209,7 @@ export default function NurseInboxPage() {
                       }
                     }}
                     rows={2}
-                    placeholder="Reply to CHW… (Ctrl+Enter to send)"
+                    placeholder={t('replyToChwCtrl')}
                     className="flex-1 rounded-xl border px-3 py-2 text-sm resize-none outline-none"
                     style={{
                       borderColor: 'var(--border)',
@@ -237,7 +222,7 @@ export default function NurseInboxPage() {
                     disabled={replyMut.isPending || !reply.trim()}
                     className="rounded-xl p-2.5 transition-opacity disabled:opacity-40"
                     style={{ backgroundColor: 'var(--ink)', color: 'var(--bg)' }}
-                    aria-label="Send reply"
+                    aria-label={t('sendReply')}
                   >
                     {replyMut.isPending
                       ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -260,6 +245,7 @@ function ConsultationRow({
   active: boolean;
   onSelect: () => void;
 }) {
+  const t = useTranslations('nurse.inbox');
   return (
     <button
       type="button"
@@ -273,8 +259,7 @@ function ConsultationRow({
       <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>
         {c.child_name}
       </p>
-      <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-        {c.opened_by_name} · {c.message_count} msg{c.message_count !== 1 ? 's' : ''}
+      <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('fromMessages', { name: c.opened_by_name ?? '', count: c.message_count })}
       </p>
     </button>
   );

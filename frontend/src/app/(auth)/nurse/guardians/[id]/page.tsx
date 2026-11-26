@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { use } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
@@ -120,13 +121,14 @@ function fmtDate(iso: string) {
 }
 
 function TrendIcon({ trend }: { trend: HealthTrendItem[] }) {
+  const tt = useTranslations('nurse.guardians.detail');
   if (trend.length < 2) return <Minus size={14} style={{ color: 'var(--text-muted)' }} />;
   const riskOrder = { HIGH: 3, MEDIUM: 2, LOW: 1, UNKNOWN: 0 };
   const latest = riskOrder[trend[0].risk_level as keyof typeof riskOrder] ?? 0;
   const prev   = riskOrder[trend[1].risk_level as keyof typeof riskOrder] ?? 0;
-  if (latest < prev) return <span title="Improving"><TrendingDown size={14} style={{ color: 'var(--success)' }} /></span>;
-  if (latest > prev) return <span title="Worsening"><TrendingUp size={14} style={{ color: 'var(--danger)' }} /></span>;
-  return <span title="Stable"><Minus size={14} style={{ color: 'var(--text-muted)' }} /></span>;
+  if (latest < prev) return <span title={tt('improving')}><TrendingDown size={14} style={{ color: 'var(--success)' }} /></span>;
+  if (latest > prev) return <span title={tt('worsening')}><TrendingUp size={14} style={{ color: 'var(--danger)' }} /></span>;
+  return <span title={tt('stable')}><Minus size={14} style={{ color: 'var(--text-muted)' }} /></span>;
 }
 
 // ── Vaccination bar ───────────────────────────────────────────────────────────
@@ -152,6 +154,7 @@ function VaxBar({ vax }: { vax: VaxSummary }) {
 // ── Child card ────────────────────────────────────────────────────────────────
 
 function ChildCard({ child }: { child: ChildSummary }) {
+  const tt = useTranslations('nurse.guardians.detail');
   return (
     <Link
       href={`/nurse/children/${child.id}`}
@@ -175,7 +178,7 @@ function ChildCard({ child }: { child: ChildSummary }) {
             <TrendIcon trend={child.health_trend} />
           </div>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {child.registration_number} · {child.age_display} · {child.sex === 'M' ? 'Male' : 'Female'}
+            {child.registration_number} · {child.age_display} · {child.sex === 'M' ? tt('male') : tt('female')}
           </p>
         </div>
       </div>
@@ -183,8 +186,8 @@ function ChildCard({ child }: { child: ChildSummary }) {
       {/* Measurements */}
       <div className="grid grid-cols-3 gap-2 text-xs">
         {[
-          { label: 'Weight', val: child.latest_weight_kg ? `${parseFloat(child.latest_weight_kg).toFixed(1)} kg` : null },
-          { label: 'Height', val: child.latest_height_cm ? `${parseFloat(child.latest_height_cm).toFixed(1)} cm` : null },
+          { label: tt('weight'), val: child.latest_weight_kg ? `${parseFloat(child.latest_weight_kg).toFixed(1)} kg` : null },
+          { label: tt('height'), val: child.latest_height_cm ? `${parseFloat(child.latest_height_cm).toFixed(1)} cm` : null },
           { label: 'MUAC',   val: child.latest_muac_cm ? `${parseFloat(child.latest_muac_cm).toFixed(1)} cm` : null },
         ].map(({ label, val }) => (
           <div key={label} className="rounded-lg px-2 py-1.5 text-center" style={{ background: 'var(--bg-sand)' }}>
@@ -198,26 +201,22 @@ function ChildCard({ child }: { child: ChildSummary }) {
 
       {/* Nutrition status */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          Nutrition: <span style={{ color: 'var(--ink)', fontWeight: 500 }}>{child.nutrition_status_display}</span>
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('nutrition')}{' '}<span style={{ color: 'var(--ink)', fontWeight: 500 }}>{child.nutrition_status_display}</span>
         </span>
         {child.last_visit_date && (
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Last visit {fmtDate(child.last_visit_date)}
-          </span>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('lastVisit', { fmtDate: fmtDate(child.last_visit_date) })}</span>
         )}
       </div>
 
       {/* Vaccination bar */}
       <div>
         <div className="flex justify-between text-xs mb-1">
-          <span style={{ color: 'var(--text-muted)' }}>Vaccination</span>
+          <span style={{ color: 'var(--text-muted)' }}>{tt('vaccination')}</span>
           <span style={{ color: 'var(--text-muted)' }}>{child.vaccination.coverage_pct}%</span>
         </div>
         <VaxBar vax={child.vaccination} />
         {child.vaccination.missed > 0 && (
-          <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>
-            {child.vaccination.missed} missed dose{child.vaccination.missed !== 1 ? 's' : ''}
+          <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{tt('missedDoses', { count: child.vaccination.missed })}
           </p>
         )}
       </div>
@@ -257,6 +256,7 @@ function ChildCard({ child }: { child: ChildSummary }) {
 // ── Advice panel ──────────────────────────────────────────────────────────────
 
 function FamilyAdvice({ overview }: { overview: FamilyOverview }) {
+  const tt = useTranslations('nurse.guardians.detail');
   const tips: { icon: React.ReactNode; color: string; text: string }[] = [];
 
   const highRisk = overview.children.filter((c) => c.risk_level === 'HIGH');
@@ -264,7 +264,7 @@ function FamilyAdvice({ overview }: { overview: FamilyOverview }) {
     tips.push({
       icon: <AlertTriangle size={15} />,
       color: 'var(--danger)',
-      text: `${highRisk.map((c) => c.full_name).join(', ')} ${highRisk.length === 1 ? 'is' : 'are'} HIGH risk — prioritise referral or clinical assessment.`,
+      text: tt('advice.highRisk', { count: highRisk.length, names: highRisk.map((c) => c.full_name).join(', ') }),
     });
   }
 
@@ -273,7 +273,7 @@ function FamilyAdvice({ overview }: { overview: FamilyOverview }) {
     tips.push({
       icon: <Syringe size={15} />,
       color: 'var(--warn)',
-      text: `${lowCoverage.map((c) => c.full_name).join(', ')} ${lowCoverage.length === 1 ? 'has' : 'have'} below 50% vaccination coverage. Schedule clinic attendance urgently.`,
+      text: tt('advice.lowCoverage', { count: lowCoverage.length, names: lowCoverage.map((c) => c.full_name).join(', ') }),
     });
   }
 
@@ -282,7 +282,7 @@ function FamilyAdvice({ overview }: { overview: FamilyOverview }) {
     tips.push({
       icon: <Clock size={15} />,
       color: 'var(--warn)',
-      text: `${overdue.map((c) => c.full_name).join(', ')} ${overdue.length === 1 ? 'has' : 'have'} overdue scheduled doses. Contact guardian to arrange catch-up vaccination.`,
+      text: tt('advice.overdue', { count: overdue.length, names: overdue.map((c) => c.full_name).join(', ') }),
     });
   }
 
@@ -291,7 +291,7 @@ function FamilyAdvice({ overview }: { overview: FamilyOverview }) {
     tips.push({
       icon: <Baby size={15} />,
       color: 'var(--text-muted)',
-      text: `${neverVisited.map((c) => c.full_name).join(', ')} ${neverVisited.length === 1 ? 'has' : 'have'} no recorded visits. Arrange a home visit or facility check-up.`,
+      text: tt('advice.neverVisited', { count: neverVisited.length, names: neverVisited.map((c) => c.full_name).join(', ') }),
     });
   }
 
@@ -302,7 +302,7 @@ function FamilyAdvice({ overview }: { overview: FamilyOverview }) {
     tips.push({
       icon: <Activity size={15} />,
       color: 'var(--danger)',
-      text: `${muacLow.map((c) => c.full_name).join(', ')} ${muacLow.length === 1 ? 'has' : 'have'} MUAC below 12.5 cm — acute malnutrition indicator. Consider RUTF/RUSF enrolment.`,
+      text: tt('advice.muacLow', { count: muacLow.length, names: muacLow.map((c) => c.full_name).join(', ') }),
     });
   }
 
@@ -310,7 +310,7 @@ function FamilyAdvice({ overview }: { overview: FamilyOverview }) {
     tips.push({
       icon: <UserCheck size={15} />,
       color: 'var(--text-muted)',
-      text: 'Guardian does not have a linked parent account. Advise them to register so they can receive SMS reminders and view their children\'s progress.',
+      text: tt('guardianDoesNotHave'),
     });
   }
 
@@ -318,17 +318,15 @@ function FamilyAdvice({ overview }: { overview: FamilyOverview }) {
     tips.push({
       icon: <CheckCircle size={15} />,
       color: 'var(--success)',
-      text: 'Family is in good standing — all children at low risk, vaccination coverage adequate. Continue routine monitoring.',
+      text: tt('familyIsInGood'),
     });
   }
 
   return (
     <div className="rounded-xl border flex flex-col gap-0 overflow-hidden" style={{ borderColor: 'var(--border)' }}>
       <div className="px-4 py-3 border-b" style={{ background: 'var(--bg-sand)', borderColor: 'var(--border)' }}>
-        <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>Clinical Guidance</h3>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          AI-assisted advice based on this family&apos;s data
-        </p>
+        <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{tt('clinicalGuidance')}</h3>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{tt('aiAssistedAdviceBased')}</p>
       </div>
       {tips.map((tip, i) => (
         <div
@@ -347,6 +345,7 @@ function FamilyAdvice({ overview }: { overview: FamilyOverview }) {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function GuardianProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const tt = useTranslations('nurse.guardians.detail');
   const { id } = use(params);
 
   const { data: overview, isLoading, error } = useQuery({
@@ -373,10 +372,9 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
     return (
       <div className="flex flex-col gap-4 max-w-4xl mx-auto w-full">
         <Link href="/nurse/children" className="flex items-center gap-1.5 text-sm w-fit" style={{ color: 'var(--text-muted)' }}>
-          <ArrowLeft size={14} /> Children
-        </Link>
+          <ArrowLeft size={14} />{' '}{tt('children')}</Link>
         <div className="rounded-xl border p-6 text-center" style={{ borderColor: 'var(--border)' }}>
-          <p className="text-sm" style={{ color: 'var(--danger)' }}>Could not load family profile. Please try again.</p>
+          <p className="text-sm" style={{ color: 'var(--danger)' }}>{tt('couldNotLoadFamily')}</p>
         </div>
       </div>
     );
@@ -388,8 +386,7 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
       {/* Back */}
       <Link href="/nurse/children" className="flex items-center gap-1.5 text-sm w-fit" style={{ color: 'var(--text-muted)' }}>
-        <ArrowLeft size={14} /> Children
-      </Link>
+        <ArrowLeft size={14} />{' '}{tt('children')}</Link>
 
       {/* Guardian header */}
       <div
@@ -411,11 +408,9 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
               {g.full_name}
             </h2>
             <Badge variant={g.has_account ? 'success' : 'default'}>
-              {g.has_account ? 'Has account' : 'No account'}
+              {g.has_account ? tt('hasAccount') : tt('noAccount')}
             </Badge>
-            <Badge variant={riskVariant(overview.family_risk_level)}>
-              Family risk: {overview.family_risk_level}
-            </Badge>
+            <Badge variant={riskVariant(overview.family_risk_level)}>{tt('familyRisk', { family_risk_level: overview.family_risk_level })}</Badge>
           </div>
           <div className="flex flex-wrap gap-4 mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
             <span className="flex items-center gap-1">
@@ -424,7 +419,7 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
             </span>
             <span className="flex items-center gap-1">
               <Users size={13} />
-              {g.relationship || 'Guardian'}
+              {g.relationship || tt('guardian')}
             </span>
             {g.user_email && (
               <span className="flex items-center gap-1">
@@ -434,15 +429,11 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
             )}
             {g.assigned_chw_name && (
               <span className="flex items-center gap-1">
-                <Activity size={13} />
-                CHW: {g.assigned_chw_name}
-              </span>
+                <Activity size={13} />{tt('chw', { assigned_chw_name: g.assigned_chw_name })}</span>
             )}
           </div>
           {g.national_id && (
-            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-              ID: {g.national_id}
-            </p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{tt('id', { national_id: g.national_id })}</p>
           )}
         </div>
       </div>
@@ -452,25 +443,25 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
         {[
           {
             icon: <Baby size={18} />,
-            label: 'Children',
+            label: tt('children'),
             value: String(overview.total_children),
             color: 'var(--ink)',
           },
           {
             icon: <Syringe size={18} />,
-            label: 'Vax Coverage',
+            label: tt('vaxCoverage'),
             value: `${overview.vaccination_coverage_pct}%`,
             color: overview.vaccination_coverage_pct >= 80 ? 'var(--success)' : overview.vaccination_coverage_pct >= 50 ? 'var(--warn)' : 'var(--danger)',
           },
           {
             icon: <AlertTriangle size={18} />,
-            label: 'High Risk',
+            label: tt('highRisk'),
             value: String(overview.children.filter((c) => c.risk_level === 'HIGH').length),
             color: overview.children.some((c) => c.risk_level === 'HIGH') ? 'var(--danger)' : 'var(--success)',
           },
           {
             icon: <Clock size={18} />,
-            label: 'Overdue Vax',
+            label: tt('overdueVax'),
             value: String(overview.children.filter((c) => c.vaccination.is_overdue).length),
             color: overview.children.some((c) => c.vaccination.is_overdue) ? 'var(--warn)' : 'var(--success)',
           },
@@ -492,11 +483,9 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
 
       {/* Children */}
       <div>
-        <h3 className="font-semibold text-base mb-3" style={{ color: 'var(--ink)' }}>
-          Children ({overview.total_children})
-        </h3>
+        <h3 className="font-semibold text-base mb-3" style={{ color: 'var(--ink)' }}>{tt('children2', { total_children: overview.total_children })}</h3>
         {overview.children.length === 0 ? (
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No active children found for this guardian.</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{tt('noActiveChildrenFound')}</p>
         ) : (
           <div className="grid sm:grid-cols-2 gap-4">
             {overview.children.map((child) => (
@@ -510,9 +499,7 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
       {overview.recent_notes.length > 0 && (
         <div>
           <h3 className="font-semibold text-base mb-3 flex items-center gap-2" style={{ color: 'var(--ink)' }}>
-            <Pin size={15} />
-            Recent Notes
-          </h3>
+            <Pin size={15} />{tt('recentNotes')}</h3>
           <div className="flex flex-col gap-2">
             {overview.recent_notes.map((note) => (
               <div
@@ -553,9 +540,7 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
       {overview.recent_visit_requests.length > 0 && (
         <div>
           <h3 className="font-semibold text-base mb-3 flex items-center gap-2" style={{ color: 'var(--ink)' }}>
-            <MessageSquare size={15} />
-            Visit Requests
-          </h3>
+            <MessageSquare size={15} />{tt('visitRequests')}</h3>
           <div className="flex flex-col gap-2">
             {overview.recent_visit_requests.map((vr) => {
               const urgencyColor = vr.urgency === 'URGENT' ? 'danger' : vr.urgency === 'SOON' ? 'warn' : 'default';
@@ -594,9 +579,7 @@ export default function GuardianProfilePage({ params }: { params: Promise<{ id: 
       {Object.keys(overview.nutrition_summary).length > 0 && (
         <div>
           <h3 className="font-semibold text-base mb-3 flex items-center gap-2" style={{ color: 'var(--ink)' }}>
-            <Activity size={15} />
-            Nutrition Distribution
-          </h3>
+            <Activity size={15} />{tt('nutritionDistribution')}</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {Object.entries(overview.nutrition_summary).map(([status, count]) => (
               <div

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { use } from 'react';
 import { useRouter } from 'next/navigation';
@@ -12,13 +13,14 @@ import { Skeleton } from '@/components/ui/Skeleton';
 
 type ClosureStatus = 'DECEASED' | 'TRANSFERRED' | 'DEPARTED';
 
-const STATUS_OPTIONS: { value: ClosureStatus; label: string; description: string }[] = [
-  { value: 'DECEASED', label: 'Deceased', description: 'Child has passed away' },
-  { value: 'TRANSFERRED', label: 'Transferred', description: 'Transferred to another facility or camp' },
-  { value: 'DEPARTED', label: 'Departed', description: 'Family has left the camp' },
+const STATUS_OPTIONS: { value: ClosureStatus; }[] = [
+  { value: 'DECEASED' },
+  { value: 'TRANSFERRED' },
+  { value: 'DEPARTED' },
 ];
 
 export default function CloseCasePage({ params }: { params: Promise<{ id: string }> }) {
+  const t = useTranslations('nurse.children.detail.close');
   const { id } = use(params);
   const router = useRouter();
   const { data: rawChild, isLoading } = useChild(id);
@@ -33,11 +35,11 @@ export default function CloseCasePage({ params }: { params: Promise<{ id: string
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!confirmed) {
-      setError('Please check the confirmation box before proceeding.');
+      setError(t('pleaseCheckTheConfirmation'));
       return;
     }
     if (!reason.trim()) {
-      setError('Please provide a reason for closure.');
+      setError(t('pleaseProvideAReason'));
       return;
     }
     setSubmitting(true);
@@ -47,7 +49,7 @@ export default function CloseCasePage({ params }: { params: Promise<{ id: string
       router.push('/nurse/children');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? 'Failed to close case. Please try again.');
+      setError(msg ?? t('failedToCloseCase'));
     } finally {
       setSubmitting(false);
     }
@@ -61,23 +63,19 @@ export default function CloseCasePage({ params }: { params: Promise<{ id: string
         className="inline-flex items-center gap-1.5 text-sm hover:underline"
         style={{ color: 'var(--text-muted)' }}
       >
-        <ArrowLeft size={14} aria-hidden="true" />
-        Back to child record
-      </Link>
+        <ArrowLeft size={14} aria-hidden="true" />{t('backToChildRecord')}</Link>
 
       {/* Header */}
       <div>
         <h2
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          Close Case
-        </h2>
+        >{t('closeCase')}</h2>
         {isLoading ? (
           <Skeleton className="h-5 w-40 mt-1 rounded" />
         ) : (
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {child?.full_name ?? 'Child'} · {child?.registration_number}
+            {child?.full_name ?? t('child')} · {child?.registration_number}
           </p>
         )}
       </div>
@@ -89,13 +87,8 @@ export default function CloseCasePage({ params }: { params: Promise<{ id: string
       >
         <AlertTriangle size={18} style={{ color: 'var(--danger)', flexShrink: 0, marginTop: 1 }} />
         <div>
-          <p className="text-sm font-semibold mb-1" style={{ color: 'var(--danger)' }}>
-            This action deactivates the child record
-          </p>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            The record will be preserved for audit purposes but removed from active caseloads.
-            This action can only be reversed by an administrator.
-          </p>
+          <p className="text-sm font-semibold mb-1" style={{ color: 'var(--danger)' }}>{t('thisActionDeactivatesThe')}</p>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('theRecordWillBe')}</p>
         </div>
       </div>
 
@@ -103,9 +96,7 @@ export default function CloseCasePage({ params }: { params: Promise<{ id: string
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {/* Status selection */}
         <div>
-          <p id="close-reason-label" className="text-sm font-semibold block mb-3" style={{ color: 'var(--ink)' }}>
-            Reason for closure
-          </p>
+          <p id="close-reason-label" className="text-sm font-semibold block mb-3" style={{ color: 'var(--ink)' }}>{t('reasonForClosure')}</p>
           <div role="radiogroup" aria-labelledby="close-reason-label" className="flex flex-col gap-2">
             {STATUS_OPTIONS.map((opt) => (
               <label
@@ -127,8 +118,8 @@ export default function CloseCasePage({ params }: { params: Promise<{ id: string
                   className="mt-0.5 shrink-0"
                 />
                 <div>
-                  <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{opt.label}</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{opt.description}</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t(`status.${opt.value}`)}</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t(`statusDesc.${opt.value}`)}</p>
                 </div>
               </label>
             ))}
@@ -137,12 +128,11 @@ export default function CloseCasePage({ params }: { params: Promise<{ id: string
 
         {/* Notes */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="close-details" className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-            Details <span style={{ color: 'var(--danger)' }}>*</span>
+          <label htmlFor="close-details" className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{t('details')}{' '}<span style={{ color: 'var(--danger)' }}>*</span>
           </label>
           <textarea id="close-details"
             rows={4}
-            placeholder="Describe the circumstances, date of event, and any follow-up actions taken…"
+            placeholder={t('describeTheCircumstancesDate')}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             required
@@ -159,9 +149,7 @@ export default function CloseCasePage({ params }: { params: Promise<{ id: string
             onChange={(e) => setConfirmed(e.target.checked)}
             className="mt-0.5 w-4 h-4 rounded shrink-0"
           />
-          <span className="text-sm" style={{ color: 'var(--ink)' }}>
-            I confirm that this information is accurate and I have the authority to close this case.
-          </span>
+          <span className="text-sm" style={{ color: 'var(--ink)' }}>{t('iConfirmThatThis')}</span>
         </label>
 
         {error && (
@@ -169,11 +157,9 @@ export default function CloseCasePage({ params }: { params: Promise<{ id: string
         )}
 
         <div className="flex gap-3">
-          <Button type="submit" variant="danger" loading={submitting} disabled={!confirmed}>
-            Close case
-          </Button>
+          <Button type="submit" variant="danger" loading={submitting} disabled={!confirmed}>{t('closeCase2')}</Button>
           <Link href={`/nurse/children/${id}`}>
-            <Button type="button" variant="secondary">Cancel</Button>
+            <Button type="button" variant="secondary">{t('cancel')}</Button>
           </Link>
         </div>
       </form>
