@@ -39,3 +39,31 @@ export {
   markAllNotificationsRead,
   deleteNotification,
 } from './notifications';
+
+/** The signed-in person's own work for their current role (profile page). */
+export interface ProfileSummary {
+  role: string;
+  member_since: string | null;
+  last_sign_in: string | null;
+  work: {
+    // Parent: the list of their children (CHW: a count, see below)
+    children?: number | {
+      id: string; full_name: string; age_display: string; sex: 'M' | 'F'; camp_name: string | null;
+      nutrition_status: string | null; risk_level: string | null; last_checkup: string | null;
+      next_vaccine: { name: string; date: string } | null; overdue_doses: number;
+    }[];
+    care_team?: { full_name: string; phone_number: string | null; role: string }[];
+    // CHW
+    zones?: string[] | number; families?: number; open_visit_requests?: number; last_checkup?: string | null;
+    // Shared counts
+    checkups_this_month?: number; chws?: number; children_in_camp?: number; registered_by_me?: number;
+    open_referrals?: number; open_sessions?: number; camps?: number | string[]; active_users?: number;
+    // Government / partner
+    organization?: string | null; kind?: string; all_camps?: boolean;
+  };
+}
+
+export async function getProfileSummary(): Promise<ProfileSummary> {
+  const { data } = await apiClient.get('/auth/me/summary/');
+  return data.data;
+}

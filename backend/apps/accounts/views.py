@@ -8,6 +8,7 @@ from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
+from django.contrib.auth.models import update_last_login
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.openapi import OpenApiTypes
 
@@ -73,6 +74,8 @@ class LoginView(TokenObtainPairView):
                 return error_response(str(message), 'AUTH_FAILED', status_code=status.HTTP_401_UNAUTHORIZED)
             clear_failed_logins(login_id)
             user = auth_serializer.validated_data['user']
+            # This path builds the token itself, so record the sign-in as SimpleJWT would
+            update_last_login(None, user)
             token = CustomTokenObtainPairSerializer.get_token(user)
             data = {
                 'access': str(token.access_token),

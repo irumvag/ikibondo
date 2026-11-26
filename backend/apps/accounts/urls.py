@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
 from .views import consent_view, consent_withdraw_view
+from .profile_summary import profile_summary_view
 
 _router = DefaultRouter()
 _router.register(r'organizations', views.OrganizationViewSet, basename='organization')
@@ -12,6 +13,7 @@ urlpatterns = [
     path('refresh/', TokenRefreshView.as_view(), name='auth-refresh'),
     path('logout/', views.logout_view, name='auth-logout'),
     path('me/', views.me_view, name='auth-me'),
+    path('me/summary/', profile_summary_view, name='auth-me-summary'),
     path('change-password/', views.change_password_view, name='auth-change-password'),
     path('register/', views.register_view, name='auth-register'),
     path('password-reset/request/', views.password_reset_request_view, name='auth-password-reset-request'),

@@ -185,6 +185,8 @@ REST_FRAMEWORK = {
 # JWT
 # ---------------------------------------------------------------------------
 SIMPLE_JWT = {
+    # Record each sign-in (shown on the profile page as "Last sign-in")
+    'UPDATE_LAST_LOGIN': True,
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
