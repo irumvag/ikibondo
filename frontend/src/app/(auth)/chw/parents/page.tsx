@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -34,6 +35,7 @@ function fmtDate(s: string | null) {
 // ── Child Profile Drawer ───────────────────────────────────────────────────────
 
 function ChildDrawer({ child, onClose }: { child: CHWChildSummary; onClose: () => void }) {
+  const t = useTranslations('chw.parents');
   const { data: history = [], isLoading: histLoading } = useQuery({
     queryKey: ['child-history', child.id],
     queryFn:  () => getChildHistory(child.id),
@@ -66,7 +68,7 @@ function ChildDrawer({ child, onClose }: { child: CHWChildSummary; onClose: () =
             </h3>
             <div className="flex flex-wrap gap-2 mt-1">
               <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {child.age_display} · {child.sex === 'M' ? 'Boy' : 'Girl'}
+                {child.age_display} · {child.sex === 'M' ? t('boy') : t('girl')}
               </span>
               {child.zone_name && (
                 <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -89,27 +91,25 @@ function ChildDrawer({ child, onClose }: { child: CHWChildSummary; onClose: () =
         <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-6">
           {/* Status chips */}
           <div className="flex flex-wrap gap-2">
-            <Badge variant={RISK_VARIANT[child.risk_level] ?? 'default'}>
-              {child.risk_level} risk
-            </Badge>
+            <Badge variant={RISK_VARIANT[child.risk_level] ?? 'default'}>{t('risk', { risk_level: child.risk_level })}</Badge>
             {child.overdue_vaccines > 0 && (
-              <Badge variant="warn">{child.overdue_vaccines} vaccine{child.overdue_vaccines !== 1 ? 's' : ''} overdue</Badge>
+              <Badge variant="warn">{t('vaccinesOverdue', { count: child.overdue_vaccines })}</Badge>
             )}
             {child.upcoming_vaccines > 0 && (
-              <Badge variant="default">{child.upcoming_vaccines} upcoming</Badge>
+              <Badge variant="default">{t('upcoming', { upcoming_vaccines: child.upcoming_vaccines })}</Badge>
             )}
             {child.last_visit_days_ago === null && (
-              <Badge variant="danger">Never visited</Badge>
+              <Badge variant="danger">{t('neverVisited')}</Badge>
             )}
           </div>
 
           {/* Quick stats */}
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: 'Last visit', value: child.last_visit_date ? fmtDate(child.last_visit_date) : 'Never', icon: Clock },
-              { label: 'Days since visit', value: child.last_visit_days_ago !== null ? `${child.last_visit_days_ago}d ago` : '—', icon: Calendar },
-              { label: 'Next vaccine', value: child.next_vaccine_name ?? 'None', icon: Syringe },
-              { label: 'Vaccine date', value: child.next_vaccine_date ? fmtDate(child.next_vaccine_date) : '—', icon: Calendar },
+              { label: t('lastVisit'), value: child.last_visit_date ? fmtDate(child.last_visit_date) : 'Never', icon: Clock },
+              { label: t('daysSinceVisit'), value: child.last_visit_days_ago !== null ? t('daysAgo', { days: child.last_visit_days_ago }) : '—', icon: Calendar },
+              { label: t('nextVaccine'), value: child.next_vaccine_name ?? 'None', icon: Syringe },
+              { label: t('vaccineDate'), value: child.next_vaccine_date ? fmtDate(child.next_vaccine_date) : '—', icon: Calendar },
             ].map(({ label, value, icon: Icon }) => (
               <div key={label} className="rounded-xl p-3" style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
                 <div className="flex items-center gap-1.5 mb-1">
@@ -123,13 +123,11 @@ function ChildDrawer({ child, onClose }: { child: CHWChildSummary; onClose: () =
 
           {/* Latest measurement */}
           <section>
-            <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-              Latest health record
-            </h4>
+            <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{t('latestHealthRecord')}</h4>
             {histLoading ? (
               <Skeleton className="h-28 rounded-xl" />
             ) : !latest ? (
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No health records yet.</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noHealthRecordsYet')}</p>
             ) : (
               <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
                 <div className="flex items-center justify-between">
@@ -169,9 +167,7 @@ function ChildDrawer({ child, onClose }: { child: CHWChildSummary; onClose: () =
           {/* Visit history */}
           {history.length > 1 && (
             <section>
-              <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-                Visit history
-              </h4>
+              <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{t('visitHistory')}</h4>
               <div className="flex flex-col gap-2">
                 {history.slice(1, 6).map((hr: HealthRecordDetail) => (
                   <div
@@ -194,13 +190,11 @@ function ChildDrawer({ child, onClose }: { child: CHWChildSummary; onClose: () =
 
           {/* Nurse notes */}
           <section>
-            <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-              Nurse notes &amp; advice
-            </h4>
+            <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{t('nurseNotesAdvice')}</h4>
             {notesLoading ? (
               <Skeleton className="h-16 rounded-xl" />
             ) : notes.length === 0 ? (
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No notes from the nurse yet.</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noNotesFromThe')}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {notes.map((n: ClinicalNote) => (
@@ -232,15 +226,12 @@ function ChildDrawer({ child, onClose }: { child: CHWChildSummary; onClose: () =
               className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-colors"
               style={{ background: 'var(--ink)', color: 'var(--bg)' }}
             >
-              <Activity size={16} /> Log a Visit
-            </Link>
+              <Activity size={16} />{' '}{t('logAVisit')}</Link>
             <Link
               href="/chw/consultations"
               className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium border transition-colors hover:bg-[var(--bg-sand)]"
               style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
-            >
-              Ask a Nurse
-            </Link>
+            >{t('askANurse')}</Link>
           </div>
         </div>
       </div>
@@ -251,6 +242,7 @@ function ChildDrawer({ child, onClose }: { child: CHWChildSummary; onClose: () =
 // ── Family Card ────────────────────────────────────────────────────────────────
 
 function FamilyCard({ family }: { family: CHWFamily }) {
+  const t = useTranslations('chw.parents');
   const [open, setOpen]           = useState(false);
   const [selectedChild, setChild] = useState<CHWChildSummary | null>(null);
 
@@ -283,22 +275,19 @@ function FamilyCard({ family }: { family: CHWFamily }) {
                 <span
                   className="text-xs px-1.5 py-0.5 rounded-full font-medium"
                   style={{ backgroundColor: 'color-mix(in srgb, var(--success) 12%, transparent)', color: 'var(--success)' }}
-                >
-                  App user
-                </span>
+                >{t('appUser')}</span>
               )}
               {alertCount > 0 && (
                 <span
                   className="text-xs px-1.5 py-0.5 rounded-full font-semibold"
                   style={{ backgroundColor: '#fef2f2', color: 'var(--danger)' }}
                 >
-                  <AlertTriangle size={10} className="inline mr-0.5" />{alertCount} alert{alertCount !== 1 ? 's' : ''}
+                  <AlertTriangle size={10} className="inline mr-0.5" />{t('alerts', { count: alertCount })}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-3 mt-0.5">
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {family.relationship} · {family.children.length} child{family.children.length !== 1 ? 'ren' : ''}
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('relationshipChildren', { relationship: family.relationship, count: family.children.length })}
               </span>
               {family.phone_number && (
                 <a
@@ -351,16 +340,13 @@ function FamilyCard({ family }: { family: CHWFamily }) {
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{child.age_display}</span>
                     {child.last_visit_days_ago !== null ? (
                       <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                        <Clock size={10} className="inline mr-0.5" />
-                        {child.last_visit_days_ago}d ago
-                      </span>
+                        <Clock size={10} className="inline mr-0.5" />{t('dAgo', { last_visit_days_ago: child.last_visit_days_ago })}</span>
                     ) : (
-                      <span className="text-xs font-medium" style={{ color: 'var(--danger)' }}>Never visited</span>
+                      <span className="text-xs font-medium" style={{ color: 'var(--danger)' }}>{t('neverVisited')}</span>
                     )}
                     {child.overdue_vaccines > 0 && (
                       <span className="text-xs font-medium flex items-center gap-0.5" style={{ color: 'var(--warn)' }}>
-                        <Syringe size={10} />{child.overdue_vaccines} overdue
-                      </span>
+                        <Syringe size={10} />{t('overdue2', { overdue_vaccines: child.overdue_vaccines })}</span>
                     )}
                   </div>
                 </div>
@@ -385,6 +371,7 @@ function FamilyCard({ family }: { family: CHWFamily }) {
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function CHWParentsPage() {
+  const t = useTranslations('chw.parents');
   const [search,  setSearch]  = useState('');
   const [filter,  setFilter]  = useState<'ALL' | 'ALERT' | 'APP_USER'>('ALL');
 
@@ -420,20 +407,18 @@ export default function CHWParentsPage() {
         <h2
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          My Families
-        </h2>
+        >{t('myFamilies')}</h2>
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          {isLoading ? '—' : `${families.length} families · ${totalChildren} children`}
+          {isLoading ? '—' : t('familiesChildren', { families: families.length, children: totalChildren })}
         </p>
       </div>
 
       {/* Summary row */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Families', value: families.length, icon: Users, color: 'var(--ink)' },
-          { label: 'Need attention', value: alertFamilies, icon: AlertTriangle, color: alertFamilies > 0 ? 'var(--danger)' : 'var(--success)' },
-          { label: 'App users', value: appUsers, icon: CheckCircle2, color: 'var(--success)' },
+          { label: t('families'), value: families.length, icon: Users, color: 'var(--ink)' },
+          { label: t('needAttention'), value: alertFamilies, icon: AlertTriangle, color: alertFamilies > 0 ? 'var(--danger)' : 'var(--success)' },
+          { label: t('appUsers'), value: appUsers, icon: CheckCircle2, color: 'var(--success)' },
         ].map(({ label, value, icon: Icon, color }) => (
           <div
             key={label}
@@ -456,7 +441,7 @@ export default function CHWParentsPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search parent or child name…"
+            placeholder={t('searchParentOrChild')}
             className="w-full pl-8 pr-8 py-2 rounded-xl border text-sm outline-none focus:ring-2"
             style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)', color: 'var(--ink)' }}
           />
@@ -480,7 +465,7 @@ export default function CHWParentsPage() {
                 color:       filter === f ? 'var(--bg)' : 'var(--text-muted)',
               }}
             >
-              {f === 'ALL' ? 'All' : f === 'ALERT' ? '⚠ Needs attention' : '✓ App users'}
+              {f === 'ALL' ? t('all') : f === 'ALERT' ? t('needsAttention') : t('appUsers2')}
             </button>
           ))}
         </div>
@@ -494,8 +479,8 @@ export default function CHWParentsPage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Users size={32} />}
-          title={search ? 'No matches found' : 'No families assigned yet'}
-          description={search ? 'Try a different name.' : 'Your supervisor assigns families to you. Check back later.'}
+          title={search ? t('noMatchesFound') : t('noFamiliesAssignedYet')}
+          description={search ? t('tryADifferentName') : t('yourSupervisorAssignsFamilies')}
         />
       ) : (
         <div className="flex flex-col gap-3">

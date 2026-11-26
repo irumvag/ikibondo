@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
@@ -49,11 +50,12 @@ async function searchChildren(q: string) {
   return data.data ?? data.results ?? [];
 }
 
-const STATUS_META: Record<string, { label: string; color: string; icon: typeof Clock }> = {
-  PENDING:   { label: 'Pending',   color: 'warn',    icon: Clock },
-  ACCEPTED:  { label: 'Accepted',  color: 'info',    icon: AlertCircle },
-  COMPLETED: { label: 'Completed', color: 'success', icon: CheckCircle },
-  CANCELLED: { label: 'Cancelled', color: 'danger',  icon: XCircle },
+// Status names: messages/en.json chw.referrals.status.<STATUS>
+const STATUS_META: Record<'PENDING' | 'ACCEPTED' | 'COMPLETED' | 'CANCELLED', { color: string; icon: typeof Clock }> = {
+  PENDING:   { color: 'warn',    icon: Clock },
+  ACCEPTED:  { color: 'info',    icon: AlertCircle },
+  COMPLETED: { color: 'success', icon: CheckCircle },
+  CANCELLED: { color: 'danger',  icon: XCircle },
 };
 
 function formatDate(iso: string) {
@@ -61,6 +63,7 @@ function formatDate(iso: string) {
 }
 
 export default function CHWReferralsPage() {
+  const t = useTranslations('chw.referrals');
   const toast = useToast();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -85,7 +88,7 @@ export default function CHWReferralsPage() {
   const createMut = useMutation({
     mutationFn: createReferral,
     onSuccess: () => {
-      toast.success('Referral sent');
+      toast.success(t('referralSent'));
       qc.invalidateQueries({ queryKey: ['chw-referrals'] });
       setShowForm(false);
       setSelectedChild(null);
@@ -98,7 +101,7 @@ export default function CHWReferralsPage() {
   const completeMut = useMutation({
     mutationFn: ({ id, outcome }: { id: string; outcome: string }) => completeReferral(id, outcome),
     onSuccess: () => {
-      toast.success('Outcome recorded');
+      toast.success(t('outcomeRecorded'));
       qc.invalidateQueries({ queryKey: ['chw-referrals'] });
       setCompleteId(null);
       setOutcome('');
@@ -110,26 +113,21 @@ export default function CHWReferralsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-            Referrals
-          </h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Log and track high-risk child referrals to health facilities.
-          </p>
+          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('referrals')}</h2>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('logAndTrackHigh')}</p>
         </div>
         <Button onClick={() => setShowForm(true)}>
-          <Plus size={16} className="mr-1" /> New Referral
-        </Button>
+          <Plus size={16} className="mr-1" />{' '}{t('newReferral')}</Button>
       </div>
 
       {/* New Referral Form */}
       {showForm && (
         <div className="rounded-xl border p-5 flex flex-col gap-4" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-          <h3 className="font-semibold" style={{ color: 'var(--ink)' }}>Create Referral</h3>
+          <h3 className="font-semibold" style={{ color: 'var(--ink)' }}>{t('createReferral')}</h3>
 
           {/* Child search */}
           <div className="flex flex-col gap-1">
-            <label htmlFor={selectedChild ? undefined : 'referrals-child-search'} className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Child</label>
+            <label htmlFor={selectedChild ? undefined : 'referrals-child-search'} className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('child')}</label>
             {selectedChild ? (
               <div className="flex items-center gap-2">
                 <span className="text-sm px-3 py-2 rounded-lg" style={{ background: 'var(--bg)', color: 'var(--ink)' }}>
@@ -139,15 +137,13 @@ export default function CHWReferralsPage() {
                   onClick={() => { setSelectedChild(null); setChildSearch(''); }}
                   className="text-xs"
                   style={{ color: 'var(--text-muted)' }}
-                >
-                  Change
-                </button>
+                >{t('change')}</button>
               </div>
             ) : (
               <div className="relative">
                 <Input
                   id="referrals-child-search"
-                  placeholder="Search by name or registration number…"
+                  placeholder={t('searchByNameOr')}
                   value={childSearch}
                   onChange={(e) => setChildSearch(e.target.value)}
                 />
@@ -173,20 +169,20 @@ export default function CHWReferralsPage() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label htmlFor="referrals-target-facility" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Target Facility</label>
+            <label htmlFor="referrals-target-facility" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('targetFacility')}</label>
             <Input
               id="referrals-target-facility"
-              placeholder="e.g. Kiziba Health Centre"
+              placeholder={t('eGKizibaHealth')}
               value={facility}
               onChange={(e) => setFacility(e.target.value)}
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label htmlFor="referrals-reason-for-referral" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Reason for Referral</label>
+            <label htmlFor="referrals-reason-for-referral" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('reasonForReferral')}</label>
             <textarea id="referrals-reason-for-referral"
               rows={3}
-              placeholder="Describe clinical reason…"
+              placeholder={t('describeClinicalReason')}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className="w-full rounded-lg px-3 py-2 text-sm border resize-none"
@@ -195,12 +191,12 @@ export default function CHWReferralsPage() {
           </div>
 
           <div className="flex gap-2 justify-end">
-            <Button variant="ghost" onClick={() => setShowForm(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setShowForm(false)}>{t('cancel')}</Button>
             <Button
               disabled={!selectedChild || !facility || !reason || createMut.isPending}
               onClick={() => selectedChild && createMut.mutate({ child: selectedChild.id, target_facility: facility, reason })}
             >
-              {createMut.isPending ? 'Saving…' : 'Create Referral'}
+              {createMut.isPending ? t('saving') : t('createReferral')}
             </Button>
           </div>
         </div>
@@ -209,22 +205,22 @@ export default function CHWReferralsPage() {
       {/* Complete Referral Modal */}
       {completeId && (
         <div className="rounded-xl border p-5 flex flex-col gap-4" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-          <h3 className="font-semibold" style={{ color: 'var(--ink)' }}>Record Outcome</h3>
+          <h3 className="font-semibold" style={{ color: 'var(--ink)' }}>{t('recordOutcome')}</h3>
           <textarea
             rows={3}
-            placeholder="Describe what happened at the facility…"
+            placeholder={t('describeWhatHappenedAt')}
             value={outcome}
             onChange={(e) => setOutcome(e.target.value)}
             className="w-full rounded-lg px-3 py-2 text-sm border resize-none"
             style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--ink)' }}
           />
           <div className="flex gap-2 justify-end">
-            <Button variant="ghost" onClick={() => setCompleteId(null)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setCompleteId(null)}>{t('cancel')}</Button>
             <Button
               disabled={!outcome || completeMut.isPending}
               onClick={() => completeMut.mutate({ id: completeId, outcome })}
             >
-              {completeMut.isPending ? 'Saving…' : 'Mark Complete'}
+              {completeMut.isPending ? t('saving') : t('markComplete')}
             </Button>
           </div>
         </div>
@@ -238,13 +234,14 @@ export default function CHWReferralsPage() {
       ) : referrals.length === 0 ? (
         <EmptyState
           icon={<CheckCircle size={32} />}
-          title="No referrals yet"
-          description="Create a referral to send a child to a health facility for further care."
+          title={t('noReferralsYet')}
+          description={t('createAReferralTo')}
         />
       ) : (
         <div className="flex flex-col gap-3">
           {referrals.map((ref) => {
-            const meta = STATUS_META[ref.status] ?? STATUS_META.PENDING;
+            const status = ref.status in STATUS_META ? (ref.status as keyof typeof STATUS_META) : 'PENDING';
+            const meta = STATUS_META[status];
             const Icon = meta.icon;
             return (
               <div
@@ -261,20 +258,18 @@ export default function CHWReferralsPage() {
                   </div>
                   <Badge variant={meta.color as 'warn' | 'success' | 'danger' | 'info'}>
                     <Icon size={12} className="mr-1" />
-                    {meta.label}
+                    {t(`status.${status}`)}
                   </Badge>
                 </div>
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{ref.reason}</p>
                 {ref.outcome && (
                   <p className="text-xs px-3 py-2 rounded-lg" style={{ background: 'var(--bg)', color: 'var(--ink)' }}>
-                    <span className="font-medium">Outcome: </span>{ref.outcome}
+                    <span className="font-medium">{t('outcome')}{' '}</span>{ref.outcome}
                   </p>
                 )}
                 {ref.status === 'PENDING' || ref.status === 'ACCEPTED' ? (
                   <div className="flex justify-end">
-                    <Button size="sm" variant="ghost" onClick={() => setCompleteId(ref.id)}>
-                      Record Outcome
-                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setCompleteId(ref.id)}>{t('recordOutcome')}</Button>
                   </div>
                 ) : null}
               </div>

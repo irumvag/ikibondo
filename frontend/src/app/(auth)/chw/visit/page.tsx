@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState, useEffect, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
@@ -32,17 +33,18 @@ const RISK_BG: Record<string, string> = {
   HIGH: '#fef2f2', MEDIUM: '#fffbeb', LOW: '#f0fdf4', UNKNOWN: 'var(--bg-sand)',
 };
 
+// Symptoms are saved as these codes; names: messages/en.json chw.visit.symptom.<CODE>
 const SYMPTOM_FLAGS = [
-  { key: 'FEVER',       label: 'Fever'       },
-  { key: 'COUGH',       label: 'Cough'       },
-  { key: 'DIARRHEA',    label: 'Diarrhea'    },
-  { key: 'VOMITING',    label: 'Vomiting'    },
-  { key: 'RASH',        label: 'Rash'        },
-  { key: 'CONVULSIONS', label: 'Convulsions' },
-  { key: 'LETHARGY',    label: 'Lethargy'    },
-  { key: 'ANOREXIA',    label: 'Anorexia'    },
-  { key: 'DEHYDRATION', label: 'Dehydration' },
-];
+  { key: 'FEVER' },
+  { key: 'COUGH' },
+  { key: 'DIARRHEA' },
+  { key: 'VOMITING' },
+  { key: 'RASH' },
+  { key: 'CONVULSIONS' },
+  { key: 'LETHARGY' },
+  { key: 'ANOREXIA' },
+  { key: 'DEHYDRATION' },
+] as const;
 
 interface FormState {
   measurement_date: string;
@@ -75,6 +77,7 @@ function intNum(s: string): number | undefined { return s.trim() === '' ? undefi
 // ── main component ─────────────────────────────────────────────────────────────
 
 function CaseloadInner() {
+  const t = useTranslations('chw.visit');
   const searchParams = useSearchParams();
   const preChildId = searchParams.get('child');
 
@@ -173,7 +176,7 @@ function CaseloadInner() {
         setQueued(true);
       } else {
         const msg = (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data;
-        setFormError(msg?.error ?? msg?.message ?? 'Failed to save visit. Please try again.');
+        setFormError(msg?.error ?? msg?.message ?? t('failedToSaveVisit'));
       }
     } finally {
       setSubmitting(false);
@@ -203,11 +206,9 @@ function CaseloadInner() {
           <h2
             className="text-2xl font-bold"
             style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            My Caseload
-          </h2>
+          >{t('myCaseload')}</h2>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {isLoading ? '—' : `${families.length} families · ${totalChildren} children`}
+            {isLoading ? '—' : t('familiesChildren', { families: families.length, children: totalChildren })}
           </p>
         </div>
         {!isLoading && families.some((f) => f.children.some((c) => c.risk_level === 'HIGH')) && (
@@ -215,9 +216,7 @@ function CaseloadInner() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium shrink-0"
             style={{ background: '#fef2f2', color: 'var(--danger)' }}
           >
-            <AlertTriangle size={14} />
-            High risk children
-          </div>
+            <AlertTriangle size={14} />{t('highRiskChildren')}</div>
         )}
       </div>
 
@@ -228,7 +227,7 @@ function CaseloadInner() {
           type="text"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          placeholder="Search family or child name…"
+          placeholder={t('searchFamilyOrChild')}
           className="w-full pl-9 pr-3 py-2.5 rounded-xl border text-sm outline-none focus:ring-2"
           style={{
             borderColor: 'var(--border)',
@@ -246,8 +245,8 @@ function CaseloadInner() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Users size={28} />}
-          title="No families assigned"
-          description="Your supervisor has not assigned any families to you yet."
+          title={t('noFamiliesAssigned')}
+          description={t('yourSupervisorHasNot')}
         />
       ) : (
         <div className="flex flex-col gap-3">
@@ -289,13 +288,13 @@ function CaseloadInner() {
                         {family.full_name}
                       </span>
                       {family.has_account && (
-                        <Badge variant="info">App user</Badge>
+                        <Badge variant="info">{t('appUser')}</Badge>
                       )}
                       {highRiskKids > 0 && (
-                        <Badge variant="danger">{highRiskKids} high risk</Badge>
+                        <Badge variant="danger">{t('highRisk', { highRiskKids: highRiskKids })}</Badge>
                       )}
                       {overdueVax > 0 && (
-                        <Badge variant="warn">{overdueVax} overdue vax</Badge>
+                        <Badge variant="warn">{t('overdueVax', { overdueVax: overdueVax })}</Badge>
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 flex-wrap text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -309,7 +308,7 @@ function CaseloadInner() {
                           <Phone size={11} />{family.phone_number}
                         </a>
                       )}
-                      <span>{family.children.length} child{family.children.length !== 1 ? 'ren' : ''}</span>
+                      <span>{t('children', { count: family.children.length })}</span>
                     </div>
                   </div>
                   <div className="shrink-0 flex items-center gap-2">
@@ -321,9 +320,7 @@ function CaseloadInner() {
                 {isOpen && (
                   <div className="border-t divide-y" style={{ borderColor: 'var(--border)' }}>
                     {family.children.length === 0 ? (
-                      <p className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>
-                        No children registered for this family.
-                      </p>
+                      <p className="px-4 py-3 text-sm" style={{ color: 'var(--text-muted)' }}>{t('noChildrenRegisteredFor')}</p>
                     ) : (
                       family.children.map((child) => (
                         <ChildRow
@@ -376,6 +373,7 @@ export default function CaseloadPage() {
 // ── ChildRow ──────────────────────────────────────────────────────────────────
 
 function ChildRow({ child, onLogVisit }: { child: CHWChildSummary; onLogVisit: () => void }) {
+  const t = useTranslations('chw.visit');
   const risk = RISK_META[child.risk_level] ?? RISK_META.UNKNOWN;
 
   return (
@@ -397,7 +395,7 @@ function ChildRow({ child, onLogVisit }: { child: CHWChildSummary; onLogVisit: (
             <Badge variant={risk.variant}>{child.risk_level}</Badge>
           </div>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {child.age_display} · {child.sex === 'M' ? 'Male' : 'Female'} · {child.registration_number}
+            {child.age_display} · {child.sex === 'M' ? t('male') : t('female')} · {child.registration_number}
             {child.zone_name ? ` · ${child.zone_name}` : ''}
           </p>
 
@@ -407,33 +405,27 @@ function ChildRow({ child, onLogVisit }: { child: CHWChildSummary; onLogVisit: (
             <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
               <Clock size={10} />
               {child.last_visit_date
-                ? `Last visit: ${child.last_visit_days_ago === 0 ? 'Today' : child.last_visit_days_ago === 1 ? 'Yesterday' : `${child.last_visit_days_ago}d ago`}`
-                : 'Never visited'}
+                ? (child.last_visit_days_ago === 0 ? t('lastVisitToday') : child.last_visit_days_ago === 1 ? t('lastVisitYesterday') : t('lastVisitDaysAgo', { days: child.last_visit_days_ago ?? '' }))
+                : t('neverVisited')}
             </span>
 
             {/* Overdue vaccines */}
             {child.overdue_vaccines > 0 && (
               <span className="flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--danger)' }}>
-                <Syringe size={10} />
-                {child.overdue_vaccines} overdue
-              </span>
+                <Syringe size={10} />{t('overdue', { overdue_vaccines: child.overdue_vaccines })}</span>
             )}
 
             {/* Next vaccine */}
             {child.next_vaccine_name && child.overdue_vaccines === 0 && (
               <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                <Syringe size={10} />
-                Next: {child.next_vaccine_name}
-                {child.next_vaccine_date ? ` on ${fmtDate(child.next_vaccine_date)}` : ''}
+                <Syringe size={10} />{child.next_vaccine_date ? t('nextVaccineOn', { name: child.next_vaccine_name, date: fmtDate(child.next_vaccine_date) }) : t('nextVaccine', { name: child.next_vaccine_name })}
               </span>
             )}
 
             {/* Upcoming */}
             {child.upcoming_vaccines > 0 && !child.next_vaccine_name && (
               <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                <Syringe size={10} />
-                {child.upcoming_vaccines} upcoming
-              </span>
+                <Syringe size={10} />{t('upcoming', { upcoming_vaccines: child.upcoming_vaccines })}</span>
             )}
           </div>
         </div>
@@ -443,9 +435,7 @@ function ChildRow({ child, onLogVisit }: { child: CHWChildSummary; onLogVisit: (
         onClick={onLogVisit}
         className="shrink-0 inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
         style={{ background: 'var(--ink)', color: 'var(--bg)' }}
-      >
-        Log Visit
-      </button>
+      >{t('logVisit')}</button>
     </div>
   );
 }
@@ -468,6 +458,7 @@ function VisitModal({
   onClose: () => void;
   onAnother: () => void;
 }) {
+  const t = useTranslations('chw.visit');
   const riskColor = (r: string) =>
     r === 'HIGH' ? 'var(--danger)' : r === 'MEDIUM' ? 'var(--warn)' : r === 'LOW' ? 'var(--success)' : 'var(--text-muted)';
 
@@ -487,9 +478,7 @@ function VisitModal({
           style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}
         >
           <div>
-            <p className="font-bold text-base" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-              Log visit — {child.full_name}
-            </p>
+            <p className="font-bold text-base" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('logVisit2', { full_name: child.full_name })}</p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
               {child.age_display} · {child.registration_number}
               {child.zone_name ? ` · ${child.zone_name}` : ''}
@@ -522,9 +511,7 @@ function VisitModal({
                     : <CheckCircle size={26} />}
                 </div>
                 <div>
-                  <p className="font-bold text-lg" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-                    Visit recorded
-                  </p>
+                  <p className="font-bold text-lg" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('visitRecorded')}</p>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                     {result.child_name} · {result.measurement_date}
                   </p>
@@ -544,7 +531,7 @@ function VisitModal({
                   </div>
                 ))}
                 <div className="flex justify-between text-sm pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Risk level</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{t('riskLevel')}</span>
                   <span
                     className="text-xs font-bold px-2.5 py-1 rounded-full"
                     style={{ background: `${riskColor(result.risk_level)}20`, color: riskColor(result.risk_level) }}
@@ -555,21 +542,19 @@ function VisitModal({
               </div>
 
               {result.risk_level === 'HIGH' && (
-                <div className="rounded-xl p-3 text-sm" style={{ background: '#fef2f2', borderLeft: '3px solid var(--danger)', color: 'var(--danger)' }}>
-                  High risk — refer to nearest health facility immediately.
-                </div>
+                <div className="rounded-xl p-3 text-sm" style={{ background: '#fef2f2', borderLeft: '3px solid var(--danger)', color: 'var(--danger)' }}>{t('highRiskReferTo')}</div>
               )}
 
               <div className="flex gap-2 pt-1">
-                <Button variant="secondary" className="flex-1" onClick={onClose}>Done</Button>
-                <Button variant="primary" className="flex-1" onClick={onAnother}>Log another child</Button>
+                <Button variant="secondary" className="flex-1" onClick={onClose}>{t('done')}</Button>
+                <Button variant="primary" className="flex-1" onClick={onAnother}>{t('logAnotherChild')}</Button>
               </div>
             </div>
           ) : (
             /* ── Visit form ── */
             <>
               <Input
-                label="Visit date"
+                label={t('visitDate')}
                 type="date"
                 value={form.measurement_date}
                 onChange={(e) => setF('measurement_date', e.target.value)}
@@ -578,11 +563,11 @@ function VisitModal({
 
               {/* Measurements */}
               <div>
-                <p className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>Measurements</p>
+                <p className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>{t('measurements')}</p>
                 <div className="grid grid-cols-3 gap-3">
-                  <Input label="Weight (kg)" type="number" step="0.1" min="0" value={form.weight_kg} onChange={(e) => setF('weight_kg', e.target.value)} placeholder="7.5" />
-                  <Input label="Height (cm)" type="number" step="0.1" min="0" value={form.height_cm} onChange={(e) => setF('height_cm', e.target.value)} placeholder="72" />
-                  <Input label="MUAC (cm)"   type="number" step="0.1" min="0" value={form.muac_cm}   onChange={(e) => setF('muac_cm', e.target.value)}   placeholder="11.5" />
+                  <Input label={t('weightKg')} type="number" step="0.1" min="0" value={form.weight_kg} onChange={(e) => setF('weight_kg', e.target.value)} placeholder="7.5" />
+                  <Input label={t('heightCm')} type="number" step="0.1" min="0" value={form.height_cm} onChange={(e) => setF('height_cm', e.target.value)} placeholder="72" />
+                  <Input label={t('muacCm')}   type="number" step="0.1" min="0" value={form.muac_cm}   onChange={(e) => setF('muac_cm', e.target.value)}   placeholder="11.5" />
                 </div>
                 <div className="mt-3 flex items-center gap-3">
                   <button
@@ -598,30 +583,28 @@ function VisitModal({
                       style={{ transform: form.oedema ? 'translateX(1.25rem)' : 'translateX(0.25rem)' }}
                     />
                   </button>
-                  <span className="text-sm" style={{ color: 'var(--ink)' }}>Bilateral pitting oedema</span>
+                  <span className="text-sm" style={{ color: 'var(--ink)' }}>{t('bilateralPittingOedema')}</span>
                 </div>
               </div>
 
               {/* Vitals */}
               <div>
-                <p className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>
-                  Vitals <span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>(optional)</span>
+                <p className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>{t('vitals')}{' '}<span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>{t('optional')}</span>
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  <Input label="Temperature (°C)" type="number" step="0.1" value={form.temperature_c} onChange={(e) => setF('temperature_c', e.target.value)} placeholder="37.2" />
-                  <Input label="Resp. rate (/min)" type="number" step="1" value={form.respiratory_rate} onChange={(e) => setF('respiratory_rate', e.target.value)} placeholder="28" />
-                  <Input label="Heart rate (bpm)" type="number" step="1" value={form.heart_rate} onChange={(e) => setF('heart_rate', e.target.value)} placeholder="110" />
-                  <Input label="SpO2 (%)" type="number" step="1" min="0" max="100" value={form.spo2} onChange={(e) => setF('spo2', e.target.value)} placeholder="97" />
+                  <Input label={t('temperatureC')} type="number" step="0.1" value={form.temperature_c} onChange={(e) => setF('temperature_c', e.target.value)} placeholder="37.2" />
+                  <Input label={t('respRateMin')} type="number" step="1" value={form.respiratory_rate} onChange={(e) => setF('respiratory_rate', e.target.value)} placeholder="28" />
+                  <Input label={t('heartRateBpm')} type="number" step="1" value={form.heart_rate} onChange={(e) => setF('heart_rate', e.target.value)} placeholder="110" />
+                  <Input label={t('spo2')} type="number" step="1" min="0" max="100" value={form.spo2} onChange={(e) => setF('spo2', e.target.value)} placeholder="97" />
                 </div>
               </div>
 
               {/* Symptoms */}
               <div>
-                <p className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>
-                  Symptoms <span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>(select all that apply)</span>
+                <p className="text-sm font-semibold mb-2" style={{ color: 'var(--ink)' }}>{t('symptoms')}{' '}<span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>{t('selectAllThatApply')}</span>
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {SYMPTOM_FLAGS.map(({ key, label }) => {
+                  {SYMPTOM_FLAGS.map(({ key }) => {
                     const active = form.symptom_flags.includes(key);
                     return (
                       <button
@@ -636,7 +619,7 @@ function VisitModal({
                           color:           active ? 'var(--bg)' : 'var(--text-muted)',
                         }}
                       >
-                        {label}
+                        {t(`symptom.${key}`)}
                       </button>
                     );
                   })}
@@ -645,14 +628,13 @@ function VisitModal({
 
               {/* Notes */}
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="visit-notes-optional" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
-                  Notes <span className="font-normal" style={{ color: 'var(--text-muted)' }}>(optional)</span>
+                <label htmlFor="visit-notes-optional" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('notes')}{' '}<span className="font-normal" style={{ color: 'var(--text-muted)' }}>{t('optional')}</span>
                 </label>
                 <textarea id="visit-notes-optional"
                   value={form.notes}
                   onChange={(e) => setF('notes', e.target.value)}
                   rows={3}
-                  placeholder="Observations, referrals, follow-up…"
+                  placeholder={t('observationsReferralsFollowUp')}
                   className="w-full px-3 py-2.5 rounded-xl border text-sm resize-none outline-none focus:ring-2"
                   style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)', color: 'var(--ink)' }}
                 />
@@ -668,16 +650,14 @@ function VisitModal({
         {/* Footer (submit) */}
         {!result && !queued && (
           <div className="px-5 py-4 border-t shrink-0 flex gap-2" style={{ borderColor: 'var(--border)' }}>
-            <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+            <Button variant="secondary" className="flex-1" onClick={onClose}>{t('cancel')}</Button>
             <Button
               variant="primary"
               className="flex-1"
               loading={submitting}
               onClick={onSubmit}
             >
-              {submitting && <Loader2 size={14} className="animate-spin mr-1" />}
-              Save &amp; get risk score
-            </Button>
+              {submitting && <Loader2 size={14} className="animate-spin mr-1" />}{t('saveGetRiskScore')}</Button>
           </div>
         )}
       </div>
@@ -690,43 +670,38 @@ function VisitModal({
 // Field triage can't wait for signal: MUAC and oedema are classified on the phone with the
 // WHO cut-offs (6–59 months). The full risk score is calculated once the visit uploads.
 
-function muacBand(form: FormState): { label: string; color: string; action: string } | null {
-  if (form.oedema) {
-    return { label: 'Oedema present: severe acute malnutrition', color: 'var(--muac-red)',
-             action: 'Refer to the health centre today.' };
-  }
+// MUAC band for the saved visit; its text is messages/en.json chw.visit.band.label/action.<band>
+function muacBand(form: FormState): { band: 'oedema' | 'red' | 'yellow' | 'green'; muac: number | null; color: string } | null {
+  if (form.oedema) return { band: 'oedema', muac: null, color: 'var(--muac-red)' };
   const muac = form.muac_cm.trim() === '' ? null : parseFloat(form.muac_cm);
   if (muac === null || Number.isNaN(muac)) return null;
-  if (muac < 11.5) return { label: `MUAC ${muac} cm: red band`, color: 'var(--muac-red)', action: 'Refer to the health centre today.' };
-  if (muac < 12.5) return { label: `MUAC ${muac} cm: yellow band`, color: 'var(--muac-yellow)', action: 'Enrol in supplementary feeding and re-measure at the next visit.' };
-  return { label: `MUAC ${muac} cm: green band`, color: 'var(--muac-green)', action: 'No acute malnutrition by MUAC.' };
+  if (muac < 11.5) return { band: 'red', muac, color: 'var(--muac-red)' };
+  if (muac < 12.5) return { band: 'yellow', muac, color: 'var(--muac-yellow)' };
+  return { band: 'green', muac, color: 'var(--muac-green)' };
 }
 
 function OfflineSaved({ form, childName, onAnother, onClose }: {
   form: FormState; childName: string; onAnother: () => void; onClose: () => void;
 }) {
+  const t = useTranslations('chw.visit');
   const band = muacBand(form);
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col items-start gap-3">
         <SuccessCheck />
-        <p className="font-extrabold text-lg" style={{ color: 'var(--ink)' }}>Saved on this phone</p>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          There&apos;s no connection right now. {childName}&apos;s visit will upload automatically when the phone is back online.
-        </p>
+        <p className="font-extrabold text-lg" style={{ color: 'var(--ink)' }}>{t('savedOnThisPhone')}</p>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('thereSNoConnection', { childName: childName })}</p>
       </div>
       {band && (
         <div className="pl-3 border-l-4" style={{ borderColor: band.color }}>
-          <p className="text-sm font-bold" style={{ color: 'var(--ink)' }}>{band.label}</p>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text)' }}>{band.action}</p>
+          <p className="text-sm font-bold" style={{ color: 'var(--ink)' }}>{t(`band.label.${band.band}`, { muac: String(band.muac ?? '') })}</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text)' }}>{t(`band.action.${band.band}`)}</p>
         </div>
       )}
-      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-        The full risk assessment appears once the visit has uploaded.
-      </p>
+      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('theFullRiskAssessment')}</p>
       <div className="flex gap-2">
-        <Button variant="secondary" className="flex-1" onClick={onAnother}>Log another visit</Button>
-        <Button className="flex-1" onClick={onClose}>Done</Button>
+        <Button variant="secondary" className="flex-1" onClick={onAnother}>{t('logAnotherVisit')}</Button>
+        <Button className="flex-1" onClick={onClose}>{t('done')}</Button>
       </div>
     </div>
   );

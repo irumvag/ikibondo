@@ -1,18 +1,15 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { RefreshCw, CheckCircle, XCircle, AlertTriangle, Trash2 } from 'lucide-react';
-import { useSyncStore, type PendingOp, type SyncResultEntry } from '@/store/syncStore';
+import { useSyncStore, type SyncResultEntry } from '@/store/syncStore';
 import { flushQueue } from '@/lib/offline/queue';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 
-const OP_LABEL: Record<PendingOp['op'], string> = {
-  register_child:     'Register child',
-  create_visit:       'Log visit',
-  administer_vaccine: 'Administer vaccine',
-};
+// Operation names: messages/en.json chw.sync.op.<op>
 
 const STATUS_ICON = {
   ok:       <CheckCircle  size={16} style={{ color: 'var(--success)' }} aria-hidden="true" />,
@@ -35,6 +32,7 @@ function fmtDate(iso: string) {
 }
 
 export default function SyncPage() {
+  const t = useTranslations('chw.sync');
   const userId          = useAuthStore((s) => s.user?.id);
   const allPending      = useSyncStore((s) => s.pending);
   // Only this account's work is shown and uploaded on a shared phone
@@ -56,7 +54,7 @@ export default function SyncPage() {
       setResults(await flushQueue());
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? 'Sync failed. Check your connection and try again.');
+      setError(msg ?? t('syncFailedCheckYour'));
     } finally {
       setSyncing(false);
     }
@@ -74,19 +72,15 @@ export default function SyncPage() {
           <h2
             className="text-2xl font-bold"
             style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            Sync queue
-          </h2>
+          >{t('syncQueue')}</h2>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
             {pending.length === 0
-              ? 'All records are synced.'
-              : `${pending.length} record${pending.length !== 1 ? 's' : ''} waiting to upload`}
+              ? t('allRecordsAreSynced')
+              : t('recordsWaitingUpload', { count: pending.length })}
           </p>
         </div>
         {lastSyncAt && (
-          <p className="text-xs shrink-0 mt-1" style={{ color: 'var(--text-muted)' }}>
-            Last sync: {fmtDate(lastSyncAt)}
-          </p>
+          <p className="text-xs shrink-0 mt-1" style={{ color: 'var(--text-muted)' }}>{t('lastSync', { fmtDate: fmtDate(lastSyncAt) })}</p>
         )}
       </div>
 
@@ -99,7 +93,7 @@ export default function SyncPage() {
         className="self-start"
       >
         <RefreshCw size={15} className="mr-2" aria-hidden="true" />
-        {syncing ? 'Syncing…' : 'Sync now'}
+        {syncing ? t('syncing') : t('syncNow')}
       </Button>
 
       {error && (
@@ -117,26 +111,19 @@ export default function SyncPage() {
           className="rounded-2xl border p-5 flex flex-col gap-3"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
         >
-          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-            Last sync results
-          </p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('lastSyncResults')}</p>
           <div className="flex gap-4 text-sm">
             {okCount > 0 && (
               <span className="flex items-center gap-1.5" style={{ color: 'var(--success)' }}>
-                <CheckCircle size={14} aria-hidden="true" />
-                {okCount} synced
-              </span>
+                <CheckCircle size={14} aria-hidden="true" />{t('synced', { okCount: okCount })}</span>
             )}
             {errorCount > 0 && (
               <span className="flex items-center gap-1.5" style={{ color: 'var(--danger)' }}>
-                <XCircle size={14} aria-hidden="true" />
-                {errorCount} failed
-              </span>
+                <XCircle size={14} aria-hidden="true" />{t('failed', { errorCount: errorCount })}</span>
             )}
             {conflictCount > 0 && (
               <span className="flex items-center gap-1.5" style={{ color: 'var(--warn)' }}>
-                <AlertTriangle size={14} aria-hidden="true" />
-                {conflictCount} conflict{conflictCount !== 1 ? 's' : ''}
+                <AlertTriangle size={14} aria-hidden="true" />{t('conflictCount', { count: conflictCount })}
               </span>
             )}
           </div>
@@ -166,28 +153,24 @@ export default function SyncPage() {
       {pending.length === 0 ? (
         <EmptyState
           icon={<CheckCircle size={32} />}
-          title="Queue empty"
-          description="All records have been synced to the server."
+          title={t('queueEmpty')}
+          description={t('allRecordsHaveBeen')}
         />
       ) : (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-              Pending ({pending.length})
-            </p>
+            <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{t('pending', { length: pending.length })}</p>
             <button
               type="button"
               onClick={() => {
-                if (window.confirm(`Discard ${pending.length} unsynced record(s)? They have not reached the server and cannot be recovered.`)) {
+                if (window.confirm(t('confirmDiscard', { count: pending.length }))) {
                   pending.forEach((p) => removeOperation(p.id));
                 }
               }}
               className="flex items-center gap-1.5 text-xs transition-opacity hover:opacity-70"
               style={{ color: 'var(--danger)' }}
             >
-              <Trash2 size={12} aria-hidden="true" />
-              Discard all
-            </button>
+              <Trash2 size={12} aria-hidden="true" />{t('discardAll')}</button>
           </div>
 
           <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
@@ -206,15 +189,11 @@ export default function SyncPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>
-                      {OP_LABEL[op.op]}
+                      {t(`op.${op.op}`)}
                     </p>
-                    <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                      {op.label}, saved {fmtDate(op.createdAt)}
-                    </p>
+                    <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{t('saved', { label: op.label, fmtDate: fmtDate(op.createdAt) })}</p>
                     {op.lastError && (
-                      <p className="text-xs mt-0.5" style={{ color: 'var(--danger)' }}>
-                        Not accepted: {op.lastError}
-                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--danger)' }}>{t('notAccepted', { lastError: op.lastError })}</p>
                     )}
                   </div>
                 </div>
@@ -223,7 +202,7 @@ export default function SyncPage() {
                   onClick={() => removeOperation(op.id)}
                   className="shrink-0 ml-3 p-1.5 rounded-lg transition-colors hover:bg-[var(--bg-sand)]"
                   style={{ color: 'var(--text-muted)' }}
-                  aria-label="Remove operation"
+                  aria-label={t('removeOperation')}
                 >
                   <Trash2 size={14} aria-hidden="true" />
                 </button>
@@ -239,9 +218,7 @@ export default function SyncPage() {
           className="rounded-2xl border p-5 flex flex-col gap-3"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
         >
-          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-            Previous sync results
-          </p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('previousSyncResults')}</p>
           <div className="flex gap-4 text-sm">
             {(() => {
               const ok  = lastSyncResults.filter((r) => r.status === 'ok').length;
@@ -249,9 +226,9 @@ export default function SyncPage() {
               const con = lastSyncResults.filter((r) => r.status === 'conflict').length;
               return (
                 <>
-                  {ok  > 0 && <span className="flex items-center gap-1.5" style={{ color: 'var(--success)' }}><CheckCircle  size={14} aria-hidden="true" />{ok} synced</span>}
-                  {err > 0 && <span className="flex items-center gap-1.5" style={{ color: 'var(--danger)'  }}><XCircle      size={14} aria-hidden="true" />{err} failed</span>}
-                  {con > 0 && <span className="flex items-center gap-1.5" style={{ color: 'var(--warn)'   }}><AlertTriangle size={14} aria-hidden="true" />{con} conflicts</span>}
+                  {ok  > 0 && <span className="flex items-center gap-1.5" style={{ color: 'var(--success)' }}><CheckCircle  size={14} aria-hidden="true" />{t('synced2', { ok: ok })}</span>}
+                  {err > 0 && <span className="flex items-center gap-1.5" style={{ color: 'var(--danger)'  }}><XCircle      size={14} aria-hidden="true" />{t('failed2', { err: err })}</span>}
+                  {con > 0 && <span className="flex items-center gap-1.5" style={{ color: 'var(--warn)'   }}><AlertTriangle size={14} aria-hidden="true" />{t('conflicts', { con: con })}</span>}
                 </>
               );
             })()}

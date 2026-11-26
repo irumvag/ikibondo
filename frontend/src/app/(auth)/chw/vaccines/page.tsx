@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import {
   Syringe, AlertCircle, ChevronLeft, ChevronRight,
@@ -39,6 +40,7 @@ function ChildDetailPanel({
   rec: VaccinationRecord;
   onClose: () => void;
 }) {
+  const t = useTranslations('chw.vaccines');
   const { data: history = [], isLoading: histLoading } = useQuery({
     queryKey: ['child-history', rec.child],
     queryFn: () => getChildHistory(rec.child),
@@ -131,27 +133,25 @@ function ChildDetailPanel({
                 <span
                   className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full"
                   style={{ backgroundColor: 'var(--danger)', color: 'white' }}
-                >
-                  Overdue
-                </span>
+                >{t('overdue')}</span>
               )}
             </div>
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
-                <p style={{ color: 'var(--text-muted)' }}>Scheduled date</p>
+                <p style={{ color: 'var(--text-muted)' }}>{t('scheduledDate')}</p>
                 <p className="font-semibold mt-0.5" style={{ color: 'var(--ink)' }}>
                   {fmtDate(rec.scheduled_date)}
                 </p>
               </div>
               <div>
-                <p style={{ color: 'var(--text-muted)' }}>Status</p>
+                <p style={{ color: 'var(--text-muted)' }}>{t('status')}</p>
                 <p className="font-semibold mt-0.5" style={{ color: rec.is_overdue ? 'var(--danger)' : 'var(--ink)' }}>
                   {rec.status}
                 </p>
               </div>
               {rec.dropout_risk_tier && (
                 <div>
-                  <p style={{ color: 'var(--text-muted)' }}>Dropout risk</p>
+                  <p style={{ color: 'var(--text-muted)' }}>{t('dropoutRisk')}</p>
                   <p
                     className="font-semibold mt-0.5"
                     style={{ color: RISK_COLOR[rec.dropout_risk_tier] ?? 'var(--ink)' }}
@@ -162,7 +162,7 @@ function ChildDetailPanel({
               )}
               {rec.dropout_probability && (
                 <div>
-                  <p style={{ color: 'var(--text-muted)' }}>Dropout probability</p>
+                  <p style={{ color: 'var(--text-muted)' }}>{t('dropoutProbability')}</p>
                   <p className="font-semibold mt-0.5" style={{ color: 'var(--ink)' }}>
                     {(parseFloat(rec.dropout_probability) * 100).toFixed(0)}%
                   </p>
@@ -173,13 +173,11 @@ function ChildDetailPanel({
 
           {/* Latest health record */}
           <section>
-            <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-              Latest health record
-            </h4>
+            <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{t('latestHealthRecord')}</h4>
             {histLoading ? (
               <Skeleton className="h-28 rounded-xl" />
             ) : !latest ? (
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No health records yet.</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noHealthRecordsYet')}</p>
             ) : (
               <div
                 className="rounded-2xl p-4 flex flex-col gap-3"
@@ -195,12 +193,12 @@ function ChildDetailPanel({
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { label: 'Weight', value: latest.weight_kg ? `${latest.weight_kg} kg` : null },
-                    { label: 'Height', value: latest.height_cm ? `${latest.height_cm} cm` : null },
+                    { label: t('weight'), value: latest.weight_kg ? `${latest.weight_kg} kg` : null },
+                    { label: t('height'), value: latest.height_cm ? `${latest.height_cm} cm` : null },
                     { label: 'MUAC',   value: latest.muac_cm ? `${latest.muac_cm} cm` : null },
-                    { label: 'Temp',   value: latest.temperature_c ? `${latest.temperature_c}°C` : null },
-                    { label: 'SpO2',   value: (latest as HealthRecordDetail & { spo2?: string | null }).spo2 ? `${(latest as HealthRecordDetail & { spo2?: string | null }).spo2}%` : null },
-                    { label: 'Oedema', value: latest.oedema ? 'Yes' : 'No' },
+                    { label: t('temp'),   value: latest.temperature_c ? `${latest.temperature_c}°C` : null },
+                    { label: t('spo2'),   value: (latest as HealthRecordDetail & { spo2?: string | null }).spo2 ? `${(latest as HealthRecordDetail & { spo2?: string | null }).spo2}%` : null },
+                    { label: t('oedema'), value: latest.oedema ? 'Yes' : 'No' },
                   ].filter((m) => m.value !== null).map((m) => (
                     <div key={m.label}>
                       <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{m.label}</p>
@@ -209,8 +207,7 @@ function ChildDetailPanel({
                   ))}
                 </div>
                 {latest.nutrition_status_display && (
-                  <div className="pt-2 border-t text-xs" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-                    Nutrition: <span className="font-medium" style={{ color: 'var(--ink)' }}>{latest.nutrition_status_display}</span>
+                  <div className="pt-2 border-t text-xs" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>{t('nutrition')}{' '}<span className="font-medium" style={{ color: 'var(--ink)' }}>{latest.nutrition_status_display}</span>
                   </div>
                 )}
                 {latest.symptom_flags?.length > 0 && (
@@ -232,9 +229,7 @@ function ChildDetailPanel({
           {/* Recent records timeline */}
           {history.length > 1 && (
             <section>
-              <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-                Visit history
-              </h4>
+              <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{t('visitHistory')}</h4>
               <div className="flex flex-col gap-2">
                 {history.slice(1, 5).map((hr) => (
                   <div
@@ -257,13 +252,11 @@ function ChildDetailPanel({
 
           {/* Nurse notes */}
           <section>
-            <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-              Nurse notes &amp; advice
-            </h4>
+            <h4 className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{t('nurseNotesAdvice')}</h4>
             {notesLoading ? (
               <Skeleton className="h-16 rounded-xl" />
             ) : notes.length === 0 ? (
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No notes from the nurse yet.</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noNotesFromThe')}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {notes.map((n: ClinicalNote) => (
@@ -277,7 +270,7 @@ function ChildDetailPanel({
                   >
                     <div className="flex items-center gap-2">
                       <Badge variant={NOTE_TYPE_VARIANT[n.note_type] ?? 'default'}>{n.note_type_display}</Badge>
-                      {n.is_pinned && <span className="text-xs font-medium" style={{ color: 'var(--warn)' }}>📌 Pinned</span>}
+                      {n.is_pinned && <span className="text-xs font-medium" style={{ color: 'var(--warn)' }}>{t('pinned')}</span>}
                       <span className="ml-auto text-xs" style={{ color: 'var(--text-muted)' }}>{fmtDate(n.created_at)}</span>
                     </div>
                     <p className="text-sm" style={{ color: 'var(--ink)' }}>{n.content}</p>
@@ -296,9 +289,7 @@ function ChildDetailPanel({
           className="px-5 py-3 border-t text-xs text-center shrink-0"
           style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
         >
-          <AlertTriangle size={12} className="inline mr-1" style={{ color: 'var(--warn)' }} />
-          To administer a vaccine, refer the parent to the health facility.
-        </div>
+          <AlertTriangle size={12} className="inline mr-1" style={{ color: 'var(--warn)' }} />{t('toAdministerAVaccine')}</div>
       </div>
     </div>
   );
@@ -307,6 +298,7 @@ function ChildDetailPanel({
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function VaccinesPage() {
+  const t = useTranslations('chw.vaccines');
   const [page,     setPage]     = useState(1);
   const [selected, setSelected] = useState<VaccinationRecord | null>(null);
 
@@ -325,21 +317,16 @@ export default function VaccinesPage() {
           <h2
             className="text-2xl font-bold"
             style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            Vaccination queue
-          </h2>
+          >{t('vaccinationQueue')}</h2>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {isLoading ? '—' : totalCount} scheduled {totalCount !== 1 ? 'doses' : 'dose'} for your assigned children
-          </p>
+            {isLoading ? '—' : t('scheduledDoses', { count: totalCount })}</p>
         </div>
         {totalCount > 0 && (
           <div
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium"
             style={{ backgroundColor: '#fef2f2', color: 'var(--danger)' }}
           >
-            <AlertCircle size={14} />
-            {totalCount} pending
-          </div>
+            <AlertCircle size={14} />{t('pending', { totalCount: totalCount })}</div>
         )}
       </div>
 
@@ -348,10 +335,7 @@ export default function VaccinesPage() {
         className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
         style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
       >
-        <CheckCircle2 size={14} style={{ color: 'var(--success)', flexShrink: 0 }} />
-        Tap any row to view the child&apos;s details, visit history, and nurse notes.
-        Vaccines are administered by nurses at the health facility.
-      </div>
+        <CheckCircle2 size={14} style={{ color: 'var(--success)', flexShrink: 0 }} />{t('tapAnyRowTo')}</div>
 
       {/* Table */}
       {isLoading ? (
@@ -361,8 +345,8 @@ export default function VaccinesPage() {
       ) : items.length === 0 ? (
         <EmptyState
           icon={<Syringe size={32} />}
-          title="Queue empty"
-          description="No scheduled doses for your assigned children at this time."
+          title={t('queueEmpty')}
+          description={t('noScheduledDosesFor')}
         />
       ) : (
         <>
@@ -373,12 +357,12 @@ export default function VaccinesPage() {
                 className="grid grid-cols-[1fr_1fr_130px_90px_80px_90px] gap-3 px-4 py-2.5 text-xs font-semibold min-w-[640px]"
                 style={{ color: 'var(--text-muted)', backgroundColor: 'var(--bg-elev)', borderBottom: '1px solid var(--border)' }}
               >
-                <span>Child</span>
-                <span>Zone / Guardian</span>
-                <span>Vaccine</span>
-                <span>Scheduled</span>
-                <span>Overdue</span>
-                <span>Dropout</span>
+                <span>{t('child')}</span>
+                <span>{t('zoneGuardian')}</span>
+                <span>{t('vaccine')}</span>
+                <span>{t('scheduled2')}</span>
+                <span>{t('overdue')}</span>
+                <span>{t('dropout')}</span>
               </div>
 
               {/* Rows */}
@@ -414,9 +398,7 @@ export default function VaccinesPage() {
                   </span>
                   <span>
                     {rec.is_overdue && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#fef2f2', color: 'var(--danger)' }}>
-                        Overdue
-                      </span>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#fef2f2', color: 'var(--danger)' }}>{t('overdue')}</span>
                     )}
                   </span>
                   <span>
@@ -440,7 +422,7 @@ export default function VaccinesPage() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between text-sm" style={{ color: 'var(--text-muted)' }}>
-              <span>Page {page} of {totalPages}</span>
+              <span>{t('pageOf', { page: page, totalPages: totalPages })}</span>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -449,16 +431,14 @@ export default function VaccinesPage() {
                   className="flex items-center gap-1 px-3 py-1.5 rounded-xl border text-xs font-medium disabled:opacity-40 transition-colors hover:bg-[var(--bg-sand)]"
                   style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
                 >
-                  <ChevronLeft size={13} /> Prev
-                </button>
+                  <ChevronLeft size={13} />{' '}{t('prev')}</button>
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-xl border text-xs font-medium disabled:opacity-40 transition-colors hover:bg-[var(--bg-sand)]"
                   style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
-                >
-                  Next <ChevronRight size={13} />
+                >{t('next')}{' '}<ChevronRight size={13} />
                 </button>
               </div>
             </div>
@@ -473,11 +453,9 @@ export default function VaccinesPage() {
               <Clock size={16} style={{ color: 'var(--danger)', flexShrink: 0, marginTop: 1 }} />
               <div>
                 <p className="font-semibold" style={{ color: 'var(--danger)' }}>
-                  {items.filter((r) => r.is_overdue).length} overdue dose{items.filter((r) => r.is_overdue).length !== 1 ? 's' : ''}
+                  {t('overdueDoses', { count: items.filter((r) => r.is_overdue).length })}
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--danger)', opacity: 0.8 }}>
-                  Remind parents to bring their child to the health facility as soon as possible.
-                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--danger)', opacity: 0.8 }}>{t('remindParentsToBring')}</p>
               </div>
             </div>
           )}

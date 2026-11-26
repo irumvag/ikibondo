@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -18,28 +19,30 @@ import { Badge } from '@/components/ui/Badge';
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
-function fmtMsgTime(iso: string) {
+// `yesterday` is the translated word, passed in by the component.
+function fmtMsgTime(iso: string, yesterday: string) {
   const d = new Date(iso);
   const now = new Date();
   const diffDays = Math.floor((now.getTime() - d.getTime()) / 86_400_000);
   if (diffDays === 0) return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-  if (diffDays === 1) return 'Yesterday';
+  if (diffDays === 1) return yesterday;
   if (diffDays < 7)  return d.toLocaleDateString(undefined, { weekday: 'short' });
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function fmtThreadTime(iso: string) {
+function fmtThreadTime(iso: string, yesterday: string) {
   const d = new Date(iso);
   const now = new Date();
   const diffDays = Math.floor((now.getTime() - d.getTime()) / 86_400_000);
   if (diffDays === 0) return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-  if (diffDays === 1) return 'Yesterday';
+  if (diffDays === 1) return yesterday;
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 // ── main page ──────────────────────────────────────────────────────────────────
 
 export default function CHWConsultationsPage() {
+  const t = useTranslations('chw.consultations');
   const qc = useQueryClient();
   const me = useAuthStore((s) => s.user);
 
@@ -134,17 +137,13 @@ export default function CHWConsultationsPage() {
           <h2
             className="font-bold text-base"
             style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            Ask Nurse
-          </h2>
+          >{t('askNurse')}</h2>
           <button
             onClick={() => setShowNew(true)}
             className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
             style={{ background: 'var(--ink)', color: 'var(--bg)' }}
           >
-            <Plus size={13} />
-            New
-          </button>
+            <Plus size={13} />{t('new')}</button>
         </div>
 
         {/* Thread list */}
@@ -156,18 +155,14 @@ export default function CHWConsultationsPage() {
           ) : consultations.length === 0 ? (
             <div className="px-4 py-8 text-center">
               <MessageSquare size={28} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
-              <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>No consultations yet</p>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                Tap <strong>New</strong> to ask a nurse about a child.
-              </p>
+              <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('noConsultationsYet')}</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{t.rich('tapNewToAsk', { b: (chunks) => <strong>{chunks}</strong> })}</p>
             </div>
           ) : (
             <>
               {openList.length > 0 && (
                 <>
-                  <p className="text-xs font-semibold px-4 pt-2 pb-1" style={{ color: 'var(--text-muted)' }}>
-                    Open · {openList.length}
-                  </p>
+                  <p className="text-xs font-semibold px-4 pt-2 pb-1" style={{ color: 'var(--text-muted)' }}>{t('open', { length: openList.length })}</p>
                   {openList.map((c) => (
                     <ThreadItem
                       key={c.id}
@@ -181,9 +176,7 @@ export default function CHWConsultationsPage() {
               )}
               {doneList.length > 0 && (
                 <>
-                  <p className="text-xs font-semibold px-4 pt-3 pb-1" style={{ color: 'var(--text-muted)' }}>
-                    Resolved · {doneList.length}
-                  </p>
+                  <p className="text-xs font-semibold px-4 pt-3 pb-1" style={{ color: 'var(--text-muted)' }}>{t('resolved', { length: doneList.length })}</p>
                   {doneList.map((c) => (
                     <ThreadItem
                       key={c.id}
@@ -215,19 +208,15 @@ export default function CHWConsultationsPage() {
               <MessageSquare size={28} style={{ color: 'var(--text-muted)' }} />
             </div>
             <div>
-              <p className="font-semibold" style={{ color: 'var(--ink)' }}>Select a conversation</p>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                Choose a thread on the left, or start a new consultation with a nurse.
-              </p>
+              <p className="font-semibold" style={{ color: 'var(--ink)' }}>{t('selectAConversation')}</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('chooseAThreadOn')}</p>
             </div>
             <button
               onClick={() => setShowNew(true)}
               className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium"
               style={{ background: 'var(--ink)', color: 'var(--bg)' }}
             >
-              <Plus size={15} />
-              Ask a nurse
-            </button>
+              <Plus size={15} />{t('askANurse')}</button>
           </div>
         ) : (
           <>
@@ -262,16 +251,15 @@ export default function CHWConsultationsPage() {
                 </div>
                 <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>
                   {selected.assigned_nurse_name
-                    ? `Nurse: ${selected.assigned_nurse_name}`
-                    : 'Awaiting nurse assignment'}
-                  {' · '}Opened {fmtThreadTime(selected.created_at)}
-                </p>
+                    ? t('nurseName', { name: selected.assigned_nurse_name })
+                    : t('awaitingNurseAssignment')}
+                  {' · '}{t('opened', { date: fmtThreadTime(selected.created_at, t('yesterday')) })}</p>
               </div>
 
               {/* Resolve controls */}
               {selected.status === 'OPEN' && (
                 <div className="flex items-center gap-2 shrink-0">
-                  <div className="flex gap-0.5" title="Rate helpfulness">
+                  <div className="flex gap-0.5" title={t('rateHelpfulness')}>
                     {[1, 2, 3, 4, 5].map((n) => (
                       <button key={n} onClick={() => setRating(n)} className="p-0.5 hover:opacity-80">
                         <Star
@@ -292,9 +280,7 @@ export default function CHWConsultationsPage() {
                   >
                     {resolveMut.isPending
                       ? <Loader2 size={12} className="animate-spin" />
-                      : <CheckCircle2 size={12} />}
-                    Resolve
-                  </button>
+                      : <CheckCircle2 size={12} />}{t('resolve')}</button>
                 </div>
               )}
             </div>
@@ -304,15 +290,11 @@ export default function CHWConsultationsPage() {
               {selected.messages.length === 0 && (
                 <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center py-12">
                   <Clock size={24} style={{ color: 'var(--text-muted)' }} />
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                    No messages yet.
-                    {selected.assigned_nurse_name
-                      ? ` ${selected.assigned_nurse_name} will respond soon.`
-                      : ' A nurse will be assigned shortly.'}
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{selected.assigned_nurse_name
+                      ? t('noMessagesNurse', { name: selected.assigned_nurse_name })
+                      : t('noMessagesAny')}
                   </p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    Start the conversation by describing your concern below.
-                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('startTheConversationBy')}</p>
                 </div>
               )}
 
@@ -351,7 +333,7 @@ export default function CHWConsultationsPage() {
                       {/* Author label */}
                       {showAuthor && !isMe && (
                         <p className="text-xs font-medium mb-1 ml-1" style={{ color: 'var(--text-muted)' }}>
-                          {msg.author_name ?? 'Nurse'}
+                          {msg.author_name ?? t('nurse')}
                         </p>
                       )}
 
@@ -393,7 +375,7 @@ export default function CHWConsultationsPage() {
                       {isLastInGroup && (
                         <div className={`flex items-center gap-1 mt-1 ${isMe ? 'pr-1' : 'pl-9'}`}>
                           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                            {fmtMsgTime(msg.created_at)}
+                            {fmtMsgTime(msg.created_at, t('yesterday'))}
                           </span>
                           {isMe && (
                             <CheckCheck size={12} style={{ color: 'var(--success)' }} />
@@ -431,7 +413,7 @@ export default function CHWConsultationsPage() {
                     }
                   }}
                   rows={1}
-                  placeholder="Message… (Enter to send, Shift+Enter for newline)"
+                  placeholder={t('messageEnterToSend')}
                   className="flex-1 rounded-2xl border px-4 py-2.5 text-sm resize-none outline-none focus:ring-2 focus:ring-[var(--primary)] transition-all"
                   style={{
                     borderColor: 'var(--border)',
@@ -458,9 +440,7 @@ export default function CHWConsultationsPage() {
                 className="px-4 py-3 border-t shrink-0 text-center text-sm"
                 style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', background: 'var(--card)' }}
               >
-                <CheckCircle2 size={14} className="inline mr-1.5" style={{ color: 'var(--success)' }} />
-                This consultation was resolved
-                {selected.resolved_at ? ` on ${fmtThreadTime(selected.resolved_at)}` : ''}.
+                <CheckCircle2 size={14} className="inline mr-1.5" style={{ color: 'var(--success)' }} />{selected.resolved_at ? t('resolvedOn', { date: fmtThreadTime(selected.resolved_at, t('yesterday')) }) : t('resolvedNoDate')}
                 {selected.helpful_rating && (
                   <span className="ml-2">
                     {'★'.repeat(selected.helpful_rating)}{'☆'.repeat(5 - selected.helpful_rating)}
@@ -494,6 +474,7 @@ function ThreadItem({
   meId: string;
   onSelect: () => void;
 }) {
+  const t = useTranslations('chw.consultations');
   const lastMsg = c.messages[c.messages.length - 1];
   const lastBody = lastMsg?.body ?? '';
   const isOwnLast = lastMsg?.author === meId;
@@ -512,15 +493,15 @@ function ThreadItem({
           {c.child_name}
         </p>
         <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>
-          {c.messages.length > 0 ? fmtThreadTime(lastMsg.created_at) : fmtThreadTime(c.created_at)}
+          {c.messages.length > 0 ? fmtThreadTime(lastMsg.created_at, t('yesterday')) : fmtThreadTime(c.created_at, t('yesterday'))}
         </span>
       </div>
       <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>
         {lastBody
           ? `${isOwnLast ? 'You: ' : ''}${lastBody}`
           : c.assigned_nurse_name
-          ? `Nurse: ${c.assigned_nurse_name}`
-          : 'No messages yet'}
+          ? t('nurseName', { name: c.assigned_nurse_name })
+          : t('noMessagesYet2')}
       </p>
       <div className="flex items-center gap-2 mt-1">
         <span
@@ -530,11 +511,10 @@ function ThreadItem({
             color: c.status === 'OPEN' ? 'var(--primary)' : 'var(--text-muted)',
           }}
         >
-          {c.status === 'OPEN' ? 'Open' : 'Resolved'}
+          {c.status === 'OPEN' ? t('open2') : t('resolved2')}
         </span>
         {c.message_count > 0 && (
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {c.message_count} msg{c.message_count !== 1 ? 's' : ''}
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('messages', { count: c.message_count })}
           </span>
         )}
       </div>
@@ -551,6 +531,7 @@ function NewConsultationModal({
   onClose: () => void;
   isOpening: boolean;
 }) {
+  const t = useTranslations('chw.consultations');
   const [search, setSearch] = useState('');
   const [pickedChild, setPickedChild] = useState<CHWChildSummary | null>(null);
 
@@ -593,12 +574,8 @@ function NewConsultationModal({
           style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}
         >
           <div>
-            <p className="font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-              Ask a nurse
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              Pick the child you want advice about
-            </p>
+            <p className="font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('askANurse')}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('pickTheChildYou')}</p>
           </div>
           <button onClick={onClose} className="text-xl leading-none px-2" style={{ color: 'var(--text-muted)' }}>×</button>
         </div>
@@ -611,7 +588,7 @@ function NewConsultationModal({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search child or parent name…"
+              placeholder={t('searchChildOrParent')}
               autoFocus
               className="w-full pl-9 pr-3 py-2 rounded-xl border text-sm outline-none focus:ring-2"
               style={{ borderColor: 'var(--border)', background: 'var(--bg)', color: 'var(--ink)' }}
@@ -628,8 +605,8 @@ function NewConsultationModal({
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={<Search size={22} />}
-              title="No children found"
-              description="Try a different name or check your caseload."
+              title={t('noChildrenFound')}
+              description={t('tryADifferentName')}
             />
           ) : (
             filtered.map((child) => {
@@ -679,18 +656,14 @@ function NewConsultationModal({
             onClick={onClose}
             className="flex-1 rounded-xl border py-2.5 text-sm font-medium"
             style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-          >
-            Cancel
-          </button>
+          >{t('cancel')}</button>
           <button
             onClick={() => pickedChild && onOpen(pickedChild.id)}
             disabled={!pickedChild || isOpening}
             className="flex-1 rounded-xl py-2.5 text-sm font-medium disabled:opacity-40 transition-opacity hover:opacity-80 flex items-center justify-center gap-2"
             style={{ background: 'var(--ink)', color: 'var(--bg)' }}
           >
-            {isOpening && <Loader2 size={14} className="animate-spin" />}
-            Open consultation
-          </button>
+            {isOpening && <Loader2 size={14} className="animate-spin" />}{t('openConsultation')}</button>
         </div>
       </div>
     </div>

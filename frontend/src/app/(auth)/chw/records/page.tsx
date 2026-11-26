@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -42,6 +43,7 @@ function canAmend(rec: HealthRecordDetail) {
 // ── main page ──────────────────────────────────────────────────────────────────
 
 export default function CHWRecordsPage() {
+  const t = useTranslations('chw.records');
   const qc = useQueryClient();
 
   const [page, setPage]           = useState(1);
@@ -73,11 +75,9 @@ export default function CHWRecordsPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-            Health Records
-          </h2>
+          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('healthRecords')}</h2>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {isLoading ? '—' : `${total} records for your assigned children`}
+            {isLoading ? '—' : t('recordsForChildren', { count: total })}
           </p>
         </div>
       </div>
@@ -89,7 +89,7 @@ export default function CHWRecordsPage() {
             type="text"
             value={childFilter}
             onChange={(e) => setChildFilter(e.target.value)}
-            placeholder="Filter by child name…"
+            placeholder={t('filterByChildName')}
             className="w-full pl-3 pr-3 py-2 rounded-xl border text-sm outline-none focus:ring-2"
             style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)', color: 'var(--ink)' }}
           />
@@ -120,8 +120,8 @@ export default function CHWRecordsPage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Activity size={28} />}
-          title="No records found"
-          description="Health records you log during visits will appear here."
+          title={t('noRecordsFound')}
+          description={t('healthRecordsYouLog')}
         />
       ) : (
         <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
@@ -130,10 +130,10 @@ export default function CHWRecordsPage() {
             className="grid grid-cols-[1fr_100px_90px_80px_80px] gap-3 px-4 py-2.5 text-xs font-semibold"
             style={{ background: 'var(--bg-elev)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}
           >
-            <span>Child</span>
-            <span>Date</span>
-            <span>Status</span>
-            <span>Risk</span>
+            <span>{t('child')}</span>
+            <span>{t('date')}</span>
+            <span>{t('status')}</span>
+            <span>{t('risk')}</span>
             <span>MUAC</span>
           </div>
 
@@ -151,10 +151,10 @@ export default function CHWRecordsPage() {
       {/* Pagination */}
       {pages > 1 && (
         <div className="flex items-center justify-between text-sm" style={{ color: 'var(--text-muted)' }}>
-          <span>Page {page} of {pages}</span>
+          <span>{t('pageOf', { page: page, pages: pages })}</span>
           <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setPage((p) => p - 1)} disabled={page <= 1}>← Prev</Button>
-            <Button variant="secondary" size="sm" onClick={() => setPage((p) => p + 1)} disabled={page >= pages}>Next →</Button>
+            <Button variant="secondary" size="sm" onClick={() => setPage((p) => p - 1)} disabled={page <= 1}>{t('prev')}</Button>
+            <Button variant="secondary" size="sm" onClick={() => setPage((p) => p + 1)} disabled={page >= pages}>{t('next')}</Button>
           </div>
         </div>
       )}
@@ -191,6 +191,7 @@ function RecordRow({ rec, onView, onAmend }: {
   onView: () => void;
   onAmend: () => void;
 }) {
+  const t = useTranslations('chw.records');
   const amendable = canAmend(rec);
   return (
     <div
@@ -201,7 +202,7 @@ function RecordRow({ rec, onView, onAmend }: {
       <div className="min-w-0">
         <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>{rec.child_name}</p>
         <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          {rec.data_source === 'iot' ? 'Bluetooth device' : 'Entered by hand'}
+          {rec.data_source === 'iot' ? t('bluetoothDevice') : t('enteredByHand')}
           {rec.recorded_by_name ? ` · ${rec.recorded_by_name}` : ''}
         </p>
       </div>
@@ -218,7 +219,7 @@ function RecordRow({ rec, onView, onAmend }: {
           <button
             onClick={(e) => { e.stopPropagation(); onAmend(); }}
             className="p-1 rounded-lg hover:opacity-80 transition-opacity"
-            title="Edit (within 24h)"
+            title={t('editWithin24h')}
           >
             <Edit2 size={11} style={{ color: 'var(--primary)' }} />
           </button>
@@ -235,6 +236,7 @@ function RecordDetailDrawer({ rec, onClose, onAmend }: {
   onClose: () => void;
   onAmend: () => void;
 }) {
+  const t = useTranslations('chw.records');
   const amendable = canAmend(rec);
 
   const { data: notes = [] } = useQuery<ClinicalNote[]>({
@@ -293,13 +295,11 @@ function RecordDetailDrawer({ rec, onClose, onAmend }: {
                 className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium hover:opacity-80"
                 style={{ background: 'var(--ink)', color: 'var(--bg)' }}
               >
-                <Edit2 size={12} /> Edit
-              </button>
+                <Edit2 size={12} />{' '}{t('edit')}</button>
             )}
             {!amendable && (
               <span className="text-xs flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
-                <Clock size={11} /> 24h window passed
-              </span>
+                <Clock size={11} />{' '}{t('n24hWindowPassed')}</span>
             )}
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[var(--bg-sand)]">
               <X size={18} style={{ color: 'var(--text-muted)' }} />
@@ -311,33 +311,33 @@ function RecordDetailDrawer({ rec, onClose, onAmend }: {
           {/* Risk + nutrition */}
           <div className="rounded-xl border p-4 flex flex-col gap-2.5" style={{ borderColor: 'var(--border)', background: 'var(--card)' }}>
             <div className="flex justify-between items-center">
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Assessment</span>
-              <Badge variant={RISK_VARIANT[rec.risk_level] ?? 'default'}>{rec.risk_level} risk</Badge>
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('assessment')}</span>
+              <Badge variant={RISK_VARIANT[rec.risk_level] ?? 'default'}>{t('risk2', { risk_level: rec.risk_level })}</Badge>
             </div>
-            <Row label="Nutrition status" value={rec.nutrition_status_display} />
+            <Row label={t('nutritionStatus')} value={rec.nutrition_status_display} />
             {rec.ml_confidence && (
-              <Row label="ML confidence" value={`${(parseFloat(rec.ml_confidence) * 100).toFixed(1)}%`} />
+              <Row label={t('mlConfidence')} value={`${(parseFloat(rec.ml_confidence) * 100).toFixed(1)}%`} />
             )}
           </div>
 
           {/* Measurements */}
           <div className="rounded-xl border p-4 flex flex-col gap-2.5" style={{ borderColor: 'var(--border)', background: 'var(--card)' }}>
-            <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Measurements</span>
+            <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('measurements')}</span>
             <div className="grid grid-cols-2 gap-y-2">
-              <Row label="Weight" value={rec.weight_kg ? `${rec.weight_kg} kg` : '—'} />
-              <Row label="Height" value={rec.height_cm ? `${rec.height_cm} cm` : '—'} />
+              <Row label={t('weight')} value={rec.weight_kg ? `${rec.weight_kg} kg` : '—'} />
+              <Row label={t('height')} value={rec.height_cm ? `${rec.height_cm} cm` : '—'} />
               <Row label="MUAC" value={rec.muac_cm ? `${rec.muac_cm} cm` : '—'} />
-              <Row label="Oedema" value={rec.oedema ? 'Yes ⚠️' : 'No'} />
-              {rec.temperature_c && <Row label="Temp" value={`${rec.temperature_c}°C`} />}
-              {rec.weight_for_height_z && <Row label="WFH z" value={parseFloat(rec.weight_for_height_z).toFixed(2)} />}
-              {rec.height_for_age_z  && <Row label="HFA z" value={parseFloat(rec.height_for_age_z).toFixed(2)} />}
+              <Row label={t('oedema')} value={rec.oedema ? 'Yes ⚠️' : 'No'} />
+              {rec.temperature_c && <Row label={t('temp')} value={`${rec.temperature_c}°C`} />}
+              {rec.weight_for_height_z && <Row label={t('wfhZ')} value={parseFloat(rec.weight_for_height_z).toFixed(2)} />}
+              {rec.height_for_age_z  && <Row label={t('hfaZ')} value={parseFloat(rec.height_for_age_z).toFixed(2)} />}
             </div>
           </div>
 
           {/* Symptoms */}
           {rec.symptom_flags?.length > 0 && (
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Symptoms</span>
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('symptoms')}</span>
               <div className="flex flex-wrap gap-1.5">
                 {rec.symptom_flags.map((s) => (
                   <span key={s} className="text-xs px-2.5 py-1 rounded-full border" style={{ borderColor: 'var(--danger)', color: 'var(--danger)', background: '#fef2f2' }}>
@@ -351,7 +351,7 @@ function RecordDetailDrawer({ rec, onClose, onAmend }: {
           {/* Notes from CHW */}
           {rec.notes && (
             <div className="rounded-xl p-3.5 text-sm" style={{ background: 'var(--bg-elev)', color: 'var(--ink)' }}>
-              <p className="text-xs font-semibold uppercase mb-1.5" style={{ color: 'var(--text-muted)' }}>Field notes</p>
+              <p className="text-xs font-semibold uppercase mb-1.5" style={{ color: 'var(--text-muted)' }}>{t('fieldNotes')}</p>
               {rec.notes}
             </div>
           )}
@@ -359,7 +359,7 @@ function RecordDetailDrawer({ rec, onClose, onAmend }: {
           {/* SHAP factors */}
           {factorEntries.length > 0 && (
             <div className="rounded-xl border p-4 flex flex-col gap-3" style={{ borderColor: 'var(--border)', background: 'var(--card)' }}>
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Risk factors (AI)</span>
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('riskFactorsAi')}</span>
               {factorEntries.map(([name, val]) => (
                 <div key={name}>
                   <div className="flex justify-between mb-1">
@@ -379,9 +379,7 @@ function RecordDetailDrawer({ rec, onClose, onAmend }: {
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <MessageSquare size={14} style={{ color: 'var(--primary)' }} />
-                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                  Nurse notes & advice
-                </span>
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('nurseNotesAdvice')}</span>
               </div>
               {[...recNotes, ...childNotes].map((note) => (
                 <NoteCard key={note.id} note={note} />
@@ -391,9 +389,7 @@ function RecordDetailDrawer({ rec, onClose, onAmend }: {
 
           {recNotes.length === 0 && childNotes.length === 0 && (
             <div className="rounded-xl p-4 text-center text-sm" style={{ background: 'var(--bg-elev)', color: 'var(--text-muted)' }}>
-              <MessageSquare size={18} className="mx-auto mb-1.5 opacity-40" />
-              No nurse notes on this record yet.
-            </div>
+              <MessageSquare size={18} className="mx-auto mb-1.5 opacity-40" />{t('noNurseNotesOn')}</div>
           )}
         </div>
       </div>
@@ -411,6 +407,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 function NoteCard({ note }: { note: ClinicalNote }) {
+  const t = useTranslations('chw.records');
   return (
     <div
       className="rounded-xl p-3.5 flex flex-col gap-1.5"
@@ -423,7 +420,7 @@ function NoteCard({ note }: { note: ClinicalNote }) {
         <Badge variant={NOTE_TYPE_VARIANT[note.note_type] ?? 'default'}>{note.note_type_display}</Badge>
         {note.is_pinned && <Pin size={11} style={{ color: 'var(--warn)' }} />}
         <span className="text-xs ml-auto" style={{ color: 'var(--text-muted)' }}>
-          {note.author_name ?? 'Nurse'} · {fmtDate(note.created_at)}
+          {note.author_name ?? t('nurse')} · {fmtDate(note.created_at)}
         </span>
       </div>
       <p className="text-sm" style={{ color: 'var(--ink)' }}>{note.content}</p>
@@ -438,6 +435,7 @@ function AmendModal({ rec, onClose, onSaved }: {
   onClose: () => void;
   onSaved: (updated: HealthRecordDetail) => void;
 }) {
+  const t = useTranslations('chw.records');
   const [reason, setReason]     = useState('');
   const [weight, setWeight]     = useState(rec.weight_kg ?? '');
   const [height, setHeight]     = useState(rec.height_cm ?? '');
@@ -462,7 +460,7 @@ function AmendModal({ rec, onClose, onSaved }: {
     onSuccess: (updated) => onSaved(updated),
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? 'Failed to save amendment.');
+      setError(msg ?? t('failedToSaveAmendment'));
     },
   });
 
@@ -482,13 +480,9 @@ function AmendModal({ rec, onClose, onSaved }: {
         {/* Header */}
         <div className="px-5 py-4 border-b shrink-0 flex items-center justify-between" style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)' }}>
           <div>
-            <p className="font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-              Edit record — {rec.child_name}
-            </p>
+            <p className="font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('editRecord', { child_name: rec.child_name })}</p>
             <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: 'var(--warn)' }}>
-              <Clock size={11} />
-              Within 24h window · {fmtDate(rec.measurement_date)}
-            </p>
+              <Clock size={11} />{t('within24hWindow', { fmtDate: fmtDate(rec.measurement_date) })}</p>
           </div>
           <button onClick={onClose}><X size={18} style={{ color: 'var(--text-muted)' }} /></button>
         </div>
@@ -497,13 +491,12 @@ function AmendModal({ rec, onClose, onSaved }: {
         <div className="overflow-y-auto flex-1 px-5 py-5 flex flex-col gap-4">
           {/* Reason (required) */}
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="records-reason-for-amendment" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
-              Reason for amendment <span style={{ color: 'var(--danger)' }}>*</span>
+            <label htmlFor="records-reason-for-amendment" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('reasonForAmendment')}{' '}<span style={{ color: 'var(--danger)' }}>*</span>
             </label>
             <input id="records-reason-for-amendment"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. Scale was miscalibrated, re-weighed child"
+              placeholder={t('eGScaleWas')}
               className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:ring-2"
               style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)', color: 'var(--ink)' }}
             />
@@ -511,11 +504,11 @@ function AmendModal({ rec, onClose, onSaved }: {
 
           {/* Measurements */}
           <div className="grid grid-cols-3 gap-3">
-            <Input label="Weight (kg)" type="number" step="0.1" value={String(weight)} onChange={(e) => setWeight(e.target.value)} placeholder="7.5" />
-            <Input label="Height (cm)" type="number" step="0.1" value={String(height)} onChange={(e) => setHeight(e.target.value)} placeholder="72" />
-            <Input label="MUAC (cm)"   type="number" step="0.1" value={String(muac)}   onChange={(e) => setMuac(e.target.value)}   placeholder="11.5" />
+            <Input label={t('weightKg')} type="number" step="0.1" value={String(weight)} onChange={(e) => setWeight(e.target.value)} placeholder="7.5" />
+            <Input label={t('heightCm')} type="number" step="0.1" value={String(height)} onChange={(e) => setHeight(e.target.value)} placeholder="72" />
+            <Input label={t('muacCm')}   type="number" step="0.1" value={String(muac)}   onChange={(e) => setMuac(e.target.value)}   placeholder="11.5" />
           </div>
-          <Input label="Temperature (°C)" type="number" step="0.1" value={String(temp)} onChange={(e) => setTemp(e.target.value)} placeholder="37.2" />
+          <Input label={t('temperatureC')} type="number" step="0.1" value={String(temp)} onChange={(e) => setTemp(e.target.value)} placeholder="37.2" />
 
           {/* Oedema */}
           <div className="flex items-center gap-3">
@@ -530,12 +523,12 @@ function AmendModal({ rec, onClose, onSaved }: {
               <span className="absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform"
                 style={{ transform: oedema ? 'translateX(1.25rem)' : 'translateX(0.25rem)' }} />
             </button>
-            <span className="text-sm" style={{ color: 'var(--ink)' }}>Bilateral pitting oedema</span>
+            <span className="text-sm" style={{ color: 'var(--ink)' }}>{t('bilateralPittingOedema')}</span>
           </div>
 
           {/* Symptoms */}
           <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Symptoms</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('symptoms')}</p>
             <div className="flex flex-wrap gap-2">
               {SYMPTOM_FLAGS.map((k) => {
                 const active = symptoms.includes(k);
@@ -560,14 +553,14 @@ function AmendModal({ rec, onClose, onSaved }: {
 
           {/* Notes */}
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="records-field-notes" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Field notes</label>
+            <label htmlFor="records-field-notes" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('fieldNotes')}</label>
             <textarea id="records-field-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               className="w-full px-3 py-2.5 rounded-xl border text-sm resize-none outline-none focus:ring-2"
               style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)', color: 'var(--ink)' }}
-              placeholder="Observations, follow-up actions…"
+              placeholder={t('observationsFollowUpActions')}
             />
           </div>
 
@@ -576,19 +569,17 @@ function AmendModal({ rec, onClose, onSaved }: {
 
         {/* Footer */}
         <div className="px-5 py-4 border-t shrink-0 flex gap-2" style={{ borderColor: 'var(--border)' }}>
-          <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" className="flex-1" onClick={onClose}>{t('cancel')}</Button>
           <Button
             variant="primary"
             className="flex-1"
             loading={amendMut.isPending}
             onClick={() => {
-              if (!reason.trim()) { setError('Please provide a reason for this amendment.'); return; }
+              if (!reason.trim()) { setError(t('pleaseProvideAReason')); return; }
               setError('');
               amendMut.mutate();
             }}
-          >
-            Save changes
-          </Button>
+          >{t('saveChanges')}</Button>
         </div>
       </div>
     </div>

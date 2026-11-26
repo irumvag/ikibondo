@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import {
   Baby, Syringe, RefreshCw, Stethoscope, AlertTriangle,
@@ -14,17 +15,19 @@ import { useSyncStore } from '@/store/syncStore';
 import { listCHWFamilies } from '@/lib/api/chw';
 import { listHealthRecords } from '@/lib/api/nurse';
 
+// Action names and descriptions: messages/en.json chw.home.actions.<msgKey>
 const QUICK_ACTIONS = [
-  { href: '/chw/today',        icon: CalendarDays,    label: "Today's plan",      desc: 'Family visit schedule for today.' },
-  { href: '/chw/visit',        icon: Stethoscope,     label: 'Log a visit',       desc: 'Record measurements for a child.' },
-  { href: '/chw/records',      icon: Activity,        label: 'Health records',    desc: 'View & edit your recorded visits.' },
-  { href: '/chw/vaccines',     icon: Syringe,         label: 'Vaccine queue',     desc: 'Administer scheduled doses.' },
-  { href: '/chw/consultations',icon: MessageSquare,   label: 'Ask a nurse',       desc: 'Open or continue a consultation.' },
-  { href: '/chw/requests',     icon: ClipboardCheck,  label: 'Visit requests',    desc: 'Requests from parents in your caseload.' },
-  { href: '/chw/scan',         icon: QrCode,          label: 'Scan QR',           desc: 'Scan a child\'s QR card for instant lookup.' },
-];
+  { href: '/chw/today',        icon: CalendarDays,    msgKey: 'todaysPlan' },
+  { href: '/chw/visit',        icon: Stethoscope,     msgKey: 'logAVisit' },
+  { href: '/chw/records',      icon: Activity,        msgKey: 'healthRecords' },
+  { href: '/chw/vaccines',     icon: Syringe,         msgKey: 'vaccineQueue' },
+  { href: '/chw/consultations',icon: MessageSquare,   msgKey: 'askANurse' },
+  { href: '/chw/requests',     icon: ClipboardCheck,  msgKey: 'visitRequests' },
+  { href: '/chw/scan',         icon: QrCode,          msgKey: 'scanQr' },
+] as const;
 
 export default function CHWDashboard() {
+  const t = useTranslations('chw.home');
   const user    = useAuthStore((s) => s.user);
   const pending = useSyncStore((s) => s.pending);
 
@@ -54,8 +57,7 @@ export default function CHWDashboard() {
         <h2
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          Welcome back, {user?.full_name?.split(' ')[0] ?? 'CHW'}
+        >{t('welcomeBack', { name: user?.full_name?.split(' ')[0] ?? 'CHW' })}
         </h2>
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
           {user?.camp_name ?? '—'} · {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -72,8 +74,8 @@ export default function CHWDashboard() {
           <QrCode size={20} />
         </div>
         <div className="flex-1">
-          <p className="text-sm font-semibold">Scan child QR card</p>
-          <p className="text-xs mt-0.5" style={{ opacity: 0.7 }}>Open camera to look up a child instantly</p>
+          <p className="text-sm font-semibold">{t('scanChildQrCard')}</p>
+          <p className="text-xs mt-0.5" style={{ opacity: 0.7 }}>{t('openCameraToLook')}</p>
         </div>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.6 }}>
           <path d="M6 12l4-4-4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -83,53 +85,49 @@ export default function CHWDashboard() {
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KPICard
-          label="Families"
+          label={t('families')}
           value={famLoading ? '—' : families.length.toString()}
           icon={<Baby size={18} />}
-          subtext={`${totalChildren} children total`}
+          subtext={t('childrenTotal', { count: totalChildren })}
           isLoading={famLoading}
         />
         <KPICard
-          label="High risk"
+          label={t('highRisk')}
           value={famLoading ? '—' : highRiskCount.toString()}
           icon={<AlertTriangle size={18} />}
           variant={highRiskCount > 0 ? 'danger' : 'default'}
-          subtext="Children needing urgent care"
+          subtext={t('childrenNeedingUrgentCare')}
           isLoading={famLoading}
         />
         <KPICard
-          label="Vaccines due"
+          label={t('vaccinesDue')}
           value={vaxLoading ? '—' : (vaccines?.count ?? 0).toString()}
           icon={<Syringe size={18} />}
           variant={(vaccines?.count ?? 0) > 0 ? 'warn' : 'default'}
-          subtext={`${overdueVaxKids} children affected`}
+          subtext={t('childrenAffected', { count: overdueVaxKids })}
           isLoading={vaxLoading}
         />
         <KPICard
-          label="Unsynced"
+          label={t('unsynced')}
           value={pending.length.toString()}
           icon={<RefreshCw size={18} />}
           variant={pending.length > 0 ? 'warn' : 'default'}
-          subtext={pending.length === 0 ? 'All records synced' : 'Tap Sync to upload'}
+          subtext={pending.length === 0 ? t('allRecordsSynced') : t('tapSyncToUpload')}
         />
       </div>
 
       {/* Alert banner — high risk children */}
       {highRiskCount > 0 && (
-        <Alert variant="danger" title={`${highRiskCount} high-risk child${highRiskCount !== 1 ? 'ren' : ''} need attention today`}>
-          <Link href="/chw/today" className="underline font-medium">
-            View today&apos;s priority visit plan →
-          </Link>
+        <Alert variant="danger" title={t('highRiskNeedAttention', { count: highRiskCount })}>
+          <Link href="/chw/today" className="underline font-medium">{t('viewTodaySPriority')}</Link>
         </Alert>
       )}
 
       {/* Quick actions */}
       <div>
-        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-          Quick actions
-        </h3>
+        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{t('quickActions')}</h3>
         <div className="grid sm:grid-cols-2 gap-3">
-          {QUICK_ACTIONS.map(({ href, icon: Icon, label, desc }) => (
+          {QUICK_ACTIONS.map(({ href, icon: Icon, msgKey }) => (
             <Link
               key={href}
               href={href}
@@ -143,8 +141,8 @@ export default function CHWDashboard() {
                 <Icon size={18} />
               </div>
               <div>
-                <p className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{label}</p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{desc}</p>
+                <p className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{t(`actions.${msgKey}.label`)}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t(`actions.${msgKey}.desc`)}</p>
               </div>
             </Link>
           ))}
@@ -153,10 +151,8 @@ export default function CHWDashboard() {
 
       {/* Sync prompt */}
       {pending.length > 0 && (
-        <Alert variant="warn" title={`${pending.length} record${pending.length !== 1 ? 's' : ''} waiting to sync`}>
-          <Link href="/chw/sync" className="underline font-medium">
-            Tap to upload now →
-          </Link>
+        <Alert variant="warn" title={t('recordsWaiting', { count: pending.length })}>
+          <Link href="/chw/sync" className="underline font-medium">{t('tapToUploadNow')}</Link>
         </Alert>
       )}
     </div>

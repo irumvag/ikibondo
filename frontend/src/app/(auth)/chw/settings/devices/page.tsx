@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
 import { Bluetooth, BluetoothOff, Plus, Trash2, Wifi, WifiOff, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -14,12 +15,12 @@ interface PairedDevice {
   isManual: boolean;
 }
 
-const DEVICE_TYPES: { value: PairedDevice['type']; label: string }[] = [
-  { value: 'weight_scale',   label: 'Weight Scale' },
-  { value: 'muac_tape',      label: 'MUAC Tape' },
-  { value: 'thermometer',    label: 'Thermometer' },
-  { value: 'pulse_oximeter', label: 'Pulse Oximeter' },
-  { value: 'other',          label: 'Other' },
+const DEVICE_TYPES: { value: PairedDevice['type']; }[] = [
+  { value: 'weight_scale' },
+  { value: 'muac_tape' },
+  { value: 'thermometer' },
+  { value: 'pulse_oximeter' },
+  { value: 'other' },
 ];
 
 const STORAGE_KEY = 'ikibondo.ble_devices';
@@ -49,6 +50,7 @@ declare global {
 }
 
 export default function BLEDevicesPage() {
+  const tt = useTranslations('chw.settings.devices');
   const [devices, setDevices]       = useState<PairedDevice[]>([]);
   const [bleSupported, setBleSupported] = useState(false);
   const [scanning, setScanning]     = useState(false);
@@ -84,7 +86,7 @@ export default function BLEDevicesPage() {
       saveDevices(updated);
     } catch (e: unknown) {
       if ((e as Error)?.name !== 'NotFoundError') {
-        setError((e as Error)?.message ?? 'Bluetooth scan failed.');
+        setError((e as Error)?.message ?? tt('bluetoothScanFailed'));
       }
     } finally {
       setScanning(false);
@@ -121,13 +123,9 @@ export default function BLEDevicesPage() {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <Bluetooth size={20} style={{ color: 'var(--primary)' }} />
-          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-            BLE Devices
-          </h2>
+          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{tt('bleDevices')}</h2>
         </div>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Pair Bluetooth sensor devices for automatic vital sign capture during visits.
-        </p>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{tt('pairBluetoothSensorDevices')}</p>
       </div>
 
       {/* BLE support banner */}
@@ -138,13 +136,8 @@ export default function BLEDevicesPage() {
         >
           <BluetoothOff size={18} style={{ color: 'var(--warn)', flexShrink: 0, marginTop: 1 }} />
           <div>
-            <p className="text-sm font-medium" style={{ color: 'var(--warn)' }}>
-              Web Bluetooth not supported
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              Your browser does not support Web Bluetooth API. Use Chrome or Edge on Android/desktop to scan
-              devices automatically, or add devices manually using the button below.
-            </p>
+            <p className="text-sm font-medium" style={{ color: 'var(--warn)' }}>{tt('webBluetoothNotSupported')}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{tt('yourBrowserDoesNot')}</p>
           </div>
         </div>
       )}
@@ -161,8 +154,7 @@ export default function BLEDevicesPage() {
           </Button>
         )}
         <Button variant="ghost" onClick={() => setShowManual(!showManual)}>
-          <Plus size={16} className="mr-1" /> Add Manually
-        </Button>
+          <Plus size={16} className="mr-1" />{' '}{tt('addManually')}</Button>
       </div>
 
       {/* Error */}
@@ -178,14 +170,14 @@ export default function BLEDevicesPage() {
           className="rounded-xl border p-4 flex flex-col gap-3"
           style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
         >
-          <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>Add Device Manually</h3>
+          <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{tt('addDeviceManually')}</h3>
           <Input
-            placeholder="Device ID (from device label or app)"
+            placeholder={tt('deviceIdFromDevice')}
             value={manualId}
             onChange={(e) => setManualId(e.target.value)}
           />
           <Input
-            placeholder="Device name (e.g. SECA mBCA 525)"
+            placeholder={tt('deviceNameEG')}
             value={manualName}
             onChange={(e) => setManualName(e.target.value)}
           />
@@ -196,12 +188,12 @@ export default function BLEDevicesPage() {
             style={{ background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--ink)' }}
           >
             {DEVICE_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
+              <option key={t.value} value={t.value}>{tt(`type.${t.value}`)}</option>
             ))}
           </select>
           <div className="flex gap-2 justify-end">
-            <Button variant="ghost" onClick={() => setShowManual(false)}>Cancel</Button>
-            <Button onClick={addManual} disabled={!manualId.trim() || !manualName.trim()}>Save Device</Button>
+            <Button variant="ghost" onClick={() => setShowManual(false)}>{tt('cancel')}</Button>
+            <Button onClick={addManual} disabled={!manualId.trim() || !manualName.trim()}>{tt('saveDevice')}</Button>
           </div>
         </div>
       )}
@@ -213,10 +205,8 @@ export default function BLEDevicesPage() {
           style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
         >
           <WifiOff size={32} style={{ color: 'var(--text-muted)' }} />
-          <p className="font-medium text-sm" style={{ color: 'var(--ink)' }}>No devices paired yet</p>
-          <p className="text-xs max-w-xs" style={{ color: 'var(--text-muted)' }}>
-            Pair a BLE sensor to automatically populate measurements during a visit.
-          </p>
+          <p className="font-medium text-sm" style={{ color: 'var(--ink)' }}>{tt('noDevicesPairedYet')}</p>
+          <p className="text-xs max-w-xs" style={{ color: 'var(--text-muted)' }}>{tt('pairABleSensor')}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -236,22 +226,20 @@ export default function BLEDevicesPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{dev.name}</span>
                   <Badge variant="info">
-                    {DEVICE_TYPES.find((t) => t.value === dev.type)?.label ?? 'Other'}
+                    {DEVICE_TYPES.some((t) => t.value === dev.type) ? tt(`type.${dev.type}`) : tt('other')}
                   </Badge>
                   {dev.isManual && (
-                    <Badge variant="warn">Manual</Badge>
+                    <Badge variant="warn">{tt('manual')}</Badge>
                   )}
                 </div>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  ID: {dev.id} · Paired {new Date(dev.connectedAt).toLocaleDateString()}
-                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{tt('idPaired', { id: dev.id, toLocaleDateString: new Date(dev.connectedAt).toLocaleDateString() })}</p>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle size={16} style={{ color: 'var(--success)' }} />
                 <button
                   onClick={() => removeDevice(dev.id)}
                   className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                  title="Remove device"
+                  title={tt('removeDevice')}
                 >
                   <Trash2 size={15} style={{ color: 'var(--danger)' }} />
                 </button>
@@ -266,12 +254,12 @@ export default function BLEDevicesPage() {
         className="rounded-xl border p-4 flex flex-col gap-2"
         style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}
       >
-        <p className="text-xs font-semibold" style={{ color: 'var(--ink)' }}>How device pairing works</p>
+        <p className="text-xs font-semibold" style={{ color: 'var(--ink)' }}>{tt('howDevicePairingWorks')}</p>
         <ul className="text-xs space-y-1" style={{ color: 'var(--text-muted)' }}>
-          <li>1. Enable Bluetooth on your phone and switch on the sensor device.</li>
-          <li>2. Tap <strong>Scan for Devices</strong> and select your device from the list.</li>
-          <li>3. During a visit, the app will automatically read measurements from the sensor.</li>
-          <li>4. If BLE is unavailable, enter readings manually — the pairing list is still used for matching.</li>
+          <li>{tt('n1EnableBluetoothOn')}</li>
+          <li>{tt.rich('stepScan', { b: (chunks) => <strong>{chunks}</strong> })}</li>
+          <li>{tt('n3DuringAVisit')}</li>
+          <li>{tt('n4IfBleIs')}</li>
         </ul>
       </div>
     </div>

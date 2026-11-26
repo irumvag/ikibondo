@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -38,6 +39,7 @@ function todayLabel() {
 // ── main page ──────────────────────────────────────────────────────────────────
 
 export default function CHWTodayPage() {
+  const t = useTranslations('chw.today');
   const router = useRouter();
   const [visited, setVisited]   = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set(['all']));
@@ -73,9 +75,7 @@ export default function CHWTodayPage() {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <CalendarDays size={20} style={{ color: 'var(--primary)' }} />
-          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-            Today&apos;s Plan
-          </h2>
+          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('todaySPlan')}</h2>
         </div>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{todayLabel()}</p>
       </div>
@@ -83,11 +83,11 @@ export default function CHWTodayPage() {
       {/* Summary cards */}
       {!isLoading && (
         <div className="grid grid-cols-3 gap-3">
-          <SummaryCard value={toVisit.length}              label="To visit"  color="var(--primary)" />
-          <SummaryCard value={done.length}                 label="Done today" color="var(--success)" />
+          <SummaryCard value={toVisit.length}              label={t('toVisit')}  color="var(--primary)" />
+          <SummaryCard value={done.length}                 label={t('doneToday')} color="var(--success)" />
           <SummaryCard
             value={toVisit.length - done.length}
-            label="Remaining"
+            label={t('remaining')}
             color={toVisit.length - done.length > 0 ? 'var(--warn)' : 'var(--success)'}
           />
         </div>
@@ -98,8 +98,8 @@ export default function CHWTodayPage() {
         <div className="rounded-xl border p-3.5 flex items-center gap-4" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
           <div className="flex-1">
             <div className="flex justify-between text-xs mb-1.5">
-              <span style={{ color: 'var(--ink)' }}>Visit progress</span>
-              <span style={{ color: 'var(--text-muted)' }}>{done.length} / {toVisit.length} children</span>
+              <span style={{ color: 'var(--ink)' }}>{t('visitProgress')}</span>
+              <span style={{ color: 'var(--text-muted)' }}>{t('children', { length: done.length, length2: toVisit.length })}</span>
             </div>
             <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg)' }}>
               <div
@@ -125,15 +125,14 @@ export default function CHWTodayPage() {
       ) : families.length === 0 ? (
         <EmptyState
           icon={<CheckCircle size={32} />}
-          title="No families assigned"
-          description="Your supervisor has not assigned any families yet."
+          title={t('noFamiliesAssigned')}
+          description={t('yourSupervisorHasNot')}
         />
       ) : (
         <>
           {activeFamilies.length > 0 && (
             <div className="flex flex-col gap-3">
-              <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                Needs attention · {activeFamilies.length} famil{activeFamilies.length === 1 ? 'y' : 'ies'}
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('needsAttentionFamilies', { count: activeFamilies.length })}
               </p>
               {activeFamilies.map((family) => (
                 <FamilyCard
@@ -152,8 +151,7 @@ export default function CHWTodayPage() {
 
           {quietFamilies.length > 0 && (
             <div className="flex flex-col gap-3">
-              <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                Up to date · {quietFamilies.length} famil{quietFamilies.length === 1 ? 'y' : 'ies'}
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('upToDateFamilies', { count: quietFamilies.length })}
               </p>
               {quietFamilies.map((family) => (
                 <FamilyCard
@@ -177,9 +175,7 @@ export default function CHWTodayPage() {
       <div className="flex gap-4 text-xs flex-wrap" style={{ color: 'var(--text-muted)' }}>
         {(['HIGH', 'MEDIUM', 'LOW'] as const).map((r) => (
           <span key={r} className="flex items-center gap-1.5">
-            <RiskDot level={r} />
-            {r.charAt(0) + r.slice(1).toLowerCase()} risk
-          </span>
+            <RiskDot level={r} />{t('risk', { value: r.charAt(0) + r.slice(1).toLowerCase() })}</span>
         ))}
       </div>
     </div>
@@ -211,6 +207,7 @@ function FamilyCard({ family, planMap, visited, expanded, onToggle, onLogVisit, 
   onMarkDone: (childId: string) => void;
   dimmed?:    boolean;
 }) {
+  const t = useTranslations('chw.today');
   const highRisk    = family.children.filter((c) => c.risk_level === 'HIGH').length;
   const overdueVax  = family.children.reduce((s, c) => s + c.overdue_vaccines, 0);
   const hasPending  = family.children.some((c) => planMap.get(c.id)?.has_pending_request);
@@ -242,13 +239,11 @@ function FamilyCard({ family, planMap, visited, expanded, onToggle, onLogVisit, 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{family.full_name}</span>
-            {hasPending  && <Badge variant="warn"><Bell size={9} className="mr-0.5 inline" />Visit request</Badge>}
-            {highRisk > 0 && <Badge variant="danger">{highRisk} high risk</Badge>}
-            {overdueVax > 0 && <Badge variant="warn">{overdueVax} overdue vax</Badge>}
+            {hasPending  && <Badge variant="warn"><Bell size={9} className="mr-0.5 inline" />{t('visitRequest')}</Badge>}
+            {highRisk > 0 && <Badge variant="danger">{t('highRisk', { highRisk: highRisk })}</Badge>}
+            {overdueVax > 0 && <Badge variant="warn">{t('overdueVax', { overdueVax: overdueVax })}</Badge>}
             {visitedKids > 0 && (
-              <span className="text-xs font-medium" style={{ color: 'var(--success)' }}>
-                {visitedKids}/{totalKids} done
-              </span>
+              <span className="text-xs font-medium" style={{ color: 'var(--success)' }}>{t('done', { visitedKids: visitedKids, totalKids: totalKids })}</span>
             )}
           </div>
           {family.phone_number && (
@@ -263,8 +258,7 @@ function FamilyCard({ family, planMap, visited, expanded, onToggle, onLogVisit, 
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {totalKids} child{totalKids !== 1 ? 'ren' : ''}
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('childCount', { count: totalKids })}
           </span>
           {expanded
             ? <ChevronUp size={15} style={{ color: 'var(--text-muted)' }} />
@@ -300,6 +294,7 @@ function ChildPlanRow({ child, planItem, isVisited, onLogVisit, onMarkDone }: {
   onLogVisit: () => void;
   onMarkDone: () => void;
 }) {
+  const t = useTranslations('chw.today');
   const score   = planItem?.priority_score ?? 0;
   const reasons = planItem?.priority_reasons ?? [];
 
@@ -316,8 +311,7 @@ function ChildPlanRow({ child, planItem, isVisited, onLogVisit, onMarkDone }: {
           <Badge variant={RISK_VARIANT[child.risk_level] ?? 'default'}>{child.risk_level}</Badge>
           {isVisited && (
             <span className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--success)' }}>
-              <CheckCircle size={11} /> Visited
-            </span>
+              <CheckCircle size={11} />{' '}{t('visited')}</span>
           )}
         </div>
 
@@ -336,12 +330,11 @@ function ChildPlanRow({ child, planItem, isVisited, onLogVisit, onMarkDone }: {
 
         {/* Next vaccine info when no urgent issues */}
         {score === 0 && child.next_vaccine_name && (
-          <p className="text-xs mt-1" style={{ color: 'var(--success)' }}>
-            ✓ Up to date · next: {child.next_vaccine_name} {child.next_vaccine_date ?? ''}
+          <p className="text-xs mt-1" style={{ color: 'var(--success)' }}>{t('upToDateNextOn', { name: child.next_vaccine_name, date: child.next_vaccine_date ?? '' })}
           </p>
         )}
         {score === 0 && !child.next_vaccine_name && (
-          <p className="text-xs mt-1" style={{ color: 'var(--success)' }}>✓ Up to date</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--success)' }}>{t('upToDate')}</p>
         )}
       </div>
 
@@ -356,12 +349,10 @@ function ChildPlanRow({ child, planItem, isVisited, onLogVisit, onMarkDone }: {
             border:      isVisited ? '1px solid var(--border)' : 'none',
           }}
         >
-          {isVisited ? 'Re-visit' : 'Log Visit'}
+          {isVisited ? t('reVisit') : t('logVisit')}
         </button>
         {!isVisited && score > 0 && (
-          <button onClick={onMarkDone} className="text-xs hover:underline" style={{ color: 'var(--text-muted)' }}>
-            Mark done
-          </button>
+          <button onClick={onMarkDone} className="text-xs hover:underline" style={{ color: 'var(--text-muted)' }}>{t('markDone')}</button>
         )}
       </div>
     </div>
@@ -370,15 +361,18 @@ function ChildPlanRow({ child, planItem, isVisited, onLogVisit, onMarkDone }: {
 
 // ── ReasonChip ─────────────────────────────────────────────────────────────────
 
-const REASON_ICON: Record<string, React.ReactNode> = {
-  'Visit request':   <Bell size={9} />,
-  'High risk':       <AlertTriangle size={9} />,
-  'Overdue vaccine': <Syringe size={9} />,
-  'Never visited':   <Clock size={9} />,
+// The API sends reasons in English; what CHWs see is messages/en.json chw.today.reason.<key>
+const REASONS: Record<string, { key: 'visitRequest' | 'highRisk' | 'overdueVaccine' | 'neverVisited'; icon: React.ReactNode }> = {
+  'Visit request':   { key: 'visitRequest',   icon: <Bell size={9} /> },
+  'High risk':       { key: 'highRisk',       icon: <AlertTriangle size={9} /> },
+  'Overdue vaccine': { key: 'overdueVaccine', icon: <Syringe size={9} /> },
+  'Never visited':   { key: 'neverVisited',   icon: <Clock size={9} /> },
 };
 
 function ReasonChip({ reason }: { reason: string }) {
-  const icon = REASON_ICON[reason] ?? <Clock size={9} />;
+  const t = useTranslations('chw.today');
+  const known = REASONS[reason];
+  const icon = known?.icon ?? <Clock size={9} />;
   const isUrgent = reason === 'Visit request' || reason === 'High risk';
   return (
     <span
@@ -389,7 +383,7 @@ function ReasonChip({ reason }: { reason: string }) {
         color: isUrgent ? 'var(--danger)' : 'var(--text-muted)',
       }}
     >
-      {icon}{reason}
+      {icon}{known ? t(`reason.${known.key}`) : reason}
     </span>
   );
 }

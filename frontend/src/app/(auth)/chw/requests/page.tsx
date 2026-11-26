@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -16,18 +17,19 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/ToastContext';
 
-const STATUS_TABS: { key: VisitRequestStatus | 'ALL'; label: string }[] = [
-  { key: 'ALL',       label: 'All'       },
-  { key: 'PENDING',   label: 'Pending'   },
-  { key: 'ACCEPTED',  label: 'Accepted'  },
-  { key: 'COMPLETED', label: 'Completed' },
-  { key: 'DECLINED',  label: 'Declined'  },
+// Tab and urgency names: messages/en.json chw.requests.status.<KEY> / urgency.<URGENCY>
+const STATUS_TABS: { key: VisitRequestStatus | 'ALL' }[] = [
+  { key: 'ALL' },
+  { key: 'PENDING' },
+  { key: 'ACCEPTED' },
+  { key: 'COMPLETED' },
+  { key: 'DECLINED' },
 ];
 
 const URGENCY_META = {
-  URGENT:  { variant: 'danger'  as const, label: 'Urgent'  },
-  SOON:    { variant: 'warn'    as const, label: 'Soon'    },
-  ROUTINE: { variant: 'default' as const, label: 'Routine' },
+  URGENT:  { variant: 'danger'  as const },
+  SOON:    { variant: 'warn'    as const },
+  ROUTINE: { variant: 'default' as const },
 };
 
 const STATUS_META = {
@@ -42,6 +44,7 @@ function fmtDate(iso: string) {
 }
 
 export default function CHWRequestsPage() {
+  const t = useTranslations('chw.requests');
   const toast = useToast();
   const qc = useQueryClient();
   const [tab, setTab]                 = useState<VisitRequestStatus | 'ALL'>('PENDING');
@@ -58,13 +61,13 @@ export default function CHWRequestsPage() {
 
   const acceptMut = useMutation({
     mutationFn: ({ id, eta }: { id: string; eta?: string }) => acceptVisitRequest(id, eta),
-    onSuccess: () => { toast.success('Visit accepted — the family has been told'); qc.invalidateQueries({ queryKey: ['chw', 'visit-requests'] }); },
+    onSuccess: () => { toast.success(t('visitAcceptedTheFamily')); qc.invalidateQueries({ queryKey: ['chw', 'visit-requests'] }); },
   });
 
   const declineMut = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) => declineVisitRequest(id, reason),
     onSuccess: () => {
-      toast.success('Request declined');
+      toast.success(t('requestDeclined'));
       qc.invalidateQueries({ queryKey: ['chw', 'visit-requests'] });
       setDeclineId(null);
       setDeclineReason('');
@@ -73,7 +76,7 @@ export default function CHWRequestsPage() {
 
   const completeMut = useMutation({
     mutationFn: (id: string) => completeVisitRequest(id),
-    onSuccess: () => { toast.success('Visit marked complete'); qc.invalidateQueries({ queryKey: ['chw', 'visit-requests'] }); },
+    onSuccess: () => { toast.success(t('visitMarkedComplete')); qc.invalidateQueries({ queryKey: ['chw', 'visit-requests'] }); },
   });
 
   const pendingCount = requests.filter((r) => r.status === 'PENDING').length;
@@ -83,27 +86,21 @@ export default function CHWRequestsPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-            Visit Requests
-          </h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Home visit requests from parents in your caseload.
-          </p>
+          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('visitRequests')}</h2>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('homeVisitRequestsFrom')}</p>
         </div>
         {pendingCount > 0 && (
           <div
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium shrink-0"
             style={{ background: '#fef2f2', color: 'var(--danger)' }}
           >
-            <AlertTriangle size={14} />
-            {pendingCount} pending
-          </div>
+            <AlertTriangle size={14} />{t('pending', { pendingCount: pendingCount })}</div>
         )}
       </div>
 
       {/* Status tab bar */}
       <div className="flex gap-1 border-b overflow-x-auto" style={{ borderColor: 'var(--border)' }}>
-        {STATUS_TABS.map(({ key, label }) => {
+        {STATUS_TABS.map(({ key }) => {
           const count = key === 'ALL' ? requests.length : requests.filter((r) => r.status === key).length;
           return (
             <button
@@ -115,7 +112,7 @@ export default function CHWRequestsPage() {
                 color:       tab === key ? 'var(--ink)' : 'var(--text-muted)',
               }}
             >
-              {label}
+              {t(`status.${key}`)}
               {count > 0 && (
                 <span
                   className="text-xs px-1.5 py-0.5 rounded-full font-semibold"
@@ -140,8 +137,8 @@ export default function CHWRequestsPage() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Clock size={28} />}
-          title="No requests"
-          description={`No ${tab === 'ALL' ? '' : tab.toLowerCase() + ' '}visit requests at this time.`}
+          title={t('noRequests')}
+          description={t(`empty.${tab}`)}
         />
       ) : (
         <div className="flex flex-col gap-3">
@@ -170,33 +167,25 @@ export default function CHWRequestsPage() {
             className="rounded-2xl border w-full max-w-sm p-6 flex flex-col gap-4"
             style={{ background: 'var(--bg-elev)', borderColor: 'var(--border)' }}
           >
-            <h2 className="text-lg font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-              Decline request
-            </h2>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Provide a reason so the parent understands next steps.
-            </p>
+            <h2 className="text-lg font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('declineRequest')}</h2>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('provideAReasonSo')}</p>
             <textarea
               value={declineReason}
               onChange={(e) => setDeclineReason(e.target.value)}
               rows={3}
-              placeholder="Reason for declining…"
+              placeholder={t('reasonForDeclining')}
               className="w-full rounded-xl border px-3 py-2 text-sm resize-none outline-none"
               style={{ borderColor: 'var(--border)', background: 'var(--bg)', color: 'var(--ink)' }}
             />
             <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={() => { setDeclineId(null); setDeclineReason(''); }}>
-                Cancel
-              </Button>
+              <Button variant="secondary" className="flex-1" onClick={() => { setDeclineId(null); setDeclineReason(''); }}>{t('cancel')}</Button>
               <button
                 onClick={() => declineMut.mutate({ id: declineId, reason: declineReason })}
                 disabled={declineMut.isPending || !declineReason.trim()}
                 className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl text-sm font-medium px-3 py-2 transition-opacity disabled:opacity-50"
                 style={{ background: 'var(--danger)', color: '#fff' }}
               >
-                {declineMut.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                Decline
-              </button>
+                {declineMut.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{t('decline')}</button>
             </div>
           </div>
         </div>
@@ -215,7 +204,9 @@ function RequestCard({
   isAccepting: boolean;
   isCompleting: boolean;
 }) {
-  const urgencyMeta = URGENCY_META[vr.urgency] ?? URGENCY_META.ROUTINE;
+  const t = useTranslations('chw.requests');
+  const urgency = vr.urgency in URGENCY_META ? vr.urgency : 'ROUTINE';
+  const urgencyMeta = URGENCY_META[urgency];
   const statusMeta  = STATUS_META[vr.status]   ?? STATUS_META.PENDING;
 
   return (
@@ -229,7 +220,7 @@ function RequestCard({
           <p className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{vr.child_name}</p>
           <Badge variant={urgencyMeta.variant}>
             {vr.urgency === 'URGENT' && <AlertTriangle size={10} className="mr-0.5" />}
-            {urgencyMeta.label}
+            {t(`urgency.${urgency}`)}
           </Badge>
           <Badge variant={statusMeta.variant}>{vr.status}</Badge>
         </div>
@@ -249,15 +240,11 @@ function RequestCard({
         )}
         {vr.assigned_chw_name && (
           <span className="flex items-center gap-1">
-            <MapPin size={11} />
-            CHW: {vr.assigned_chw_name}
-          </span>
+            <MapPin size={11} />{t('chw', { assigned_chw_name: vr.assigned_chw_name })}</span>
         )}
         {vr.eta && (
           <span className="flex items-center gap-1">
-            <Clock size={11} />
-            ETA: {new Date(vr.eta).toLocaleString()}
-          </span>
+            <Clock size={11} />{t('eta', { value: new Date(vr.eta).toLocaleString() })}</span>
         )}
       </div>
 
@@ -292,9 +279,7 @@ function RequestCard({
         <p
           className="text-xs px-3 py-2 rounded-lg"
           style={{ background: '#fef2f2', color: 'var(--danger)' }}
-        >
-          Declined: {vr.decline_reason}
-        </p>
+        >{t('declined', { decline_reason: vr.decline_reason })}</p>
       )}
 
       {/* Actions */}
@@ -305,39 +290,33 @@ function RequestCard({
             className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border py-2 text-sm transition-colors hover:opacity-80"
             style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
           >
-            <XCircle size={14} /> Decline
-          </button>
+            <XCircle size={14} />{' '}{t('decline')}</button>
           <button
             onClick={onAccept}
             disabled={isAccepting}
             className="flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-medium transition-opacity disabled:opacity-50"
             style={{ background: 'var(--ink)', color: 'var(--bg)' }}
           >
-            {isAccepting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-            Accept
-          </button>
+            {isAccepting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}{t('accept')}</button>
         </div>
       )}
 
       {vr.status === 'ACCEPTED' && (
         <div className="flex items-center justify-between pt-1">
-          <span className="text-xs font-medium" style={{ color: 'var(--primary)' }}>Accepted</span>
+          <span className="text-xs font-medium" style={{ color: 'var(--primary)' }}>{t('accepted')}</span>
           <button
             onClick={onComplete}
             disabled={isCompleting}
             className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-opacity disabled:opacity-50"
             style={{ background: 'var(--success)', color: '#fff' }}
           >
-            {isCompleting ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-            Mark complete
-          </button>
+            {isCompleting ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}{t('markComplete')}</button>
         </div>
       )}
 
       {vr.status === 'COMPLETED' && (
         <div className="flex items-center gap-1.5 pt-1 text-xs font-medium" style={{ color: 'var(--success)' }}>
-          <CheckCircle2 size={13} />
-          Completed {vr.completed_at ? fmtDate(vr.completed_at) : ''}
+          <CheckCircle2 size={13} />{t('completedOn', { date: vr.completed_at ? fmtDate(vr.completed_at) : '' })}
         </div>
       )}
     </div>

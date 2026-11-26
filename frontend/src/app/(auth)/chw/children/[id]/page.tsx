@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import React, { use } from 'react';
 import Link from 'next/link';
 import {
@@ -21,12 +22,13 @@ function riskVariant(level?: string): 'danger' | 'warn' | 'success' {
   return 'success';
 }
 
-function age(dob?: string) {
-  if (!dob) return '—';
+// Age in months, or years and months from 2 years; returns the values for messages ageMonths / ageYearsMonths.
+function age(dob?: string): { months: number; years?: number } | null {
+  if (!dob) return null;
   const ms = Date.now() - new Date(dob).getTime();
   const months = Math.floor(ms / (1000 * 60 * 60 * 24 * 30.44));
-  if (months < 24) return `${months} mo`;
-  return `${Math.floor(months / 12)} yr ${months % 12} mo`;
+  if (months < 24) return { months };
+  return { years: Math.floor(months / 12), months: months % 12 };
 }
 
 function fmt(val?: string | number | null, unit = '') {
@@ -36,6 +38,7 @@ function fmt(val?: string | number | null, unit = '') {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 export default function CHWChildDetail({ params }: { params: Promise<{ id: string }> }) {
+  const t = useTranslations('chw.children.detail');
   const { id } = use(params);
 
   const { data: child,   isLoading: loadingChild }   = useChild(id);
@@ -56,9 +59,7 @@ export default function CHWChildDetail({ params }: { params: Promise<{ id: strin
           className="flex items-center gap-1.5 text-sm hover:opacity-75 transition-opacity"
           style={{ color: 'var(--text-muted)' }}
         >
-          <ArrowLeft size={15} />
-          Dashboard
-        </Link>
+          <ArrowLeft size={15} />{t('dashboard')}</Link>
       </div>
 
       {/* ── Child header ── */}
@@ -79,19 +80,17 @@ export default function CHWChildDetail({ params }: { params: Promise<{ id: strin
               </p>
             </div>
             {latest?.risk_level && (
-              <Badge variant={riskVariant(latest.risk_level)}>
-                {String(latest.risk_level)} risk
-              </Badge>
+              <Badge variant={riskVariant(latest.risk_level)}>{t('risk', { String: String(latest.risk_level) })}</Badge>
             )}
           </div>
 
           {/* Info grid */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {([
-              { icon: Calendar, label: 'Age',  value: age(typedChild.date_of_birth as string) },
-              { icon: User,     label: 'Sex',  value: typedChild.sex === 'M' ? 'Male' : typedChild.sex === 'F' ? 'Female' : '—' },
-              { icon: Heart,    label: 'Status', value: String(typedChild.nutrition_status_display ?? typedChild.nutrition_status ?? '—') },
-              { icon: ClipboardList, label: 'Records', value: `${history?.length ?? 0}` },
+              { icon: Calendar, label: t('age'),  value: (() => { const a = age(typedChild.date_of_birth as string); return !a ? '—' : a.years === undefined ? t('ageMonths', { months: a.months }) : t('ageYearsMonths', { years: a.years, months: a.months }); })() },
+              { icon: User,     label: t('sex'),  value: typedChild.sex === 'M' ? 'Male' : typedChild.sex === 'F' ? 'Female' : '—' },
+              { icon: Heart,    label: t('status'), value: String(typedChild.nutrition_status_display ?? typedChild.nutrition_status ?? '—') },
+              { icon: ClipboardList, label: t('records'), value: `${history?.length ?? 0}` },
             ] as { icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; label: string; value: string }[]).map(({ icon: Icon, label, value }) => (
               <div key={label} className="rounded-xl p-3 flex flex-col gap-1" style={{ backgroundColor: 'var(--bg-sand)' }}>
                 <div className="flex items-center gap-1.5">
@@ -118,7 +117,7 @@ export default function CHWChildDetail({ params }: { params: Promise<{ id: strin
         </div>
       ) : (
         <div className="rounded-2xl border p-5 text-center" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Child not found.</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('childNotFound')}</p>
         </div>
       )}
 
@@ -129,25 +128,19 @@ export default function CHWChildDetail({ params }: { params: Promise<{ id: strin
           className="flex items-center gap-3 rounded-2xl border p-4 font-semibold text-sm transition-colors hover:opacity-85"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
         >
-          <ClipboardList size={18} style={{ color: 'var(--ink)' }} />
-          Log visit
-        </Link>
+          <ClipboardList size={18} style={{ color: 'var(--ink)' }} />{t('logVisit')}</Link>
         <Link
           href={`/chw/records?child=${id}`}
           className="flex items-center gap-3 rounded-2xl border p-4 font-semibold text-sm transition-colors hover:opacity-85"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
         >
-          <Activity size={18} style={{ color: 'var(--ink)' }} />
-          Health data
-        </Link>
+          <Activity size={18} style={{ color: 'var(--ink)' }} />{t('healthData')}</Link>
       </div>
 
       {/* ── Latest health record ── */}
       <div className="rounded-2xl border p-5 flex flex-col gap-4" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-            Latest health record
-          </p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('latestHealthRecord')}</p>
           {latest && (
             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
               {new Date(latest.measurement_date).toLocaleDateString()}
@@ -170,12 +163,9 @@ export default function CHWChildDetail({ params }: { params: Promise<{ id: strin
               >
                 <AlertTriangle size={15} style={{ color: latest.risk_level === 'HIGH' ? 'var(--danger)' : 'var(--warn)', flexShrink: 0 }} />
                 <div>
-                  <p className="text-xs font-semibold" style={{ color: latest.risk_level === 'HIGH' ? 'var(--danger)' : 'var(--warn)' }}>
-                    {latest.nutrition_status_display} — {latest.risk_level} risk
-                  </p>
+                  <p className="text-xs font-semibold" style={{ color: latest.risk_level === 'HIGH' ? 'var(--danger)' : 'var(--warn)' }}>{t('risk2', { nutrition_status_display: latest.nutrition_status_display, risk_level: latest.risk_level })}</p>
                   {latest.symptom_flags?.length > 0 && (
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      Flags: {latest.symptom_flags.join(', ')}
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('flagsList', { flags: latest.symptom_flags.join(', ') })}
                     </p>
                   )}
                 </div>
@@ -185,8 +175,8 @@ export default function CHWChildDetail({ params }: { params: Promise<{ id: strin
             {/* Measurements grid */}
             <div className="grid grid-cols-3 gap-2">
               {([
-                { icon: Weight, label: 'Weight', value: fmt(latest.weight_kg, ' kg') },
-                { icon: Ruler,  label: 'Height', value: fmt(latest.height_cm, ' cm') },
+                { icon: Weight, label: t('weight'), value: fmt(latest.weight_kg, ' kg') },
+                { icon: Ruler,  label: t('height'), value: fmt(latest.height_cm, ' cm') },
                 { icon: Activity, label: 'MUAC', value: fmt(latest.muac_cm, ' cm') },
               ] as { icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; label: string; value: string }[]).map(({ icon: Icon, label, value }) => (
                 <div key={label} className="rounded-xl p-3 flex flex-col gap-1 text-center" style={{ backgroundColor: 'var(--bg-sand)' }}>
@@ -198,11 +188,11 @@ export default function CHWChildDetail({ params }: { params: Promise<{ id: strin
             </div>
 
             {latest.oedema && (
-              <p className="text-xs font-semibold" style={{ color: 'var(--danger)' }}>⚠ Oedema present</p>
+              <p className="text-xs font-semibold" style={{ color: 'var(--danger)' }}>{t('oedemaPresent')}</p>
             )}
           </div>
         ) : (
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No health records yet.</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noHealthRecordsYet')}</p>
         )}
       </div>
 
@@ -210,15 +200,13 @@ export default function CHWChildDetail({ params }: { params: Promise<{ id: strin
       <div className="rounded-2xl border p-5 flex flex-col items-center gap-4" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
         <div className="w-full flex items-center gap-2">
           <QrCode size={16} style={{ color: 'var(--ink)' }} />
-          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-            Child QR card
-          </p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('childQrCard')}</p>
         </div>
 
         {qrData?.png_base64 ? (
           <img
             src={`data:image/png;base64,${qrData.png_base64}`}
-            alt="Child QR code"
+            alt={t('childQrCode')}
             className="rounded-xl"
             style={{ width: 192, height: 192 }}
           />
@@ -226,16 +214,12 @@ export default function CHWChildDetail({ params }: { params: Promise<{ id: strin
           <QRCodeSVG value={id} size={192} />
         )}
 
-        <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
-          Show this to the nurse or scan during next visit.
-        </p>
+        <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>{t('showThisToThe')}</p>
       </div>
 
       {/* ── Recent notes ── */}
       <div className="rounded-2xl border p-5 flex flex-col gap-3" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
-        <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-          Clinical notes
-        </p>
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('clinicalNotes')}</p>
 
         {loadingNotes ? (
           <div className="flex flex-col gap-2">
@@ -264,7 +248,7 @@ export default function CHWChildDetail({ params }: { params: Promise<{ id: strin
             ))}
           </div>
         ) : (
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No clinical notes yet.</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noClinicalNotesYet')}</p>
         )}
       </div>
     </div>
