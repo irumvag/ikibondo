@@ -35,6 +35,9 @@ class ChildSerializer(serializers.ModelSerializer):
     registered_by_name = serializers.CharField(source='registered_by.full_name', read_only=True, allow_null=True)
     assigned_chw_name  = serializers.CharField(source='guardian.assigned_chw.full_name',         read_only=True, allow_null=True)
     assigned_chw_phone = serializers.CharField(source='guardian.assigned_chw.phone_number',      read_only=True, allow_null=True)
+    # From the latest measurement; null until the child has been measured
+    risk_level = serializers.SerializerMethodField()
+    nutrition_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Child
@@ -48,13 +51,29 @@ class ChildSerializer(serializers.ModelSerializer):
             'assigned_chw_name', 'assigned_chw_phone',
             'registered_by', 'registered_by_name',
             'photo', 'notes', 'is_active', 'created_at',
-            'deletion_requested_at',
+            'deletion_requested_at', 'risk_level', 'nutrition_status',
         ]
         read_only_fields = ['id', 'registration_number', 'created_at', 'registered_by', 'deletion_requested_at']
 
     @extend_schema_field(serializers.BooleanField())
     def get_guardian_has_account(self, obj):
         return obj.guardian.user_id is not None
+
+    def _latest(self, obj, field):
+        # Annotated by ChildViewSet; otherwise (single child elsewhere) look it up
+        annotated = f'latest_{field}'
+        if hasattr(obj, annotated):
+            return getattr(obj, annotated)
+        rec = obj.health_records.filter(is_active=True).order_by('-measurement_date', '-created_at').first()
+        return getattr(rec, field, None) if rec else None
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_risk_level(self, obj):
+        return self._latest(obj, 'risk_level')
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_nutrition_status(self, obj):
+        return self._latest(obj, 'nutrition_status')
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

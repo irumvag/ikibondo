@@ -332,8 +332,16 @@ class ChildViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Child.objects.none()
+        from django.db.models import OuterRef, Subquery
+        from apps.health_records.models import HealthRecord
+        latest = HealthRecord.objects.filter(child=OuterRef('pk'), is_active=True).order_by(
+            '-measurement_date', '-created_at')
         qs = Child.objects.filter(is_active=True).select_related(
             'camp', 'zone', 'guardian', 'guardian__user', 'registered_by'
+        ).annotate(
+            # Status from the latest measurement, read by ChildSerializer (one query for the list)
+            latest_risk_level=Subquery(latest.values('risk_level')[:1]),
+            latest_nutrition_status=Subquery(latest.values('nutrition_status')[:1]),
         )
         return scope_children(qs, self.request.user)
 
