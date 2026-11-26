@@ -163,3 +163,13 @@ class TestIndicatorSettings:
         c = APIClient()
         c.force_authenticate(_user(UserRole.GOVERNMENT, Organization.objects.create(name='Ministry', kind='GOVERNMENT')))
         assert c.put('/api/v1/insights/indicators/sam_rate/', {'target': 3}, format='json').status_code == 403
+
+
+def test_supervisor_sees_only_their_own_camp(camps):
+    from apps.accounts.models import UserRole
+    from apps.accounts.tests.factories import UserFactory
+    big, small, _ = camps
+    sup = UserFactory(role=UserRole.SUPERVISOR, camp=big, is_approved=True)
+    res = _client(sup).get('/api/v1/insights/overview/')
+    assert res.status_code == 200
+    assert _names(res) == {'Big camp'}

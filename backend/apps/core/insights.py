@@ -28,6 +28,9 @@ def visible_camps(user):
     role = getattr(user, 'role', None)
     if role == UserRole.ADMIN:
         return camps
+    # A supervisor oversees their own camp (mobile and web statistics)
+    if role == UserRole.SUPERVISOR:
+        return camps.filter(id=user.camp_id) if user.camp_id else camps.none()
     if role not in STAKEHOLDER_ROLES:
         return camps.none()
     org = getattr(user, 'organization', None)

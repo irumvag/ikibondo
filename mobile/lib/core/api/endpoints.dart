@@ -47,6 +47,9 @@ class Endpoints {
   static final refresh          = '$kBaseUrl/auth/refresh/';
   static final logout           = '$kBaseUrl/auth/logout/';
   static final me               = '$kBaseUrl/auth/me/';
+  static final meSummary        = '$kBaseUrl/auth/me/summary/';
+  static final landingStats     = '$kBaseUrl/stats/landing/';       // admin only
+  static final insightsOverview = '$kBaseUrl/insights/overview/';   // admin, supervisor (own camp)
   static final register         = '$kBaseUrl/auth/register/';
   static final changePassword   = '$kBaseUrl/auth/change-password/';
   static final switchRole       = '$kBaseUrl/auth/switch-role/';

@@ -234,8 +234,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                               const SizedBox(height: 28),
                               Text(
-                                'For community health workers, nurses and parents. '
-                                'Supervisors, administrators and partners use the website.',
+                                'For health workers, nurses, parents, supervisors and administrators. '
+                          'Government and partner statistics are on the website.',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.inter(
                                     fontSize: 12,

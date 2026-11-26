@@ -17,7 +17,7 @@ class IsStakeholderOrAdmin(BasePermission):
     def has_permission(self, request, view):
         role = getattr(request.user, 'role', None)
         return bool(request.user and request.user.is_authenticated
-                    and (role == UserRole.ADMIN or role in STAKEHOLDER_ROLES))
+                    and (role in (UserRole.ADMIN, UserRole.SUPERVISOR) or role in STAKEHOLDER_ROLES))
 
 
 @extend_schema(exclude=True)

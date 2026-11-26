@@ -33,6 +33,8 @@ import '../../features/nurse/sessions_screen.dart';
 import '../../shared/widgets/chw_shell.dart';
 import '../../shared/widgets/parent_shell.dart';
 import '../../shared/widgets/nurse_shell.dart';
+import '../../shared/widgets/oversight_shell.dart';
+import '../../features/oversight/oversight_screens.dart';
 import '../../shared/widgets/health_guides.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -60,7 +62,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (loggedIn) {
         final home = _homeForRole(auth.user!.role);
         final loc = state.matchedLocation;
-        const sections = ['/chw', '/parent', '/nurse'];
+        const sections = ['/chw', '/parent', '/nurse', '/oversight'];
         final section = sections.where((s) => loc == s || loc.startsWith('$s/')).firstOrNull;
         if (section != null && section != home) return home;
       }
@@ -137,6 +139,21 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
+      // ── Admin / supervisor shell ─────────────────────────────────────────
+      ShellRoute(
+        builder: (_, __, child) => OversightShell(child: child),
+        routes: [
+          GoRoute(path: '/oversight',          builder: (_, __) => const OversightHomeScreen()),
+          GoRoute(path: '/oversight/stats',    builder: (_, __) => const OversightStatsScreen()),
+          GoRoute(path: '/oversight/children', builder: (_, __) => const OversightChildrenScreen()),
+          GoRoute(path: '/oversight/guides',   builder: (_, __) => const GuidesScreen()),
+          GoRoute(
+            path: '/oversight/children/:id',
+            builder: (_, state) => NurseChildDetailScreen(childId: state.pathParameters['id']!),
+          ),
+        ],
+      ),
+
       // ── Nurse shell ────────────────────────────────────────────────────
       ShellRoute(
         builder: (_, __, child) => NurseShell(child: child),
@@ -171,8 +188,8 @@ String _homeForRole(UserRole role) {
     case UserRole.chw:        return '/chw';
     case UserRole.parent:     return '/parent';
     case UserRole.nurse:      return '/nurse';
-    case UserRole.supervisor: return '/nurse'; // supervisors use nurse views
-    case UserRole.admin:      return '/nurse';
+    case UserRole.supervisor: return '/oversight';
+    case UserRole.admin:      return '/oversight';
     case UserRole.government: return '/web-only';
     case UserRole.partner:    return '/web-only';
   }

@@ -17,6 +17,8 @@ const _accounts = {
   'parent': ('parent@ikibondo.rw', 'parent123'),
   'chw': ('chw1@ikibondo.rw', 'chw123'),
   'nurse': ('nurse@ikibondo.rw', 'nurse123'),
+  'admin': ('admin@ikibondo.rw', 'admin123'),
+  'supervisor': ('supervisor@ikibondo.rw', 'super123'),
 };
 
 const _screens = {
@@ -25,6 +27,8 @@ const _screens = {
   'chw': ['/chw', '/chw/requests', '/chw/plan', '/chw/vaccines', '/chw/scan', '/chw/sync'],
   'nurse': ['/nurse', '/nurse/children', '/nurse/register', '/nurse/approvals',
             '/nurse/referrals', '/nurse/sessions', '/nurse/scan'],
+  'admin': ['/oversight', '/oversight/stats', '/oversight/children'],
+  'supervisor': ['/oversight', '/oversight/stats', '/oversight/children'],
 };
 
 const _firstChild = 'Uwimana Jean';
@@ -71,7 +75,11 @@ void main() {
       }
 
       // A child's page, opened the way a user does: from the list
-      router.go(role == 'nurse' ? '/nurse/children' : '/$role');
+      router.go(switch (role) {
+        'nurse' => '/nurse/children',
+        'admin' || 'supervisor' => '/oversight/children',
+        _ => '/$role',
+      });
       await settle(t);
       final child = find.text(_firstChild);
       if (child.evaluate().isNotEmpty) {
