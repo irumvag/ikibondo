@@ -83,6 +83,7 @@ class Endpoints {
   static final vaccinations     = '$kBaseUrl/vaccinations/';
   static String vaccination(String id) => '$kBaseUrl/vaccinations/$id/';
   static String administerVaccine(String id) => '$kBaseUrl/vaccinations/$id/administer/';
+  static final vaccineGuide      = '$kBaseUrl/vaccinations/guide/';
   static final vaccines         = '$kBaseUrl/vaccinations/vaccines/';
   static final clinicSessions   = '$kBaseUrl/vaccinations/clinic-sessions/';
   static String sessionEligible(String id) => '$kBaseUrl/vaccinations/clinic-sessions/$id/eligible-children/';

@@ -10,6 +10,8 @@ import '../../core/models/vaccination_record.dart';
 import '../../core/providers/sync_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/brand.dart';
+import '../../shared/widgets/health_guides.dart';
+import 'package:go_router/go_router.dart';
 import '../../shared/widgets/loading_skeleton.dart';
 import '../../core/api/response.dart';
 
@@ -17,11 +19,19 @@ final _vaccineQueueProvider =
     FutureProvider.autoDispose<List<VaccinationRecord>>((ref) async {
   final db = ref.read(dbProvider);
   try {
-    final resp = await ApiClient.dio.get(
-      Endpoints.vaccinations,
-      queryParameters: {'status': 'SCHEDULED', 'ordering': 'scheduled_date'},
-    );
-    final items = unwrapList(resp.data);
+    // Upcoming and missed doses: missed ones are the families to follow up first
+    final items = <Map<String, dynamic>>[];
+    for (final status in ['MISSED', 'SCHEDULED']) {
+      final resp = await ApiClient.dio.get(
+        Endpoints.vaccinations,
+        queryParameters: {
+          'status': status,
+          'ordering': 'scheduled_date',
+          'page_size': 200
+        },
+      );
+      items.addAll(unwrapList(resp.data));
+    }
     final records = items.map((e) => VaccinationRecord.fromJson(e)).toList();
     // Refresh the offline cache so the queue survives losing connectivity.
     await db.cacheVaccinationRecords([
@@ -103,8 +113,9 @@ class VaccineQueueScreen extends ConsumerWidget {
             );
           }
 
-          final overdue = records.where((r) => r.isOverdue).toList();
-          final upcoming = records.where((r) => !r.isOverdue).toList();
+          bool late(VaccinationRecord r) => r.isOverdue || r.status == 'MISSED';
+          final overdue = records.where(late).toList();
+          final upcoming = records.where((r) => !late(r)).toList();
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -130,7 +141,8 @@ class VaccineQueueScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               if (overdue.isNotEmpty) ...[
                 _SectionHeader(
-                    title: '${overdue.length} Overdue', color: colorDanger),
+                    title: 'Follow up: ${overdue.length} missed or overdue',
+                    color: colorDanger),
                 const SizedBox(height: 8),
                 ...overdue.map((r) => _VaccineTile(record: r, ref: ref)),
                 const SizedBox(height: 16),
@@ -170,49 +182,75 @@ class _VaccineTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('d MMM');
-    final color = record.isOverdue ? colorDanger : colorInk;
+    final late = record.isOverdue || record.status == 'MISSED';
+    final color = late ? colorDanger : colorInk;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: GlassCard(
-        radius: 16,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
-              child: Icon(Icons.vaccines_outlined, color: color, size: 21),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(record.vaccineName ?? 'Vaccine',
-                      style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: colorInk)),
-                  Text(record.childName ?? '',
-                      style:
-                          GoogleFonts.inter(fontSize: 12.5, color: colorMuted)),
-                ],
+      child: GestureDetector(
+        onTap: () => showVaccineInfoSheet(
+          context,
+          {
+            'vaccine_name': record.vaccineName,
+            'dose_number': record.doseNumber,
+            'scheduled_date': record.scheduledDate,
+            'child_name': record.childName,
+            'vaccine_info': record.info,
+          },
+          familyName: record.guardianName ?? 'Guardian',
+          familyPhone: record.guardianPhone,
+          onOpenChild: () => context.go('/chw/children/${record.childId}'),
+        ),
+        child: GlassCard(
+          radius: 16,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    shape: BoxShape.circle),
+                child: Icon(Icons.vaccines_outlined, color: color, size: 21),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20)),
-              child: Text(
-                '${record.isOverdue ? 'Overdue' : 'Due'} ${fmt.format(DateTime.parse(record.scheduledDate))}',
-                style: GoogleFonts.inter(
-                    fontSize: 11, fontWeight: FontWeight.w700, color: color),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(record.vaccineName ?? 'Vaccine',
+                        style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: colorInk)),
+                    if (record.info?['full_name'] != null)
+                      Text('${record.info!['full_name']}',
+                          style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: colorInk.withValues(alpha: 0.75))),
+                    Text(
+                        [record.childName, record.guardianName]
+                            .whereType<String>()
+                            .join(' · '),
+                        style: GoogleFonts.inter(
+                            fontSize: 12.5, color: colorMuted)),
+                  ],
+                ),
               ),
-            ),
-          ],
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20)),
+                child: Text(
+                  '${record.status == 'MISSED' ? 'Missed' : record.isOverdue ? 'Overdue' : 'Due'} ${fmt.format(DateTime.parse(record.scheduledDate))}',
+                  style: GoogleFonts.inter(
+                      fontSize: 11, fontWeight: FontWeight.w700, color: color),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

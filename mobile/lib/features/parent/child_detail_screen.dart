@@ -12,6 +12,7 @@ import '../../core/models/child.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/brand.dart';
 import '../../shared/widgets/growth_chart.dart';
+import '../../shared/widgets/health_guides.dart';
 import '../../shared/widgets/risk_badge.dart';
 
 final parentChildProvider = FutureProvider.family.autoDispose<Child, String>((ref, id) async {
@@ -240,6 +241,8 @@ class _OverviewTab extends ConsumerWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 10),
+            if (_num(latest['muac_cm']) != null) MuacExplainer(cm: _num(latest['muac_cm']), showIntro: false),
             const SizedBox(height: 14),
           ],
 
@@ -580,7 +583,10 @@ class VaccineGlassRow extends StatelessWidget {
     final color = vaccineStatusColor(status, overdue);
     final date = status == 'DONE' ? (v['administered_date'] ?? v['scheduled_date']) : v['scheduled_date'];
 
-    return GlassCard(
+    final protects = vaccineProtects(v);
+    return GestureDetector(
+      onTap: () => showVaccineInfoSheet(context, v),
+      child: GlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       radius: 16,
       child: Row(
@@ -596,10 +602,15 @@ class VaccineGlassRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${v['vaccine_name'] ?? ''}',
+                Text(vaccineTitle(v),
                     style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: colorInk)),
-                Text('Dose ${v['dose_number'] ?? 1} · ${date ?? ''}',
-                    style: GoogleFonts.inter(fontSize: 12, color: colorMuted)),
+                if (protects != null)
+                  Text(protects,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(fontSize: 12, height: 1.3, color: colorInk.withValues(alpha: 0.75))),
+                Text('${v['vaccine_name'] ?? ''} · dose ${v['dose_number'] ?? 1} · ${date ?? ''}',
+                    style: GoogleFonts.inter(fontSize: 11.5, color: colorMuted)),
               ],
             ),
           ),
@@ -611,6 +622,7 @@ class VaccineGlassRow extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

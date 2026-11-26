@@ -13,6 +13,10 @@ class VaccinationRecord {
   final String? notes;
   final double? dropoutProbability;
   final String? dropoutRiskTier;
+  final String? guardianName;
+  final String? guardianPhone;
+  /// Full name, protects_against, how_given, after (server: vaccine_info.py)
+  final Map<String, dynamic>? info;
 
   const VaccinationRecord({
     required this.id,
@@ -28,6 +32,9 @@ class VaccinationRecord {
     this.batchNumber,
     this.notes,
     this.dropoutProbability,
+    this.guardianName,
+    this.guardianPhone,
+    this.info,
     this.dropoutRiskTier,
   });
 
@@ -45,6 +52,9 @@ class VaccinationRecord {
         isOverdue:           (json['is_overdue'] as bool?) ?? false,
         batchNumber:         json['batch_number'] as String?,
         notes:               json['notes'] as String?,
+        guardianName:        json['guardian_name'] as String?,
+        guardianPhone:       json['guardian_phone'] as String?,
+        info:                json['vaccine_info'] is Map ? Map<String, dynamic>.from(json['vaccine_info'] as Map) : null,
         dropoutProbability:  double.tryParse('${json['dropout_probability'] ?? ''}'),
         dropoutRiskTier:     json['dropout_risk_tier'] as String?,
       );

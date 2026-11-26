@@ -13,6 +13,7 @@ import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/risk_badge.dart';
 import '../../core/api/response.dart';
 import '../../shared/widgets/brand.dart';
+import '../../shared/widgets/health_guides.dart';
 
 final _childDetailProvider = FutureProvider.family.autoDispose<Child, String>((ref, id) async {
   final resp = await ApiClient.dio.get(Endpoints.child(id));
@@ -189,6 +190,10 @@ class ChwChildDetailScreen extends ConsumerWidget {
                 );
               },
             ),
+            if (recordAsync.value?.muacCm != null) ...[
+              const SizedBox(height: 12),
+              MuacExplainer(cm: recordAsync.value!.muacCm, showIntro: false),
+            ],
 
             const SizedBox(height: 16),
 

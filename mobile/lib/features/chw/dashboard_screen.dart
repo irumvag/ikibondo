@@ -167,6 +167,27 @@ class ChwDashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 18),
 
+            SoftCard(
+              onTap: () => context.go('/chw/guides'),
+              child: Row(
+                children: [
+                  const Icon(Icons.menu_book_outlined, color: colorInk),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Health guides', style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w700, color: colorInk)),
+                        Text('Feeding by age, baby care, vaccines and MUAC: to explain to families',
+                            style: GoogleFonts.inter(fontSize: 12, color: colorMuted)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: colorMuted),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
             const SectionTitle('Your caseload'),
             families.when(
               loading: () => Column(

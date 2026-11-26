@@ -15,6 +15,7 @@ import '../../core/api/api_errors.dart';
 import '../../shared/widgets/ui.dart';
 import '../../core/api/response.dart';
 import '../../shared/widgets/brand.dart';
+import '../../shared/widgets/health_guides.dart';
 
 final _nurseChildProvider = FutureProvider.family.autoDispose<Child, String>((ref, id) async {
   final resp = await ApiClient.dio.get(Endpoints.child(id));
@@ -429,6 +430,10 @@ class _NurseOverview extends ConsumerWidget {
               ],
             ),
           ),
+        if (latest?.muacCm != null) ...[
+          const SizedBox(height: 10),
+          MuacExplainer(cm: latest!.muacCm, showIntro: false),
+        ],
         const SizedBox(height: 14),
         const SectionTitle('Details'),
         SoftCard(

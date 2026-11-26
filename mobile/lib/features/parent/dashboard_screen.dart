@@ -92,6 +92,8 @@ class ParentDashboardScreen extends ConsumerWidget {
                 const SizedBox(width: 10),
                 _Action(Icons.vaccines_outlined, 'Vaccines', () => context.go('/parent/vaccines')),
                 const SizedBox(width: 10),
+                _Action(Icons.menu_book_outlined, 'Guides', () => context.go('/parent/guides')),
+                const SizedBox(width: 10),
                 _Action(
                   Icons.workspace_premium_outlined,
                   'Certificate',
@@ -124,6 +126,48 @@ class ParentDashboardScreen extends ConsumerWidget {
                   : Column(children: children.map((c) => _ChildCard(child: c)).toList()),
             ),
             const SizedBox(height: 10),
+            // Quick links into the guides
+            for (final g in const [
+              (Icons.restaurant_outlined, 'What to feed your child', 'Meals and example days for each age', 0),
+              (Icons.child_friendly_outlined, 'Caring for your baby', 'Danger signs, sleep, hygiene, play', 1),
+              (Icons.vaccines_outlined, 'Vaccines explained', 'What each vaccine protects against', 2),
+            ])
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Material(
+                  color: colorBgElev,
+                  borderRadius: BorderRadius.circular(16),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => context.go('/parent/guides?tab=${g.$4}'),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), boxShadow: softShadow),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(9),
+                            decoration: BoxDecoration(color: colorBgSand, borderRadius: BorderRadius.circular(12)),
+                            child: Icon(g.$1, color: colorInk, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(g.$2, style: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w700, color: colorInk)),
+                                Text(g.$3, style: GoogleFonts.inter(fontSize: 12.5, color: colorMuted)),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, color: colorMuted),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 4),
             const CertificateHelpCard(),
           ],
         ),

@@ -20,7 +20,8 @@ const _accounts = {
 };
 
 const _screens = {
-  'parent': ['/parent', '/parent/vaccines', '/parent/request-visit', '/parent/notifications'],
+  'parent': ['/parent', '/parent/vaccines', '/parent/request-visit', '/parent/notifications',
+             '/parent/guides', '/parent/guides?tab=1', '/parent/guides?tab=2', '/parent/guides?tab=3'],
   'chw': ['/chw', '/chw/requests', '/chw/plan', '/chw/vaccines', '/chw/scan', '/chw/sync'],
   'nurse': ['/nurse', '/nurse/children', '/nurse/register', '/nurse/approvals',
             '/nurse/referrals', '/nurse/sessions', '/nurse/scan'],
@@ -66,7 +67,7 @@ void main() {
       for (final path in _screens[role]!) {
         router.go(path);
         await settle(t);
-        await shot(t, '${role}_${(n++).toString().padLeft(2, '0')}_${path.split('/').last}');
+        await shot(t, '${role}_${(n++).toString().padLeft(2, '0')}_${path.split('/').last.replaceAll(RegExp(r'[?=]'), '_')}');
       }
 
       // A child's page, opened the way a user does: from the list

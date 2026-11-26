@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/user.dart';
@@ -32,6 +33,7 @@ import '../../features/nurse/sessions_screen.dart';
 import '../../shared/widgets/chw_shell.dart';
 import '../../shared/widgets/parent_shell.dart';
 import '../../shared/widgets/nurse_shell.dart';
+import '../../shared/widgets/health_guides.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authProvider);
@@ -96,6 +98,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/chw/vaccines',  builder: (_, __) => const VaccineQueueScreen()),
           GoRoute(path: '/chw/sync',      builder: (_, __) => const SyncScreen()),
           GoRoute(path: '/chw/requests',  builder: (_, __) => const VisitRequestsScreen()),
+          GoRoute(path: '/chw/guides',    builder: (_, __) => const GuidesScreen()),
           GoRoute(
             path: '/chw/children/:id',
             builder: (_, state) => ChwChildDetailScreen(childId: state.pathParameters['id']!),
@@ -118,6 +121,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/parent/vaccines',         builder: (_, __) => const ParentVaccinesScreen()),
           GoRoute(path: '/parent/request-visit',    builder: (_, __) => const RequestVisitScreen()),
           GoRoute(path: '/parent/notifications',    builder: (_, __) => const NotificationsScreen()),
+          GoRoute(path: '/parent/guides',           builder: (_, state) {
+            final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0;
+            // Keyed by tab so a link to another tab opens it even from the guides screen
+            return GuidesScreen(key: ValueKey('guides-$tab'), initialTab: tab);
+          }),
           GoRoute(
             path: '/parent/children/:id',
             builder: (_, state) => ParentChildDetailScreen(childId: state.pathParameters['id']!),
@@ -140,6 +148,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/nurse/approvals',   builder: (_, __) => const ApprovalsScreen()),
           GoRoute(path: '/nurse/referrals',   builder: (_, __) => const ReferralsScreen()),
           GoRoute(path: '/nurse/sessions',    builder: (_, __) => const SessionsScreen()),
+          GoRoute(path: '/nurse/guides',      builder: (_, __) => const GuidesScreen()),
           GoRoute(
             path: '/nurse/sessions/:id',
             builder: (_, state) => SessionModeScreen(

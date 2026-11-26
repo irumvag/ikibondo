@@ -8,6 +8,66 @@ import '../api/response.dart';
 /// built-in wording used until they do. Keep in step with DEFAULTS in
 /// frontend/src/lib/siteContent.ts.
 const Map<String, Map<String, dynamic>> _defaults = {
+  'app.feeding': {
+    "title": "Feeding your child, by age",
+    "body": "What and how much to give at each age, with an example day using foods found in the camp. Wash your hands with soap before cooking and feeding, and use a clean cup and spoon (not a bottle).",
+    "steps": [
+      {
+        "title": "0 to 6 months: breast milk only",
+        "description": "Give only breast milk, day and night, whenever the baby wants (8 to 12 times a day). No water, no porridge, no other drinks: breast milk has all the water and food the baby needs.",
+      },
+      {
+        "title": "6 to 8 months: first foods",
+        "description": "Keep breastfeeding. Add soft food 2 to 3 times a day, starting with 2 to 3 spoonfuls and slowly up to half a cup. Food should be thick enough to stay on the spoon.\nExample day: thick sorghum or maize porridge with milk · mashed banana or avocado · mashed beans or groundnut paste with a little oil.",
+      },
+      {
+        "title": "9 to 11 months: more meals",
+        "description": "Keep breastfeeding. Give 3 to 4 meals and 1 to 2 snacks a day, half a cup each, mashed or finely chopped. Add an animal food every day if you can.\nExample day: porridge with milk and mashed banana · avocado · mashed sweet potato with beans, dodo (green leaves) and small fish (isambaza) · fruit · rice or potato with egg.",
+      },
+      {
+        "title": "12 to 23 months: family food",
+        "description": "Keep breastfeeding to 2 years or more. Give 3 to 4 meals and 1 to 2 snacks a day, three quarters to one full cup, cut small. Every day give a food from each group: grains or roots, beans or groundnuts, milk or eggs, fish or meat, green leaves, fruit.\nExample day: porridge with milk · mandazi or fruit · beans, sweet potato, dodo and fish · avocado · ugali with eggs and vegetables.",
+      },
+      {
+        "title": "2 to 5 years",
+        "description": "Three family meals and two snacks a day in the child's own plate, so you can see how much they eat. Give milk, eggs, beans, fruit and vegetables. Avoid sweets and sugary drinks.",
+      },
+      {
+        "title": "When your child is sick",
+        "description": "Keep breastfeeding and offer food more often, in small amounts. For diarrhoea give ORS and zinc from the health centre. After the illness give one extra meal a day for two weeks.",
+      },
+    ],
+  },
+  'app.baby_care': {
+    "title": "Caring for your baby",
+    "body": "Simple things that keep babies healthy. Your community health worker can show you each one.",
+    "steps": [
+      {
+        "title": "Go to the health centre now if your child",
+        "description": "cannot breastfeed or drink · vomits everything · has convulsions (fits) · is very sleepy or hard to wake · breathes fast or with difficulty · has a fever, or a newborn feels cold · has diarrhoea with blood or for many days · a newborn has yellow palms or soles, or a red, smelly cord.",
+      },
+      {
+        "title": "The first days",
+        "description": "Breastfeed within the first hour. Keep the baby warm, skin to skin on your chest. Keep the cord clean and dry and put nothing on it. Wait before the first bath.",
+      },
+      {
+        "title": "Sleep",
+        "description": "Put the baby to sleep on their back, under a mosquito net, every night.",
+      },
+      {
+        "title": "Clean hands, clean water",
+        "description": "Wash hands with soap after the toilet, after changing the baby and before cooking or feeding. Give boiled or treated water to children over 6 months.",
+      },
+      {
+        "title": "Talk and play",
+        "description": "Talk, sing and play with your baby every day. Babies learn from your voice and your face, and it helps their brain grow.",
+      },
+      {
+        "title": "Check-ups",
+        "description": "Bring your child every month to be weighed and measured, give every vaccine on time, and vitamin A and deworming when the health centre offers them.",
+      },
+    ],
+  },
   'app.parent_home': {
     'title': 'Your child’s health, in one place',
     'body': 'See each child’s growth and vaccinations, ask for a home visit, and get reminders '
