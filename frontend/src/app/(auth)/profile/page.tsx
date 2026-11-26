@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Activity, Baby, BadgeCheck, Briefcase, CalendarDays, Check, ChevronRight, Clock, HeartHandshake,
+  Activity, Baby, BadgeCheck, BarChart3, Building2, Download, Briefcase, CalendarDays, Check, ChevronRight, Clock, HeartHandshake,
   IdCard, KeyRound, Lock, Mail, MapPin, Pencil, Phone, Repeat, ShieldCheck, SlidersHorizontal, User,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -334,19 +334,80 @@ function YourWork({ summary, role }: { summary: ProfileSummary | undefined; role
 
   if (role === 'GOVERNMENT' || role === 'PARTNER') {
     const camps = Array.isArray(w.camps) ? w.camps : [];
-    return w.organization ? (
-      <div className="flex flex-col gap-2">
-        <p className="text-sm" style={{ color: 'var(--ink)' }}>
-          <span className="font-semibold">{w.organization}</span>
-          <span style={{ color: 'var(--text-muted)' }}> · {w.kind === 'GOVERNMENT' ? 'Government body' : 'NGO / UN partner'}</span>
-        </p>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          {w.all_camps ? 'You see statistics for every camp.' : camps.length ? `You see statistics for: ${camps.join(', ')}.` : 'No camps are linked to your organisation yet.'}
-        </p>
-        <Link href="/insights" className="self-start text-sm font-semibold underline" style={{ color: 'var(--ink)' }}>Open statistics →</Link>
+    const h = w.highlights ?? {};
+    const min = w.min_cell ?? 5;
+    const rate = (r?: { value: number | null; band: string | null; level: string | null } | null) =>
+      r?.value == null ? `—` : `${r.value}%`;
+    if (!w.organization) {
+      return <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Your account is not linked to an organisation yet. Ask an Ikibondo administrator.</p>;
+    }
+    return (
+      <div className="flex flex-col gap-4">
+        {/* Organisation */}
+        <div className="flex items-center gap-3 p-3.5 rounded-xl" style={{ backgroundColor: 'var(--bg-sand)' }}>
+          <span className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}>
+            <Building2 size={20} aria-hidden="true" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold truncate" style={{ color: 'var(--ink)' }}>{w.organization}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {w.kind === 'GOVERNMENT' ? 'Government body' : 'NGO / UN partner'}
+              {typeof w.colleagues === 'number' && ` · ${w.colleagues} colleague${w.colleagues === 1 ? '' : 's'} on Ikibondo`}
+            </p>
+          </div>
+        </div>
+
+        {/* Coverage */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+            Camps you report on ({w.camps_covered ?? camps.length})
+          </p>
+          {w.all_camps ? (
+            <p className="text-sm" style={{ color: 'var(--ink)' }}>All camps (national oversight)</p>
+          ) : camps.length ? (
+            <div className="flex flex-wrap gap-1.5">
+              {camps.map((c) => (
+                <span key={c} className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}>
+                  <MapPin size={12} aria-hidden="true" />{c}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No camps are linked to your organisation yet.</p>
+          )}
+        </div>
+
+        {/* Headline figures */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <Stat value={h.children?.suppressed ? `<${min}` : (h.children?.value ?? '—')} label="Children covered" href="/insights" />
+          <Stat value={rate(h.gam_rate)} label="Wasting (GAM)" href="/insights" />
+          <Stat value={rate(h.measles_coverage)} label="Measles coverage" href="/insights" />
+          <Stat value={rate(h.penta3_coverage)} label="Penta3 coverage" href="/insights" />
+        </div>
+
+        {/* What the account may see */}
+        <div className="rounded-xl border p-3.5 text-sm" style={{ borderColor: 'var(--border)' }}>
+          <p className="font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: 'var(--ink)' }}>
+            <ShieldCheck size={15} aria-hidden="true" /> Your data access
+          </p>
+          <ul className="flex flex-col gap-1" style={{ color: 'var(--text-muted)' }}>
+            <li>• Counts and rates per camp; never a child&apos;s name or record.</li>
+            <li>• Numbers from 1 to {min - 1} are shown as “&lt;{min}” so no child can be identified.</li>
+            <li>• Rates follow WHO/UNICEF, UNHCR and Sphere definitions.</li>
+          </ul>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Link href="/insights" className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-sm font-semibold"
+            style={{ backgroundColor: 'var(--ink)', color: 'var(--bg-elev)' }}>
+            <BarChart3 size={15} aria-hidden="true" /> Open statistics
+          </Link>
+          <Link href="/insights/reports" className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-sm font-semibold border"
+            style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}>
+            <Download size={15} aria-hidden="true" /> Download report
+          </Link>
+        </div>
       </div>
-    ) : (
-      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Your account is not linked to an organisation yet. Ask an Ikibondo administrator.</p>
     );
   }
 
@@ -407,14 +468,15 @@ export default function ProfilePage() {
         <section className="rounded-2xl border overflow-hidden" style={panel}>
           <div className="h-28 sm:h-32" style={{ background: 'linear-gradient(120deg, var(--ink), var(--sky))' }} aria-hidden="true" />
           <div className="px-5 sm:px-7 pb-6">
-            <div className="flex flex-wrap items-end gap-4 -mt-12">
+            {/* Phone: avatar above the details; wider screens: side by side */}
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 sm:gap-4 -mt-12">
               <div className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-extrabold select-none shrink-0"
                 style={{ backgroundColor: 'var(--bg-elev)', color: 'var(--ink)', border: '4px solid var(--bg-elev)', boxShadow: 'var(--shadow-md)',
                   backgroundImage: 'linear-gradient(135deg, var(--bg-sand), var(--bg-elev))' }}
                 aria-hidden="true">
                 {initials}
               </div>
-              <div className="flex-1 min-w-[12rem] pt-12 sm:pt-14">
+              <div className="flex-1 min-w-0 sm:min-w-[12rem] sm:pt-14">
                 <h2 className="text-2xl font-bold flex items-center gap-2 flex-wrap" style={{ color: 'var(--ink)' }}>
                   {user?.full_name ?? '—'}
                   {user?.is_approved && (

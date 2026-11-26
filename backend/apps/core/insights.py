@@ -55,6 +55,121 @@ def _rate(part, whole):
     return round(100 * int(part or 0) / whole, 1)
 
 
+# ── Benchmarks used by partners and the Ministry ─────────────────────────────
+# Wasting and stunting prevalence: WHO/UNICEF 2018 thresholds (de Onis et al.,
+# Public Health Nutrition 2019). UNHCR aims to keep GAM below 10% in refugee camps.
+# Measles coverage in camps: Sphere, 95%. Penta1 -> Penta3 dropout: WHO, above 10%
+# signals a problem reaching children for later doses.
+WASTING_BANDS = [(2.5, 'Very low', 'good'), (5, 'Low', 'good'), (10, 'Medium', 'watch'),
+                 (15, 'High', 'alert'), (None, 'Very high', 'alert')]
+STUNTING_BANDS = [(2.5, 'Very low', 'good'), (10, 'Low', 'good'), (20, 'Medium', 'watch'),
+                  (30, 'High', 'alert'), (None, 'Very high', 'alert')]
+
+
+def _band(rate, bands):
+    if rate is None:
+        return None, None
+    for upper, label, level in bands:
+        if upper is None or rate < upper:
+            return label, level
+    return None, None
+
+
+def _indicator(rate, *, bands=None, target=None, higher_is_better=True, benchmark=''):
+    """A rate with the level partners judge it by: good / watch / alert."""
+    if bands:
+        label, level = _band(rate, bands)
+    elif rate is None or target is None:
+        label, level = None, None
+    else:
+        ok = rate >= target if higher_is_better else rate <= target
+        near = rate >= target - 10 if higher_is_better else rate <= target + 5
+        level = 'good' if ok else ('watch' if near else 'alert')
+        label = 'Meets target' if ok else 'Below target' if higher_is_better else 'Above limit'
+    return {'value': rate, 'band': label, 'level': level, 'benchmark': benchmark}
+
+
+def _months_ago(today, weeks):
+    return today - timedelta(weeks=weeks)
+
+
+def _indicators(camp_ids, today):
+    """Institutional indicators for children aged 6-59 months (see benchmarks above)."""
+    from apps.children.models import Child
+    from apps.health_records.models import HealthRecord
+    from apps.referrals.models import Referral
+    from apps.vaccinations.models import DoseStatus, VaccinationRecord
+
+    under5 = Child.objects.filter(
+        camp_id__in=camp_ids, is_active=True,
+        date_of_birth__lte=today - timedelta(days=183), date_of_birth__gt=today - timedelta(days=1826),
+    )
+    recent = HealthRecord.objects.filter(
+        child=OuterRef('pk'), is_active=True, measurement_date__gte=today - timedelta(days=90),
+    ).order_by('-measurement_date', '-created_at')
+    measured = under5.annotate(
+        st=Subquery(recent.values('nutrition_status')[:1]),
+        haz=Subquery(recent.values('height_for_age_z')[:1]),
+        waz=Subquery(recent.values('weight_for_age_z')[:1]),
+    ).exclude(st__isnull=True)
+    m = measured.aggregate(
+        n=Count('id'),
+        sam=Count('id', filter=Q(st='SAM')),
+        gam=Count('id', filter=Q(st__in=['SAM', 'MAM'])),
+        stunted=Count('id', filter=Q(haz__lt=-2)),
+        haz_n=Count('id', filter=Q(haz__isnull=False)),
+        underweight=Count('id', filter=Q(waz__lt=-2)),
+        waz_n=Count('id', filter=Q(waz__isnull=False)),
+    )
+
+    def coverage(code_prefix, min_weeks):
+        eligible = Child.objects.filter(camp_id__in=camp_ids, is_active=True,
+                                        date_of_birth__lte=_months_ago(today, min_weeks))
+        given = VaccinationRecord.objects.filter(
+            child__in=eligible, vaccine__short_code=code_prefix, status=DoseStatus.DONE,
+        ).values('child').distinct().count()
+        return given, eligible.count()
+
+    mr1, mr1_n = coverage('MR1', 36 + 4)            # MR1 due at 9 months; 4 weeks' grace
+    p3, p3_n = coverage('DPT_HepB_Hib3', 14 + 4)    # Penta3 due at 14 weeks
+    p1_children = VaccinationRecord.objects.filter(
+        child__camp_id__in=camp_ids, child__is_active=True,
+        child__date_of_birth__lte=_months_ago(today, 14 + 4),
+        vaccine__short_code='DPT_HepB_Hib1', status=DoseStatus.DONE,
+    ).values('child')
+    p1 = p1_children.distinct().count()
+    p1_then_p3 = VaccinationRecord.objects.filter(
+        child__in=p1_children, vaccine__short_code='DPT_HepB_Hib3', status=DoseStatus.DONE,
+    ).values('child').distinct().count()
+
+    year = Referral.objects.filter(child__camp_id__in=camp_ids, referred_at__date__gte=today - timedelta(days=365))
+    ref_total = year.exclude(status='CANCELLED').count()
+    ref_done = year.filter(status='COMPLETED').count()
+
+    return {
+        'gam_rate': _indicator(_rate(m['gam'], m['n']), bands=WASTING_BANDS,
+                               benchmark='WHO/UNICEF wasting thresholds; UNHCR target below 10%'),
+        'sam_rate': _indicator(_rate(m['sam'], m['n']), target=2, higher_is_better=False,
+                               benchmark='Severe acute malnutrition, MUAC below 11.5 cm or WHZ below -3'),
+        'stunting_rate': _indicator(_rate(m['stunted'], m['haz_n']), bands=STUNTING_BANDS,
+                                    benchmark='Height-for-age below -2; WHO/UNICEF thresholds'),
+        'underweight_rate': _indicator(_rate(m['underweight'], m['waz_n']),
+                                       benchmark='Weight-for-age below -2'),
+        'screening_coverage': _indicator(_rate(m['n'], under5.count()), target=90,
+                                         benchmark='Children 6-59 months measured in the last 90 days'),
+        'measles_coverage': _indicator(_rate(mr1, mr1_n), target=95,
+                                       benchmark='MR1 among children 10 months and older; Sphere 95% in camps'),
+        'penta3_coverage': _indicator(_rate(p3, p3_n), target=90,
+                                      benchmark='Third pentavalent dose among children 18 weeks and older'),
+        'penta_dropout': _indicator(_rate(p1 - p1_then_p3, p1), target=10, higher_is_better=False,
+                                    benchmark='Penta1 to Penta3 dropout; above 10% means children are being lost'),
+        'referral_completion': _indicator(_rate(ref_done, ref_total), target=80,
+                                          benchmark='Referrals completed in the last 12 months'),
+        'children_6_59m': _cell(under5.count()),
+        'measured_6_59m': _cell(m['n']),
+    }
+
+
 def _camp_stats(camp_ids, today):
     from apps.children.models import Child
     from apps.health_records.models import HealthRecord
@@ -98,6 +213,7 @@ def _camp_stats(camp_ids, today):
         'vaccination_coverage': _rate(doses_done, doses_due),
         'visits_30d': _cell(visits_30d),
         'referrals_open': _cell(referrals_open),
+        'indicators': _indicators(camp_ids, today),
     }
 
 
@@ -146,6 +262,8 @@ def build_overview(user, camp_id=None, today=None):
 
 CSV_FIELDS = ['children', 'sam', 'mam', 'normal', 'not_measured', 'high_risk',
               'acute_malnutrition_rate', 'vaccination_coverage', 'visits_30d', 'referrals_open']
+INDICATOR_FIELDS = ['gam_rate', 'sam_rate', 'stunting_rate', 'underweight_rate', 'screening_coverage',
+                    'measles_coverage', 'penta3_coverage', 'penta_dropout', 'referral_completion']
 
 
 def overview_csv(overview):
@@ -153,7 +271,7 @@ def overview_csv(overview):
     w = csv.writer(buf)
     w.writerow([f'Ikibondo aggregated statistics, {overview["generated_on"]}. '
                 f'Counts from 1 to {MIN_CELL - 1} are hidden ("<{MIN_CELL}") to protect children.'])
-    w.writerow(['camp', 'district', *CSV_FIELDS])
+    w.writerow(['camp', 'district', *CSV_FIELDS, *[f'{f}_pct' for f in INDICATOR_FIELDS]])
 
     def fmt(v):
         if isinstance(v, dict):
@@ -161,7 +279,10 @@ def overview_csv(overview):
         return '' if v is None else v
 
     for c in overview['camps']:
-        w.writerow([c['name'], c['district'], *[fmt(c[f]) for f in CSV_FIELDS]])
+        w.writerow([c['name'], c['district'], *[fmt(c[f]) for f in CSV_FIELDS],
+                    *[fmt(c['indicators'][f]['value']) for f in INDICATOR_FIELDS]])
     if overview['total']:
-        w.writerow(['All camps shown', '', *[fmt(overview['total'][f]) for f in CSV_FIELDS]])
+        t = overview['total']
+        w.writerow(['All camps shown', '', *[fmt(t[f]) for f in CSV_FIELDS],
+                    *[fmt(t['indicators'][f]['value']) for f in INDICATOR_FIELDS]])
     return buf.getvalue()

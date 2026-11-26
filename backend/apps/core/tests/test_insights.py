@@ -117,3 +117,19 @@ def test_trend_months_are_consecutive(camps):
     from apps.core.insights import _trend
     months = [m['month'] for m in _trend([camps[0].id], date(2026, 3, 15))]
     assert months[0] == '2025-04' and months[-1] == '2026-03' and len(months) == 12
+
+
+class TestInstitutionalIndicators:
+    def test_bands_follow_who_unicef_thresholds(self):
+        from apps.core.insights import STUNTING_BANDS, WASTING_BANDS, _band
+        assert _band(1.0, WASTING_BANDS) == ('Very low', 'good')
+        assert _band(7.0, WASTING_BANDS) == ('Medium', 'watch')
+        assert _band(16.0, WASTING_BANDS) == ('Very high', 'alert')
+        assert _band(25.0, STUNTING_BANDS) == ('High', 'alert')
+
+    def test_targets_judge_direction(self):
+        from apps.core.insights import _indicator
+        assert _indicator(96, target=95)['level'] == 'good'
+        assert _indicator(80, target=95)['level'] == 'alert'
+        assert _indicator(12, target=10, higher_is_better=False)['level'] == 'watch'
+        assert _indicator(None, target=95)['level'] is None  # too few children: no verdict

@@ -58,8 +58,15 @@ export interface ProfileSummary {
     // Shared counts
     checkups_this_month?: number; chws?: number; children_in_camp?: number; registered_by_me?: number;
     open_referrals?: number; open_sessions?: number; camps?: number | string[]; active_users?: number;
-    // Government / partner
-    organization?: string | null; kind?: string; all_camps?: boolean;
+    // Government / partner (aggregates only; small counts hidden)
+    organization?: string | null; kind?: string; all_camps?: boolean; camps_covered?: number;
+    highlights?: {
+      children?: { value: number | null; suppressed: boolean } | null;
+      gam_rate?: { value: number | null; band: string | null; level: string | null } | null;
+      measles_coverage?: { value: number | null; band: string | null; level: string | null } | null;
+      penta3_coverage?: { value: number | null; band: string | null; level: string | null } | null;
+    };
+    min_cell?: number; colleagues?: number;
   };
 }
 

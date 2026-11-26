@@ -106,13 +106,27 @@ def _oversight(user) -> dict:
     org = user.organization
     if not org:
         return {'organization': None}
+    from apps.core.insights import MIN_CELL, build_overview, visible_camps
+
     camps = list(org.camps.values_list('name', flat=True))
+    total = build_overview(user)['total'] or {}
+    ind = total.get('indicators') or {}
     return {
         'organization': org.name,
         'kind': org.kind,
         # A government body with no camps listed oversees every camp (see core/insights.py)
         'camps': camps,
         'all_camps': not camps and org.kind == 'GOVERNMENT',
+        'camps_covered': visible_camps(user).count(),
+        # Same suppressed figures as the statistics page (counts under MIN_CELL hidden)
+        'highlights': {
+            'children': total.get('children'),
+            'gam_rate': ind.get('gam_rate'),
+            'measles_coverage': ind.get('measles_coverage'),
+            'penta3_coverage': ind.get('penta3_coverage'),
+        },
+        'min_cell': MIN_CELL,
+        'colleagues': org.members.filter(is_active=True).exclude(id=user.id).count(),
     }
 
 

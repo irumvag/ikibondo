@@ -59,3 +59,18 @@ def test_signing_in_with_identifier_records_last_sign_in():
     assert res.status_code == 200
     user.refresh_from_db()
     assert user.last_login is not None
+
+
+@pytest.mark.django_db
+def test_partner_profile_shows_aggregates_only():
+    from apps.accounts.models import Organization
+    camp = CampFactory()
+    org = Organization.objects.create(name='Test NGO', kind='NGO')
+    org.camps.set([camp])
+    partner = UserFactory(role=UserRole.PARTNER, organization=org, is_approved=True)
+    for _ in range(6):
+        ChildFactory(camp=camp)
+    work = _get(partner)['work']
+    assert work['organization'] == 'Test NGO' and work['camps_covered'] == 1
+    assert work['highlights']['children'] == {'value': 6, 'suppressed': False}
+    assert 'children' not in {k for k in work if isinstance(work[k], list)}  # no child list for partners

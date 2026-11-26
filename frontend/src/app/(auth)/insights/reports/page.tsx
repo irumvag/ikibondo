@@ -15,6 +15,17 @@ const DEFINITIONS: [string, string][] = [
   ['Vaccination coverage', 'Doses given as a share of doses that were due by today.'],
   ['Visits (30 days)', 'Measurements recorded in the last 30 days.'],
   ['Open referrals', 'Referrals to a health facility that are not yet completed.'],
+  // Indicators (columns ending in _pct), children 6–59 months measured in the last 90 days
+  ['Wasting (GAM) %', 'SAM + MAM. WHO/UNICEF 2018 bands: very low < 2.5, low < 5, medium < 10, high < 15, very high ≥ 15. UNHCR aims for below 10.'],
+  ['SAM %', 'Severe acute malnutrition: MUAC below 11.5 cm, weight-for-height below −3 or oedema. Limit used: 2%.'],
+  ['Stunting %', 'Height-for-age below −2. WHO/UNICEF bands: < 2.5, < 10, < 20, < 30, ≥ 30.'],
+  ['Underweight %', 'Weight-for-age below −2.'],
+  ['Screening coverage %', 'Children 6–59 months measured in the last 90 days. Target used: 90%.'],
+  ['Measles (MR1) coverage %', 'Children 10 months and older who received MR1. Sphere expects 95% in camps.'],
+  ['Penta3 coverage %', 'Children 18 weeks and older who received the third pentavalent dose. Target used: 90%.'],
+  ['Penta1 → Penta3 dropout %', 'Children who started but did not finish the pentavalent series. Above 10% means children are being lost.'],
+  ['Referrals completed %', 'Referrals made in the last 12 months that were completed. Target used: 80%.'],
+  ['Not shown', `Ikibondo does not run treatment programmes, so cure, death and defaulter rates (Sphere) come from the programme's own reporting.`],
 ];
 
 export default function InsightsReportsPage() {
