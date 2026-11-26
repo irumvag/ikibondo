@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -70,6 +71,7 @@ const EMPTY_FORM: PredictForm = {
 };
 
 function PredictPanel() {
+  const t = useTranslations('admin.ml');
   const [form, setForm] = useState<PredictForm>(EMPTY_FORM);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<PredictRiskResult | null>(null);
@@ -107,7 +109,7 @@ function PredictPanel() {
       const res = await predictRisk(features);
       setResult(res);
     } catch {
-      setError('Prediction failed. Ensure the ML model is loaded on the backend.');
+      setError(t('predictionFailedEnsureThe'));
     } finally {
       setRunning(false);
     }
@@ -130,55 +132,49 @@ function PredictPanel() {
     >
       <div className="flex items-center gap-2">
         <Play size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-        <p className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Manual predict</p>
+        <p className="text-base font-semibold" style={{ color: 'var(--ink)' }}>{t('manualPredict')}</p>
       </div>
 
       <form onSubmit={handleSubmit}>
         {/* Anthropometrics */}
-        <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-          Anthropometrics
-        </p>
+        <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{t('anthropometrics')}</p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          <Input label="Weight (kg)" type="number" step="0.1" value={form.weight_kg} onChange={(e) => set('weight_kg', e.target.value)} />
-          <Input label="Height (cm)" type="number" step="0.1" value={form.height_cm} onChange={(e) => set('height_cm', e.target.value)} />
-          <Input label="MUAC (cm)" type="number" step="0.1" value={form.muac_cm} onChange={(e) => set('muac_cm', e.target.value)} />
-          <Input label="Age (months)" type="number" value={form.age_months} onChange={(e) => set('age_months', e.target.value)} />
+          <Input label={t('weightKg')} type="number" step="0.1" value={form.weight_kg} onChange={(e) => set('weight_kg', e.target.value)} />
+          <Input label={t('heightCm')} type="number" step="0.1" value={form.height_cm} onChange={(e) => set('height_cm', e.target.value)} />
+          <Input label={t('muacCm')} type="number" step="0.1" value={form.muac_cm} onChange={(e) => set('muac_cm', e.target.value)} />
+          <Input label={t('ageMonths')} type="number" value={form.age_months} onChange={(e) => set('age_months', e.target.value)} />
         </div>
 
         <div className="flex gap-4 mb-4 flex-wrap">
           <div className="flex flex-col gap-1">
-            <label htmlFor="ml-sex" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Sex</label>
+            <label htmlFor="ml-sex" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('sex')}</label>
             <select id="ml-sex"
               value={form.sex}
               onChange={(e) => set('sex', e.target.value)}
               className="text-sm px-3 py-2 rounded-lg border outline-none"
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
             >
-              <option value="M">Male</option>
-              <option value="F">Female</option>
+              <option value="M">{t('male')}</option>
+              <option value="F">{t('female')}</option>
             </select>
           </div>
           <label className="flex items-center gap-2 cursor-pointer self-end pb-1.5">
             <input type="checkbox" checked={form.oedema} onChange={(e) => set('oedema', e.target.checked)} className="w-4 h-4 rounded" />
-            <span className="text-sm" style={{ color: 'var(--ink)' }}>Oedema</span>
+            <span className="text-sm" style={{ color: 'var(--ink)' }}>{t('oedema')}</span>
           </label>
         </div>
 
         {/* Vitals */}
-        <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-          Vitals
-        </p>
+        <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{t('vitals')}</p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          <Input label="Temperature (°C)" type="number" step="0.1" value={form.temperature_c} onChange={(e) => set('temperature_c', e.target.value)} />
-          <Input label="Respiratory rate" type="number" value={form.respiratory_rate} onChange={(e) => set('respiratory_rate', e.target.value)} />
-          <Input label="Heart rate" type="number" value={form.heart_rate} onChange={(e) => set('heart_rate', e.target.value)} />
-          <Input label="SpO₂ (%)" type="number" value={form.spo2} onChange={(e) => set('spo2', e.target.value)} />
+          <Input label={t('temperatureC')} type="number" step="0.1" value={form.temperature_c} onChange={(e) => set('temperature_c', e.target.value)} />
+          <Input label={t('respiratoryRate')} type="number" value={form.respiratory_rate} onChange={(e) => set('respiratory_rate', e.target.value)} />
+          <Input label={t('heartRate')} type="number" value={form.heart_rate} onChange={(e) => set('heart_rate', e.target.value)} />
+          <Input label={t('spo')} type="number" value={form.spo2} onChange={(e) => set('spo2', e.target.value)} />
         </div>
 
         {/* Symptoms */}
-        <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-          Symptoms &amp; history
-        </p>
+        <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{t('symptomsHistory')}</p>
         <div className="flex flex-wrap gap-4 mb-4">
           {(['has_fever', 'has_cough', 'has_diarrhea', 'has_vomiting'] as const).map((k) => (
             <label key={k} className="flex items-center gap-2 cursor-pointer">
@@ -188,17 +184,15 @@ function PredictPanel() {
           ))}
         </div>
         <div className="grid sm:grid-cols-3 gap-3 mb-5">
-          <Input label="Visit count" type="number" value={form.visit_count} onChange={(e) => set('visit_count', e.target.value)} />
-          <Input label="Days since last visit" type="number" value={form.days_since_last_visit} onChange={(e) => set('days_since_last_visit', e.target.value)} />
-          <Input label="Vaccination coverage (%)" type="number" step="1" min="0" max="100" value={form.vaccination_coverage} onChange={(e) => set('vaccination_coverage', e.target.value)} />
+          <Input label={t('visitCount')} type="number" value={form.visit_count} onChange={(e) => set('visit_count', e.target.value)} />
+          <Input label={t('daysSinceLastVisit')} type="number" value={form.days_since_last_visit} onChange={(e) => set('days_since_last_visit', e.target.value)} />
+          <Input label={t('vaccinationCoverage')} type="number" step="1" min="0" max="100" value={form.vaccination_coverage} onChange={(e) => set('vaccination_coverage', e.target.value)} />
         </div>
 
         {error && <p className="text-sm mb-3" style={{ color: 'var(--danger)' }}>{error}</p>}
 
         <Button type="submit" variant="primary" loading={running}>
-          <Play size={15} className="mr-1.5" aria-hidden="true" />
-          Run prediction
-        </Button>
+          <Play size={15} className="mr-1.5" aria-hidden="true" />{t('runPrediction')}</Button>
       </form>
 
       {/* Result */}
@@ -209,13 +203,11 @@ function PredictPanel() {
         >
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Prediction result</p>
-              <Badge variant={riskVariant(result.risk_level)} className="text-base px-3 py-1">
-                {result.risk_level} risk
-              </Badge>
+              <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>{t('predictionResult')}</p>
+              <Badge variant={riskVariant(result.risk_level)} className="text-base px-3 py-1">{t('risk', { risk_level: result.risk_level })}</Badge>
             </div>
             <div className="text-right">
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>AI Confidence</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('aiConfidence')}</p>
               <p className="text-3xl font-bold" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>
                 {Math.round(result.confidence * 100)}%
               </p>
@@ -223,14 +215,12 @@ function PredictPanel() {
             </div>
           </div>
 
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Model version: {result.model_version}</p>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('modelVersion', { model_version: result.model_version })}</p>
 
           {/* SHAP factors */}
           {factorEntries.length > 0 && (
             <div>
-              <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-                Top contributing factors (SHAP)
-              </p>
+              <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{t('topContributingFactorsShap')}</p>
               <div className="flex flex-col gap-2">
                 {factorEntries.map(([feature, value]) => (
                   <div key={feature} className="flex items-center gap-3">
@@ -263,6 +253,7 @@ function PredictPanel() {
 // ── Prediction History Table ──────────────────────────────────────────────────
 
 function PredictionHistory() {
+  const t = useTranslations('admin.ml');
   const [page, setPage] = useState(1);
   const { data: predictions, isLoading } = usePredictions();
 
@@ -280,11 +271,9 @@ function PredictionHistory() {
       <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-2">
           <BarChart2 size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-          <p className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>Prediction log</p>
+          <p className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{t('predictionLog')}</p>
         </div>
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          {total.toLocaleString()} records
-        </span>
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('records', { total: total.toLocaleString() })}</span>
       </div>
 
       {/* Table */}
@@ -317,9 +306,7 @@ function PredictionHistory() {
               : items.length === 0
               ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-                      No predictions logged yet.
-                    </td>
+                    <td colSpan={5} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>{t('noPredictionsLoggedYet')}</td>
                   </tr>
                 )
               : items.map((p) => (
@@ -368,9 +355,7 @@ function PredictionHistory() {
           className="flex items-center justify-between px-5 py-3 border-t"
           style={{ borderColor: 'var(--border)' }}
         >
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Page {page} of {totalPages}
-          </span>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('pageOf', { page: page, totalPages: totalPages })}</span>
           <div className="flex gap-1">
             <Button size="sm" variant="ghost" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
               <ChevronLeft size={14} aria-hidden="true" />
@@ -387,11 +372,9 @@ function PredictionHistory() {
 
 // ── Model Version Registry ────────────────────────────────────────────────────
 
-const MODEL_NAME_OPTIONS = [
-  { value: 'malnutrition', label: 'Malnutrition classifier' },
-  { value: 'growth', label: 'Growth trajectory predictor' },
-  { value: 'vaccination', label: 'Vaccination dropout predictor' },
-];
+// Model names: messages/en.json admin.ml.modelName.<model>
+const MODEL_NAMES = ['malnutrition', 'growth', 'vaccination'] as const;
+const isModelName = (v: string): v is (typeof MODEL_NAMES)[number] => (MODEL_NAMES as readonly string[]).includes(v);
 
 interface RegisterForm {
   model_name: string; version: string; file_path: string;
@@ -403,6 +386,7 @@ const EMPTY_REGISTER: RegisterForm = {
 };
 
 function ModelRegistry() {
+  const t = useTranslations('admin.ml');
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<RegisterForm>(EMPTY_REGISTER);
@@ -431,7 +415,7 @@ function ModelRegistry() {
     },
     onError: (e: unknown) => {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setFormError(msg ?? 'Failed to register version.');
+      setFormError(msg ?? t('failedToRegisterVersion'));
     },
   });
 
@@ -459,12 +443,10 @@ function ModelRegistry() {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Database size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-          <p className="font-semibold" style={{ color: 'var(--ink)' }}>Model version registry</p>
+          <p className="font-semibold" style={{ color: 'var(--ink)' }}>{t('modelVersionRegistry')}</p>
         </div>
         <Button size="sm" variant="secondary" onClick={() => setShowForm((s) => !s)}>
-          <Plus size={14} className="mr-1" aria-hidden="true" />
-          Register version
-        </Button>
+          <Plus size={14} className="mr-1" aria-hidden="true" />{t('registerVersion')}</Button>
       </div>
 
       {/* Register form */}
@@ -476,35 +458,35 @@ function ModelRegistry() {
         >
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
-              <label htmlFor="ml-model" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Model</label>
+              <label htmlFor="ml-model" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('model')}</label>
               <select id="ml-model"
                 value={form.model_name}
                 onChange={(e) => setForm({ ...form, model_name: e.target.value })}
                 className="text-sm px-3 py-2 rounded-lg border outline-none"
                 style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
               >
-                {MODEL_NAME_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {MODEL_NAMES.map((m) => <option key={m} value={m}>{t(`modelName.${m}`)}</option>)}
               </select>
             </div>
             <Input
-              label="Version (e.g. v2)"
+              label={t('versionEGV2')}
               value={form.version}
               onChange={(e) => setForm({ ...form, version: e.target.value })}
               required
             />
           </div>
           <Input
-            label="File path (relative to ml/models/)"
+            label={t('filePathRelativeTo')}
             value={form.file_path}
             onChange={(e) => setForm({ ...form, file_path: e.target.value })}
           />
           <div className="grid sm:grid-cols-3 gap-3">
-            <Input label="F1 score" type="number" step="0.0001" min="0" max="1" value={form.f1_score} onChange={(e) => setForm({ ...form, f1_score: e.target.value })} />
-            <Input label="Recall" type="number" step="0.0001" min="0" max="1" value={form.recall} onChange={(e) => setForm({ ...form, recall: e.target.value })} />
-            <Input label="Precision" type="number" step="0.0001" min="0" max="1" value={form.precision} onChange={(e) => setForm({ ...form, precision: e.target.value })} />
+            <Input label={t('f1Score')} type="number" step="0.0001" min="0" max="1" value={form.f1_score} onChange={(e) => setForm({ ...form, f1_score: e.target.value })} />
+            <Input label={t('recall')} type="number" step="0.0001" min="0" max="1" value={form.recall} onChange={(e) => setForm({ ...form, recall: e.target.value })} />
+            <Input label={t('precision')} type="number" step="0.0001" min="0" max="1" value={form.precision} onChange={(e) => setForm({ ...form, precision: e.target.value })} />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="ml-notes" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Notes</label>
+            <label htmlFor="ml-notes" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('notes')}</label>
             <textarea id="ml-notes"
               rows={2}
               value={form.notes}
@@ -515,8 +497,8 @@ function ModelRegistry() {
           </div>
           {formError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{formError}</p>}
           <div className="flex gap-2">
-            <Button type="submit" variant="primary" loading={createMutation.isPending}>Register</Button>
-            <Button type="button" variant="secondary" onClick={() => { setShowForm(false); setFormError(''); }}>Cancel</Button>
+            <Button type="submit" variant="primary" loading={createMutation.isPending}>{t('register')}</Button>
+            <Button type="button" variant="secondary" onClick={() => { setShowForm(false); setFormError(''); }}>{t('cancel')}</Button>
           </div>
         </form>
       )}
@@ -527,15 +509,13 @@ function ModelRegistry() {
           {[0, 1, 2].map((i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
         </div>
       ) : Object.keys(grouped).length === 0 ? (
-        <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>
-          No versions registered yet. Train a model and register it here.
-        </p>
+        <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>{t('noVersionsRegisteredYet')}</p>
       ) : (
         <div className="flex flex-col gap-6">
           {Object.entries(grouped).map(([modelName, vers]) => (
             <div key={modelName}>
               <p className="text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)' }}>
-                {MODEL_NAME_OPTIONS.find((o) => o.value === modelName)?.label ?? modelName}
+                {isModelName(modelName) ? t(`modelName.${modelName}`) : modelName}
               </p>
               <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
                 {vers.map((v) => (
@@ -546,14 +526,14 @@ function ModelRegistry() {
                   >
                     <div className="flex items-center gap-2">
                       <Badge variant={v.deployed ? 'success' : 'default'}>
-                        {v.deployed ? 'Deployed' : v.version}
+                        {v.deployed ? t('deployed') : v.version}
                       </Badge>
                       {v.deployed && <span className="text-xs font-mono" style={{ color: 'var(--ink)' }}>{v.version}</span>}
                     </div>
                     <div className="flex gap-4 text-xs" style={{ color: 'var(--text-muted)' }}>
                       {v.f1_score && <span>F1 {(parseFloat(v.f1_score) * 100).toFixed(1)}%</span>}
-                      {v.recall && <span>Recall {(parseFloat(v.recall) * 100).toFixed(1)}%</span>}
-                      {v.precision && <span>Prec {(parseFloat(v.precision) * 100).toFixed(1)}%</span>}
+                      {v.recall && <span>{t('recall2', { value: (parseFloat(v.recall) * 100).toFixed(1) })}</span>}
+                      {v.precision && <span>{t('prec', { value: (parseFloat(v.precision) * 100).toFixed(1) })}</span>}
                     </div>
                     <span className="text-xs ml-auto shrink-0" style={{ color: 'var(--text-muted)' }}>
                       {new Date(v.created_at).toLocaleDateString()}
@@ -566,11 +546,9 @@ function ModelRegistry() {
                           variant="secondary"
                           loading={promoteMutation.isPending && promoteMutation.variables === v.id}
                           onClick={() => promoteMutation.mutate(v.id)}
-                          title="Promote to deployed"
+                          title={t('promoteToDeployed')}
                         >
-                          <ArrowUpCircle size={12} className="mr-1" aria-hidden="true" />
-                          Promote
-                        </Button>
+                          <ArrowUpCircle size={12} className="mr-1" aria-hidden="true" />{t('promote')}</Button>
                       )}
                       {v.deployed && (
                         <Button
@@ -578,11 +556,9 @@ function ModelRegistry() {
                           variant="ghost"
                           loading={rollbackMutation.isPending && rollbackMutation.variables === v.id}
                           onClick={() => rollbackMutation.mutate(v.id)}
-                          title="Rollback to previous version"
+                          title={t('rollbackToPreviousVersion')}
                         >
-                          <RotateCcw size={12} className="mr-1" aria-hidden="true" />
-                          Rollback
-                        </Button>
+                          <RotateCcw size={12} className="mr-1" aria-hidden="true" />{t('rollback')}</Button>
                       )}
                     </div>
                   </div>
@@ -598,13 +574,9 @@ function ModelRegistry() {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-const MODEL_LABELS: Record<string, string> = {
-  malnutrition: 'Malnutrition classifier',
-  growth: 'Growth trajectory predictor',
-  vaccination: 'Vaccination dropout predictor',
-};
 
 export default function MLModelPage() {
+  const t = useTranslations('admin.ml');
   const { data: info, isLoading, isError } = useModelInfo();
 
   return (
@@ -614,12 +586,8 @@ export default function MLModelPage() {
         <h2
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          ML Models
-        </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Risk classifier · malnutrition · growth · dropout · SHAP explanations
-        </p>
+        >{t('mlModels')}</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('riskClassifierMalnutritionGrowth')}</p>
       </div>
 
       {/* Primary risk model status card */}
@@ -629,7 +597,7 @@ export default function MLModelPage() {
       >
         <div className="flex items-center gap-2">
           <Cpu size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-          <p className="text-base font-semibold" style={{ color: 'var(--ink)' }}>Risk model (primary)</p>
+          <p className="text-base font-semibold" style={{ color: 'var(--ink)' }}>{t('riskModelPrimary')}</p>
         </div>
 
         {isLoading ? (
@@ -637,9 +605,7 @@ export default function MLModelPage() {
             {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-10 rounded-lg" />)}
           </div>
         ) : isError ? (
-          <p className="text-sm" style={{ color: 'var(--danger)' }}>
-            Could not load model metadata. Ensure the backend ML service is running.
-          </p>
+          <p className="text-sm" style={{ color: 'var(--danger)' }}>{t('couldNotLoadModel')}</p>
         ) : (
           <>
             {/* Status banner */}
@@ -654,42 +620,38 @@ export default function MLModelPage() {
                 ? <CheckCircle size={20} aria-hidden="true" />
                 : <XCircle size={20} aria-hidden="true" />}
               <span className="font-semibold text-sm">
-                {info!.model_loaded ? 'Risk model loaded and ready' : 'Risk model not loaded — run training script'}
+                {info!.model_loaded ? t('riskModelLoadedAnd') : t('riskModelNotLoaded')}
               </span>
             </div>
 
             {/* Metrics */}
             <div>
-              <MetricRow label="Version" value={<span className="flex items-center gap-1.5"><Tag size={13} aria-hidden="true" />{info!.version}</span>} />
+              <MetricRow label={t('version')} value={<span className="flex items-center gap-1.5"><Tag size={13} aria-hidden="true" />{info!.version}</span>} />
               <MetricRow
-                label="Trained at"
+                label={t('trainedAt')}
                 value={info!.trained_at
                   ? <span className="flex items-center gap-1.5"><Calendar size={13} aria-hidden="true" />{new Date(info!.trained_at).toLocaleDateString(undefined, { dateStyle: 'long' })}</span>
                   : '—'
                 }
               />
-              <MetricRow label="Feature count" value={<span className="flex items-center gap-1.5"><Layers size={13} aria-hidden="true" />{info!.n_features} features</span>} />
+              <MetricRow label={t('featureCount')} value={<span className="flex items-center gap-1.5"><Layers size={13} aria-hidden="true" />{t('features', { n_features: info!.n_features })}</span>} />
             </div>
 
             {/* Accuracy metrics */}
             {(info!.macro_f1 != null || info!.high_recall != null) && (
               <div className="flex flex-col gap-4">
-                <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                  Performance metrics
-                </p>
+                <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('performanceMetrics')}</p>
                 {info!.macro_f1 != null && (
                   <div>
                     <p className="text-sm mb-1.5" style={{ color: 'var(--text-muted)' }}>
-                      <Activity size={13} className="inline mr-1" aria-hidden="true" />Macro F1
-                    </p>
+                      <Activity size={13} className="inline mr-1" aria-hidden="true" />{t('macroF1')}</p>
                     <PctBar value={info!.macro_f1} color="var(--ink)" />
                   </div>
                 )}
                 {info!.high_recall != null && (
                   <div>
                     <p className="text-sm mb-1.5" style={{ color: 'var(--text-muted)' }}>
-                      <Activity size={13} className="inline mr-1" aria-hidden="true" />HIGH-risk recall
-                    </p>
+                      <Activity size={13} className="inline mr-1" aria-hidden="true" />{t('highRiskRecall')}</p>
                     <PctBar value={info!.high_recall} color="var(--danger, #ef4444)" />
                   </div>
                 )}
@@ -699,13 +661,11 @@ export default function MLModelPage() {
             {/* Secondary model statuses */}
             {info!.models && (
               <div>
-                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-                  Secondary models (ModelLoader)
-                </p>
+                <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{t('secondaryModelsModelloader')}</p>
                 <div className="flex flex-col gap-2">
                   {(Object.entries(info!.models) as [string, boolean][]).map(([key, loaded]) => (
                     <div key={key} className="flex items-center justify-between py-2 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
-                      <span className="text-sm" style={{ color: 'var(--ink)' }}>{MODEL_LABELS[key] ?? key}</span>
+                      <span className="text-sm" style={{ color: 'var(--ink)' }}>{isModelName(key) ? t(`modelName.${key}`) : key}</span>
                       <span
                         className="flex items-center gap-1.5 text-sm font-semibold"
                         style={{ color: loaded ? 'var(--success)' : 'var(--danger)' }}
@@ -718,15 +678,9 @@ export default function MLModelPage() {
                   ))}
                 </div>
                 {!Object.values(info!.models).every(Boolean) && (
-                  <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
-                    Run{' '}
-                    <code className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-elev)' }}>
-                      python ml/scripts/train_all.py
-                    </code>{' '}
-                    to train and save missing models to{' '}
-                    <code className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-elev)' }}>
-                      ml/models/
-                    </code>
+                  <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>{t('run')}{' '}
+                    <code className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-elev)' }}>{t('pythonMlScriptsTrain')}</code>{' '}{t('toTrainAndSave')}{' '}
+                    <code className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-elev)' }}>{t('mlModels2')}</code>
                   </p>
                 )}
               </div>
@@ -747,12 +701,8 @@ export default function MLModelPage() {
       {/* Retrain note */}
       <div className="rounded-xl p-4 text-sm" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' }}>
         <p>
-          <strong style={{ color: 'var(--ink)' }}>To retrain:</strong> run{' '}
-          <code className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-elev)' }}>
-            python -m apps.ml_engine.training.train_model
-          </code>{' '}
-          from the backend directory. The model file and metadata will be saved automatically.
-        </p>
+          <strong style={{ color: 'var(--ink)' }}>{t('toRetrain')}</strong>{' '}{t('run2')}{' '}
+          <code className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-elev)' }}>{t('pythonMAppsMl')}</code>{' '}{t('fromTheBackendDirectory')}</p>
       </div>
     </div>
   );

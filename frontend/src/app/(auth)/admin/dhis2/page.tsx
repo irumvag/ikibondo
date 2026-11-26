@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -67,13 +68,14 @@ async function retryConflict(id: string): Promise<void> {
 // ── SyncSummaryCard ───────────────────────────────────────────────────────────
 
 function SyncSummaryCard({ summary, title }: { summary: SyncSummary; title: string }) {
+  const t = useTranslations('admin.dhis2');
   const [showErrors, setShowErrors] = useState(false);
 
   const stats = [
-    { label: 'Pulled from DHIS2',     value: summary.pulled,              icon: Download,    color: '#3b82f6' },
-    { label: 'Records upserted',      value: summary.upserted,            icon: ArrowDownUp, color: '#3b82f6' },
-    { label: 'Children pushed',       value: summary.pushed_children,     icon: Upload,      color: '#10b981' },
-    { label: 'Vaccinations pushed',   value: summary.pushed_vaccinations, icon: Upload,      color: '#10b981' },
+    { label: t('pulledFromDhis2'),     value: summary.pulled,              icon: Download,    color: '#3b82f6' },
+    { label: t('recordsUpserted'),      value: summary.upserted,            icon: ArrowDownUp, color: '#3b82f6' },
+    { label: t('childrenPushed'),       value: summary.pushed_children,     icon: Upload,      color: '#10b981' },
+    { label: t('vaccinationsPushed'),   value: summary.pushed_vaccinations, icon: Upload,      color: '#10b981' },
   ];
 
   return (
@@ -107,8 +109,7 @@ function SyncSummaryCard({ summary, title }: { summary: SyncSummary; title: stri
             className="flex items-center gap-1.5 text-xs font-medium"
             style={{ color: '#ef4444' }}
           >
-            <AlertTriangle size={12} />
-            {summary.errors.length} error{summary.errors.length !== 1 ? 's' : ''}
+            <AlertTriangle size={12} />{t('errorCount', { count: summary.errors.length })}
             {showErrors ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </button>
           {showErrors && (
@@ -127,9 +128,7 @@ function SyncSummaryCard({ summary, title }: { summary: SyncSummary; title: stri
         </div>
       ) : (
         <p className="text-xs flex items-center gap-1.5" style={{ color: '#10b981' }}>
-          <CheckCircle size={12} />
-          No errors during sync
-        </p>
+          <CheckCircle size={12} />{t('noErrorsDuringSync')}</p>
       )}
     </div>
   );
@@ -138,6 +137,7 @@ function SyncSummaryCard({ summary, title }: { summary: SyncSummary; title: stri
 // ── ManualSyncPanel ───────────────────────────────────────────────────────────
 
 function ManualSyncPanel({ configured }: { configured: boolean }) {
+  const t = useTranslations('admin.dhis2');
   const qc = useQueryClient();
   const [since, setSince] = useState('');
   const [lastResult, setLastResult] = useState<SyncSummary | null>(null);
@@ -157,19 +157,14 @@ function ManualSyncPanel({ configured }: { configured: boolean }) {
     >
       <div className="flex items-center gap-2">
         <Play size={15} style={{ color: 'var(--text-muted)' }} />
-        <p className="font-semibold" style={{ color: 'var(--ink)' }}>Manual sync trigger</p>
+        <p className="font-semibold" style={{ color: 'var(--ink)' }}>{t('manualSyncTrigger')}</p>
       </div>
 
-      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-        Runs a full bidirectional sync immediately. Leave the date blank for a full sync,
-        or set a cutoff to limit the window.
-      </p>
+      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('runsAFullBidirectional')}</p>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
         <div className="flex flex-col gap-1">
-          <label htmlFor="dhis2-since-date-optional" className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-            Since date (optional)
-          </label>
+          <label htmlFor="dhis2-since-date-optional" className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('sinceDateOptional')}</label>
           <input id="dhis2-since-date-optional"
             type="date"
             value={since}
@@ -185,24 +180,20 @@ function ManualSyncPanel({ configured }: { configured: boolean }) {
           onClick={() => syncMut.mutate()}
         >
           <RefreshCw size={14} className="mr-1.5" aria-hidden="true" />
-          {syncMut.isPending ? 'Syncing…' : 'Run sync now'}
+          {syncMut.isPending ? t('syncing') : t('runSyncNow')}
         </Button>
       </div>
 
       {!configured && (
         <p className="text-xs flex items-center gap-1.5" style={{ color: '#f59e0b' }}>
-          <AlertTriangle size={12} />
-          DHIS2 credentials not configured. Set DHIS2_URL, DHIS2_USERNAME, DHIS2_PASSWORD.
-        </p>
+          <AlertTriangle size={12} />{t('dhis2CredentialsNotConfigured')}</p>
       )}
 
       {syncMut.isError && (
-        <p className="text-xs" style={{ color: '#ef4444' }}>
-          Sync failed — DHIS2 may be unreachable. Check server logs.
-        </p>
+        <p className="text-xs" style={{ color: '#ef4444' }}>{t('syncFailedDhis2May')}</p>
       )}
 
-      {lastResult && <SyncSummaryCard summary={lastResult} title="Sync result" />}
+      {lastResult && <SyncSummaryCard summary={lastResult} title={t('syncResult')} />}
     </div>
   );
 }
@@ -210,6 +201,7 @@ function ManualSyncPanel({ configured }: { configured: boolean }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function DHIS2Page() {
+  const t = useTranslations('admin.dhis2');
   const qc = useQueryClient();
 
   const { data: status, isLoading: statusLoading } = useQuery({
@@ -241,12 +233,8 @@ export default function DHIS2Page() {
         <h2
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          DHIS2 Integration
-        </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Rwanda HMIS e-Tracker immunisation registry — bidirectional sync
-        </p>
+        >{t('dhis2Integration')}</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('rwandaHmisETracker')}</p>
       </div>
 
       {/* Connection status */}
@@ -256,7 +244,7 @@ export default function DHIS2Page() {
       >
         <div className="flex items-center gap-2">
           <Activity size={15} style={{ color: 'var(--text-muted)' }} />
-          <p className="font-semibold" style={{ color: 'var(--ink)' }}>Connection status</p>
+          <p className="font-semibold" style={{ color: 'var(--ink)' }}>{t('connectionStatus')}</p>
         </div>
 
         {statusLoading ? (
@@ -269,44 +257,36 @@ export default function DHIS2Page() {
             style={{ backgroundColor: '#fef3c7' }}
           >
             <AlertTriangle size={18} style={{ color: '#f59e0b' }} />
-            <span className="text-sm font-medium" style={{ color: '#b45309' }}>
-              Status endpoint unreachable. Check server logs.
-            </span>
+            <span className="text-sm font-medium" style={{ color: '#b45309' }}>{t('statusEndpointUnreachableCheck')}</span>
           </div>
         ) : (
           <div className="grid sm:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                Status
-              </span>
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('status')}</span>
               <div className="flex items-center gap-2">
                 {status.configured ? (
                   <><CheckCircle size={15} style={{ color: '#10b981' }} />
-                  <span className="text-sm font-medium" style={{ color: '#10b981' }}>Configured</span></>
+                  <span className="text-sm font-medium" style={{ color: '#10b981' }}>{t('configured')}</span></>
                 ) : (
                   <><XCircle size={15} style={{ color: '#ef4444' }} />
-                  <span className="text-sm font-medium" style={{ color: '#ef4444' }}>Not configured</span></>
+                  <span className="text-sm font-medium" style={{ color: '#ef4444' }}>{t('notConfigured')}</span></>
                 )}
               </div>
             </div>
 
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                DHIS2 URL
-              </span>
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('dhis2Url')}</span>
               <span className="text-sm font-mono truncate" style={{ color: 'var(--ink)' }}>
                 {status.dhis2_url ?? '—'}
               </span>
             </div>
 
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                Last batch sync
-              </span>
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('lastBatchSync')}</span>
               <span className="text-sm" style={{ color: 'var(--ink)' }}>
                 {status.last_sync
                   ? new Date(status.last_sync.synced_at).toLocaleString()
-                  : 'Never'}
+                  : t('never')}
               </span>
             </div>
           </div>
@@ -315,7 +295,7 @@ export default function DHIS2Page() {
 
       {/* Last sync summary */}
       {status?.last_sync && (
-        <SyncSummaryCard summary={status.last_sync} title="Last batch sync summary" />
+        <SyncSummaryCard summary={status.last_sync} title={t('lastBatchSyncSummary')} />
       )}
 
       {/* Manual trigger */}
@@ -329,16 +309,12 @@ export default function DHIS2Page() {
             className="font-semibold flex items-center gap-2"
             style={{ color: 'var(--ink)' }}
           >
-            <AlertTriangle size={15} style={{ color: pending.length > 0 ? '#ef4444' : 'var(--text-muted)' }} />
-            Sync conflict queue
-          </h3>
+            <AlertTriangle size={15} style={{ color: pending.length > 0 ? '#ef4444' : 'var(--text-muted)' }} />{t('syncConflictQueue')}</h3>
           {pending.length > 0 && (
             <span
               className="px-2 py-0.5 rounded-full text-xs font-bold"
               style={{ backgroundColor: '#fee2e2', color: '#dc2626' }}
-            >
-              {pending.length} pending
-            </span>
+            >{t('pending', { length: pending.length })}</span>
           )}
         </div>
 
@@ -352,9 +328,7 @@ export default function DHIS2Page() {
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
           >
             <CheckCircle size={24} className="mx-auto mb-2" style={{ color: '#10b981' }} />
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              No sync conflicts — all records are in sync with DHIS2.
-            </p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noSyncConflictsAll')}</p>
           </div>
         ) : (
           <div
@@ -370,7 +344,7 @@ export default function DHIS2Page() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <Badge variant={c.resolved ? 'success' : 'danger'}>
-                      {c.resolved ? 'Resolved' : 'Pending'}
+                      {c.resolved ? t('resolved') : t('pending2')}
                     </Badge>
                     <span className="text-xs font-mono font-semibold" style={{ color: 'var(--ink)' }}>
                       {c.object_type}
@@ -382,9 +356,7 @@ export default function DHIS2Page() {
                   <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>
                     {c.object_repr}
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    {c.error_detail} · {c.retry_count} retries · {new Date(c.created_at).toLocaleString()}
-                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('retries', { error_detail: c.error_detail, retry_count: c.retry_count, value: new Date(c.created_at).toLocaleString() })}</p>
                 </div>
                 {!c.resolved && (
                   <Button
@@ -393,9 +365,7 @@ export default function DHIS2Page() {
                     loading={retryMut.isPending && retryMut.variables === c.id}
                     onClick={() => retryMut.mutate(c.id)}
                   >
-                    <RefreshCw size={12} className="mr-1" aria-hidden="true" />
-                    Retry
-                  </Button>
+                    <RefreshCw size={12} className="mr-1" aria-hidden="true" />{t('retry')}</Button>
                 )}
               </div>
             ))}
@@ -408,15 +378,14 @@ export default function DHIS2Page() {
         className="rounded-xl p-4"
         style={{ backgroundColor: 'var(--bg-sand)' }}
       >
-        <p className="font-semibold text-sm mb-2" style={{ color: 'var(--ink)' }}>How sync works</p>
+        <p className="font-semibold text-sm mb-2" style={{ color: 'var(--ink)' }}>{t('howSyncWorks')}</p>
         <ul className="list-disc list-inside space-y-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-          <li><strong style={{ color: 'var(--ink)' }}>Daily batch</strong> — Celery Beat runs bidirectional sync every night at 02:00 Kigali time.</li>
-          <li><strong style={{ color: 'var(--ink)' }}>Real-time push</strong> — each new child registration queues an async DHIS2 push within seconds.</li>
-          <li><strong style={{ color: 'var(--ink)' }}>High-risk trigger</strong> — ML HIGH-risk classification pushes child + vaccination records immediately.</li>
-          <li><strong style={{ color: 'var(--ink)' }}>Pull</strong> — records added directly in DHIS2 are upserted locally each sync cycle.</li>
+          <li><strong style={{ color: 'var(--ink)' }}>{t('dailyBatch')}</strong>{' '}{t('celeryBeatRunsBidirectional')}</li>
+          <li><strong style={{ color: 'var(--ink)' }}>{t('realTimePush')}</strong>{' '}{t('eachNewChildRegistration')}</li>
+          <li><strong style={{ color: 'var(--ink)' }}>{t('highRiskTrigger')}</strong>{' '}{t('mlHighRiskClassification')}</li>
+          <li><strong style={{ color: 'var(--ink)' }}>{t('pull')}</strong>{' '}{t('recordsAddedDirectlyIn')}</li>
         </ul>
-        <p className="mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-          Required env vars:{' '}
+        <p className="mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>{t('requiredEnvVars')}{' '}
           {['DHIS2_URL', 'DHIS2_USERNAME', 'DHIS2_PASSWORD'].map((k) => (
             <code
               key={k}

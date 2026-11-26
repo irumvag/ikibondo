@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -21,6 +22,7 @@ const inputStyle = { borderColor: 'var(--border)', backgroundColor: 'var(--bg)',
  * (Overview, Reports) for the camps listed here — never a child's record.
  */
 export default function OrganizationsPage() {
+  const t = useTranslations('admin.organizations');
   const qc = useQueryClient();
   const toast = useToast();
   const { data: orgs, isLoading } = useQuery({ queryKey: ['organizations'], queryFn: listOrganizations });
@@ -36,28 +38,28 @@ export default function OrganizationsPage() {
 
   const save = async () => {
     if (!editing) return;
-    if (!editing.form.name.trim()) { setError('Give the organisation a name.'); return; }
+    if (!editing.form.name.trim()) { setError(t('giveTheOrganisationA')); return; }
     setSaving(true); setError('');
     try {
       if (editing.id) await updateOrganization(editing.id, editing.form);
       else await createOrganization(editing.form);
       await qc.invalidateQueries({ queryKey: ['organizations'] });
-      toast.success(editing.id ? 'Organisation updated' : 'Organisation added');
+      toast.success(editing.id ? t('organisationUpdated') : t('organisationAdded'));
       setEditing(null);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg ?? 'Could not save the organisation.');
+      setError(msg ?? t('couldNotSaveThe'));
     } finally { setSaving(false); }
   };
 
   const remove = async (o: Organization) => {
-    if (!window.confirm(`Remove ${o.name}? Its ${o.member_count} member account(s) will see no statistics until moved to another organisation.`)) return;
+    if (!window.confirm(t('confirmRemove', { name: o.name, count: o.member_count }))) return;
     try {
       await deleteOrganization(o.id);
       await qc.invalidateQueries({ queryKey: ['organizations'] });
-      toast.success('Organisation removed');
+      toast.success(t('organisationRemoved'));
     } catch {
-      toast.error('Could not remove the organisation.');
+      toast.error(t('couldNotRemoveThe'));
     }
   };
 
@@ -65,37 +67,33 @@ export default function OrganizationsPage() {
     <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>Organisations</h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Government bodies and NGO/UN partners. Their staff see statistics for the camps listed — never a child&apos;s record.
-            Add their accounts in Users with the Government or NGO partner role.
-          </p>
+          <h2 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>{t('organisations')}</h2>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('governmentBodiesAndNgo')}</p>
         </div>
         <Button variant="primary" onClick={() => { setError(''); setEditing({ id: null, form: EMPTY }); }}>
-          <Plus size={15} className="mr-1.5" aria-hidden="true" /> New organisation
-        </Button>
+          <Plus size={15} className="mr-1.5" aria-hidden="true" />{' '}{t('newOrganisation')}</Button>
       </div>
 
       {editing && (
         <div className="rounded-2xl border p-5 flex flex-col gap-4 animate-pop" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Name</span>
+              <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('name')}</span>
               <input value={editing.form.name} onChange={(e) => set({ name: e.target.value })}
                 className="text-sm px-3 py-2 rounded-lg border outline-none" style={inputStyle}
-                placeholder="e.g. Ministry of Health, UNICEF Rwanda" />
+                placeholder={t('eGMinistryOf')} />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Type</span>
+              <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('type')}</span>
               <select value={editing.form.kind} onChange={(e) => set({ kind: e.target.value as OrganizationInput['kind'] })}
                 className="text-sm px-3 py-2 rounded-lg border outline-none" style={inputStyle}>
-                <option value="GOVERNMENT">Government body</option>
-                <option value="NGO">NGO / UN agency</option>
+                <option value="GOVERNMENT">{t('governmentBody')}</option>
+                <option value="NGO">{t('ngoUnAgency')}</option>
               </select>
             </label>
           </div>
           <fieldset className="flex flex-col gap-2">
-            <legend className="text-sm font-medium mb-1" style={{ color: 'var(--ink)' }}>Camps covered</legend>
+            <legend className="text-sm font-medium mb-1" style={{ color: 'var(--ink)' }}>{t('campsCovered')}</legend>
             <div className="flex flex-wrap gap-x-5 gap-y-2">
               {(camps ?? []).map((c) => (
                 <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer select-none" style={{ color: 'var(--ink)' }}>
@@ -106,18 +104,16 @@ export default function OrganizationsPage() {
             </div>
             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
               {editing.form.kind === 'GOVERNMENT'
-                ? 'Leave all unticked for a national body that oversees every camp.'
-                : 'An NGO with no camps ticked sees nothing.'}
+                ? t('leaveAllUntickedFor')
+                : t('anNgoWithNo')}
             </span>
           </fieldset>
           <label className="flex items-center gap-2 text-sm cursor-pointer select-none" style={{ color: 'var(--ink)' }}>
-            <input type="checkbox" className="w-4 h-4" checked={editing.form.is_active} onChange={(e) => set({ is_active: e.target.checked })} />
-            Active (members can see statistics)
-          </label>
+            <input type="checkbox" className="w-4 h-4" checked={editing.form.is_active} onChange={(e) => set({ is_active: e.target.checked })} />{t('activeMembersCanSee')}</label>
           {error && <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>}
           <div className="flex gap-2">
-            <Button variant="primary" loading={saving} onClick={save}>{editing.id ? 'Save' : 'Add organisation'}</Button>
-            <Button variant="secondary" onClick={() => setEditing(null)}>Cancel</Button>
+            <Button variant="primary" loading={saving} onClick={save}>{editing.id ? t('save') : t('addOrganisation')}</Button>
+            <Button variant="secondary" onClick={() => setEditing(null)}>{t('cancel')}</Button>
           </div>
         </div>
       )}
@@ -127,7 +123,7 @@ export default function OrganizationsPage() {
       ) : (orgs ?? []).length === 0 ? (
         <div className="rounded-2xl border p-10 text-center" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
           <Building2 size={28} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No organisations yet.</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noOrganisationsYet')}</p>
         </div>
       ) : (
         <ul className="flex flex-col gap-2 stagger">
@@ -139,17 +135,17 @@ export default function OrganizationsPage() {
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                   {o.camp_names.length > 0
                     ? o.camp_names.join(', ')
-                    : o.kind === 'GOVERNMENT' ? 'All camps' : 'No camps yet'}
-                  {` · ${o.member_count} member${o.member_count === 1 ? '' : 's'}`}
+                    : o.kind === 'GOVERNMENT' ? t('allCamps') : t('noCampsYet')}
+                  {t('memberCount', { count: o.member_count })}
                 </p>
               </div>
-              <Badge variant={o.kind === 'GOVERNMENT' ? 'info' : 'default'}>{o.kind === 'GOVERNMENT' ? 'Government' : 'NGO / UN'}</Badge>
-              {!o.is_active && <Badge variant="warn">Inactive</Badge>}
-              <button type="button" aria-label={`Edit ${o.name}`}
+              <Badge variant={o.kind === 'GOVERNMENT' ? 'info' : 'default'}>{o.kind === 'GOVERNMENT' ? t('government') : t('ngoUn')}</Badge>
+              {!o.is_active && <Badge variant="warn">{t('inactive')}</Badge>}
+              <button type="button" aria-label={t('editName', { name: o.name })}
                 onClick={() => { setError(''); setEditing({ id: o.id, form: { name: o.name, kind: o.kind, camps: o.camps, is_active: o.is_active } }); }}>
                 <Pencil size={15} style={{ color: 'var(--text-muted)' }} />
               </button>
-              <button type="button" aria-label={`Remove ${o.name}`} onClick={() => remove(o)}>
+              <button type="button" aria-label={t('removeName', { name: o.name })} onClick={() => remove(o)}>
                 <Trash2 size={15} style={{ color: 'var(--danger)' }} />
               </button>
             </li>

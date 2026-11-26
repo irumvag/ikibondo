@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -28,6 +29,7 @@ const LANGS: { code: Lang; label: string }[] = [
 const inputStyle = { borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' };
 
 export default function SiteContentPage() {
+  const t = useTranslations('admin.siteContent');
   const { data: stored, isLoading } = useQuery({ queryKey: ['site-content'], queryFn: getSiteContent });
   const [open, setOpen] = useState<SectionKey | null>(null);
 
@@ -38,11 +40,8 @@ export default function SiteContentPage() {
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
       <div>
-        <h2 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>Site content</h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Text on the public website. Sections you have not edited show the built-in text.
-          The FAQ is edited on its own page; camp descriptions under Camps.
-        </p>
+        <h2 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>{t('siteContent')}</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('textOnThePublic')}</p>
       </div>
       {isLoading ? (
         <div className="flex flex-col gap-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16" />)}</div>
@@ -59,11 +58,11 @@ export default function SiteContentPage() {
                     <span className="block text-sm font-semibold" style={{ color: 'var(--ink)' }}>{sec.label}</span>
                     <span className="block text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                       {row
-                        ? `Edited${row.updated_by_name ? ` by ${row.updated_by_name}` : ''}${row.updated_at ? ` · ${new Date(row.updated_at).toLocaleDateString()}` : ''}`
-                        : 'Built-in text'}
+                        ? t(`editedNote.${row.updated_by_name ? (row.updated_at ? 'editedByOn' : 'editedBy') : (row.updated_at ? 'editedOn' : 'edited')}`, { name: row.updated_by_name ?? '', date: row.updated_at ? new Date(row.updated_at).toLocaleDateString() : '' })
+                        : t('builtInText')}
                     </span>
                   </span>
-                  <span className="text-xs font-bold" style={{ color: 'var(--ink)' }}>Edit</span>
+                  <span className="text-xs font-bold" style={{ color: 'var(--ink)' }}>{t('edit')}</span>
                 </button>
               </li>
             );
@@ -75,6 +74,7 @@ export default function SiteContentPage() {
 }
 
 function SectionEditor({ sectionKey, stored, onBack }: { sectionKey: SectionKey; stored: StoredContent; onBack: () => void }) {
+  const t = useTranslations('admin.siteContent');
   const qc = useQueryClient();
   const toast = useToast();
   const section = SECTIONS.find((s) => s.key === sectionKey)!;
@@ -106,24 +106,24 @@ function SectionEditor({ sectionKey, stored, onBack }: { sectionKey: SectionKey;
     try {
       await saveSiteSection(sectionKey, { content_en: values.en, content_fr: values.fr, content_rw: values.rw });
       await qc.invalidateQueries({ queryKey: ['site-content'] });
-      toast.success('Saved. The public site shows it within a minute.');
+      toast.success(t('savedThePublicSite'));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg ?? 'Could not save. Check the text and try again.');
+      setError(msg ?? t('couldNotSaveCheck'));
     } finally {
       setSaving(false);
     }
   };
 
   const reset = async () => {
-    if (!window.confirm('Go back to the built-in text for this section, in every language?')) return;
+    if (!window.confirm(t('goBackToThe'))) return;
     try {
       await resetSiteSection(sectionKey);
       await qc.invalidateQueries({ queryKey: ['site-content'] });
-      toast.success('Back to the built-in text');
+      toast.success(t('backToTheBuilt'));
       onBack();
     } catch {
-      toast.error('Could not reset this section.');
+      toast.error(t('couldNotResetThis'));
     }
   };
 
@@ -132,27 +132,24 @@ function SectionEditor({ sectionKey, stored, onBack }: { sectionKey: SectionKey;
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <button type="button" onClick={onBack} className="flex items-center gap-1 text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
-            <ArrowLeft size={14} aria-hidden="true" /> All sections
-          </button>
+            <ArrowLeft size={14} aria-hidden="true" />{' '}{t('allSections')}</button>
           <h2 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>{section.label}</h2>
         </div>
         <div className="flex gap-2">
           {section.page && (
             <Link href={section.page} target="_blank" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border text-sm font-semibold"
               style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}>
-              <ExternalLink size={14} aria-hidden="true" /> View page
-            </Link>
+              <ExternalLink size={14} aria-hidden="true" />{' '}{t('viewPage')}</Link>
           )}
           {row && (
             <Button variant="secondary" size="sm" onClick={reset}>
-              <RotateCcw size={14} className="mr-1.5" aria-hidden="true" /> Built-in text
-            </Button>
+              <RotateCcw size={14} className="mr-1.5" aria-hidden="true" />{' '}{t('builtInText')}</Button>
           )}
-          <Button variant="primary" size="sm" loading={saving} onClick={save}>Save</Button>
+          <Button variant="primary" size="sm" loading={saving} onClick={save}>{t('save')}</Button>
         </div>
       </div>
 
-      <div role="tablist" aria-label="Language" className="flex gap-1 p-1 rounded-xl w-fit" style={{ backgroundColor: 'var(--bg-sand)' }}>
+      <div role="tablist" aria-label={t('language')} className="flex gap-1 p-1 rounded-xl w-fit" style={{ backgroundColor: 'var(--bg-sand)' }}>
         {LANGS.map((l) => (
           <button key={l.code} role="tab" aria-selected={lang === l.code} type="button" onClick={() => setLang(l.code)}
             className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
@@ -162,9 +159,7 @@ function SectionEditor({ sectionKey, stored, onBack }: { sectionKey: SectionKey;
         ))}
       </div>
       {lang !== 'en' && (
-        <p className="text-xs -mt-3" style={{ color: 'var(--text-muted)' }}>
-          Empty fields use the English text. Translations of health guidance should be written or checked by a native speaker.
-        </p>
+        <p className="text-xs -mt-3" style={{ color: 'var(--text-muted)' }}>{t('emptyFieldsUseThe')}</p>
       )}
 
       {error && <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>}
@@ -179,9 +174,7 @@ function SectionEditor({ sectionKey, stored, onBack }: { sectionKey: SectionKey;
         </div>
 
         <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-          <p className="px-4 py-2 text-xs font-semibold border-b" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
-            Preview
-          </p>
+          <p className="px-4 py-2 text-xs font-semibold border-b" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>{t('preview')}</p>
           {/* Shown at about 60% so a full-width section fits the panel */}
           <div className="pointer-events-none" aria-hidden="true" style={{ zoom: 0.6 }}>
             <Preview sectionKey={sectionKey} content={preview} />
@@ -193,6 +186,7 @@ function SectionEditor({ sectionKey, stored, onBack }: { sectionKey: SectionKey;
 }
 
 function Preview({ sectionKey, content }: { sectionKey: SectionKey; content: unknown }) {
+  const t = useTranslations('admin.siteContent');
   switch (sectionKey) {
     case 'home.hero': return <HeroSection content={content as typeof DEFAULTS['home.hero']} />;
     case 'home.how_it_works': return <HowItWorks content={content as typeof DEFAULTS['home.how_it_works']} />;
@@ -216,7 +210,7 @@ function Preview({ sectionKey, content }: { sectionKey: SectionKey; content: unk
       return (
         <div className="p-6 flex justify-center" style={{ backgroundColor: 'var(--bg)' }}>
           <div className="w-72 rounded-2xl border p-4 flex flex-col gap-2" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Mobile app</p>
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{t('mobileApp')}</p>
             <h3 className="font-bold" style={{ color: 'var(--ink)' }}>{c.title}</h3>
             <p className="text-sm" style={{ color: 'var(--text)' }}>{c.body}</p>
             {(c.steps ?? []).map((st, i) => (
@@ -268,6 +262,7 @@ function TextInput({ kind, label, hint, value, placeholder, onChange }: {
 function FieldInput({ field, value, placeholder, onChange }: {
   field: FieldDef; value: unknown; placeholder?: string; onChange: (v: unknown) => void;
 }) {
+  const t = useTranslations('admin.siteContent');
   if (field.kind !== 'list') {
     return <TextInput kind={field.kind} label={field.label} hint={field.hint}
       value={(value as string) ?? ''} placeholder={placeholder} onChange={onChange} />;
@@ -282,7 +277,7 @@ function FieldInput({ field, value, placeholder, onChange }: {
         <div key={i} className="flex flex-col gap-2 rounded-xl border p-3" style={{ borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{field.itemLabel} {i + 1}</span>
-            <button type="button" aria-label={`Remove ${field.itemLabel.toLowerCase()} ${i + 1}`}
+            <button type="button" aria-label={t('removeItem', { item: field.itemLabel.toLowerCase(), number: i + 1 })}
               onClick={() => onChange(items.filter((_, k) => k !== i))}>
               <Trash2 size={14} style={{ color: 'var(--danger)' }} />
             </button>
@@ -296,11 +291,10 @@ function FieldInput({ field, value, placeholder, onChange }: {
       {items.length < 12 && (
         <button type="button" onClick={() => onChange([...items, Object.fromEntries(field.fields.map((s) => [s.name, '']))])}
           className="flex items-center gap-1.5 text-sm font-semibold w-fit" style={{ color: 'var(--ink)' }}>
-          <Plus size={14} aria-hidden="true" /> Add {field.itemLabel.toLowerCase()}
-        </button>
+          <Plus size={14} aria-hidden="true" />{' '}{t('add', { toLowerCase: field.itemLabel.toLowerCase() })}</button>
       )}
       {placeholder !== undefined && items.length === 0 && (
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Empty lists use the English items.</span>
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('emptyListsUseThe')}</span>
       )}
     </fieldset>
   );

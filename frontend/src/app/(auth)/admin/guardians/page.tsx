@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Search, Users, Baby, X, UserCheck } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -13,6 +14,7 @@ import type { AuthUser } from '@/store/authStore';
 import { useToast } from '@/contexts/ToastContext';
 
 export default function GuardiansPage() {
+  const t = useTranslations('admin.guardians');
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [assigning, setAssigning] = useState<Guardian | null>(null);
@@ -48,11 +50,11 @@ export default function GuardiansPage() {
     try {
       await linkGuardianAccount(linking.id, selectedUser || null);
       qc.invalidateQueries({ queryKey: ['guardians'] });
-      toast.success(selectedUser ? 'Account linked to the family' : 'Account link removed');
+      toast.success(selectedUser ? t('accountLinkedToThe') : t('accountLinkRemoved'));
       setLinking(null);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg ?? 'Failed to link the account. Please try again.');
+      setError(msg ?? t('failedToLinkThe'));
     } finally {
       setSaving(false);
     }
@@ -73,7 +75,7 @@ export default function GuardiansPage() {
       qc.invalidateQueries({ queryKey: ['guardians'] });
       setAssigning(null);
     } catch {
-      setError('Failed to update assignment. Please try again.');
+      setError(t('failedToUpdateAssignment'));
     } finally {
       setSaving(false);
     }
@@ -86,11 +88,9 @@ export default function GuardiansPage() {
         <h2
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          Guardian families
-        </h2>
+        >{t('guardianFamilies')}</h2>
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          {isLoading ? '—' : `${guardians.length} famil${guardians.length !== 1 ? 'ies' : 'y'} · assign CHWs for home visit tracking`}
+          {isLoading ? '—' : t('familiesAssign', { count: guardians.length })}
         </p>
       </div>
 
@@ -101,7 +101,7 @@ export default function GuardiansPage() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, phone…"
+          placeholder={t('searchByNamePhone')}
           className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border outline-none"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
         />
@@ -121,9 +121,9 @@ export default function GuardiansPage() {
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
         >
           <Users size={40} style={{ color: 'var(--text-muted)' }} />
-          <p className="font-semibold" style={{ color: 'var(--ink)' }}>No guardian families found</p>
+          <p className="font-semibold" style={{ color: 'var(--ink)' }}>{t('noGuardianFamiliesFound')}</p>
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            {search ? 'Try a different search term.' : 'No families with registered children yet.'}
+            {search ? t('tryADifferentSearch') : t('noFamiliesWithRegistered')}
           </p>
         </div>
       )}
@@ -167,9 +167,7 @@ export default function GuardiansPage() {
                       className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
                       style={{ backgroundColor: '#f0fdf4', color: 'var(--success)' }}
                     >
-                      <UserCheck size={11} />
-                      Has app account
-                    </span>
+                      <UserCheck size={11} />{t('hasAppAccount')}</span>
                   )}
                 </div>
               </div>
@@ -179,14 +177,12 @@ export default function GuardiansPage() {
                 {g.assigned_chw_name ? (
                   <Badge variant="info">{g.assigned_chw_name}</Badge>
                 ) : (
-                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>No CHW</span>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('noChw')}</span>
                 )}
                 <Button size="sm" variant="secondary" onClick={() => openLink(g)}>
-                  {g.has_account ? 'Account' : 'Link account'}
+                  {g.has_account ? t('account') : t('linkAccount')}
                 </Button>
-                <Button size="sm" variant="secondary" onClick={() => openAssign(g)}>
-                  Assign CHW
-                </Button>
+                <Button size="sm" variant="secondary" onClick={() => openAssign(g)}>{t('assignChw')}</Button>
               </div>
             </div>
           ))}
@@ -205,36 +201,32 @@ export default function GuardiansPage() {
             style={{ backgroundColor: 'var(--bg-elev)', border: '1px solid var(--border)' }}
           >
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-lg" style={{ color: 'var(--ink)' }}>Link app account</h3>
-              <button type="button" onClick={() => setLinking(null)} aria-label="Close">
+              <h3 className="font-bold text-lg" style={{ color: 'var(--ink)' }}>{t('linkAppAccount')}</h3>
+              <button type="button" onClick={() => setLinking(null)} aria-label={t('close')}>
                 <X size={18} style={{ color: 'var(--text-muted)' }} />
               </button>
             </div>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              The linked account sees <strong style={{ color: 'var(--ink)' }}>{linking.full_name}</strong>&#8217;s
-              children in its Parent view. Only accounts with the Parent role are listed — give a staff
-              member that role in Users first.
-            </p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('theLinkedAccountSees')}{' '}<strong style={{ color: 'var(--ink)' }}>{linking.full_name}</strong>{t('sChildrenInIts')}</p>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="guardians-account" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Account</label>
+              <label htmlFor="guardians-account" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('account')}</label>
               <select id="guardians-account"
                 value={selectedUser}
                 onChange={(e) => setSelectedUser(e.target.value)}
                 className="text-sm px-3 py-2 rounded-lg border outline-none"
                 style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
               >
-                <option value="">— No linked account —</option>
+                <option value="">{t('noLinkedAccount')}</option>
                 {(parentUsers as AuthUser[]).map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.full_name} · {u.phone_number || u.email}{u.role !== 'PARENT' ? ` (also ${u.role.toLowerCase()})` : ''}
+                    {u.full_name} · {u.phone_number || u.email}{u.role !== 'PARENT' ? t('alsoRole', { role: u.role.toLowerCase() }) : ''}
                   </option>
                 ))}
               </select>
             </div>
             {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
             <div className="flex gap-2">
-              <Button variant="primary" loading={saving} onClick={handleLink} className="flex-1">Save</Button>
-              <Button variant="secondary" onClick={() => setLinking(null)}>Cancel</Button>
+              <Button variant="primary" loading={saving} onClick={handleLink} className="flex-1">{t('save')}</Button>
+              <Button variant="secondary" onClick={() => setLinking(null)}>{t('cancel')}</Button>
             </div>
           </div>
         </div>
@@ -252,17 +244,13 @@ export default function GuardiansPage() {
             style={{ backgroundColor: 'var(--bg-elev)', border: '1px solid var(--border)' }}
           >
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-lg" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-                Assign CHW
-              </h3>
+              <h3 className="font-bold text-lg" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('assignChw')}</h3>
               <button type="button" onClick={() => setAssigning(null)}>
                 <X size={18} style={{ color: 'var(--text-muted)' }} />
               </button>
             </div>
 
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Assigning a CHW to <strong style={{ color: 'var(--ink)' }}>{assigning.full_name}</strong>&#8217;s family
-              allows that CHW to view and record visits for their {assigning.children_count ?? 0}{' '}
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('assigningAChwTo')}{' '}<strong style={{ color: 'var(--ink)' }}>{assigning.full_name}</strong>{t('sFamilyAllowsThat', { value: assigning.children_count ?? 0 })}{' '}
               {(assigning.children_count ?? 0) === 1 ? 'child' : 'children'}.
             </p>
 
@@ -274,9 +262,9 @@ export default function GuardiansPage() {
                 className="text-sm px-3 py-2 rounded-lg border outline-none"
                 style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
               >
-                <option value="">— Remove assignment —</option>
+                <option value="">{t('removeAssignment')}</option>
                 {chws.map((c) => (
-                  <option key={c.id} value={c.id}>{c.full_name} ({c.camp_name ?? 'no camp'})</option>
+                  <option key={c.id} value={c.id}>{c.full_name} ({c.camp_name ?? t('noCamp')})</option>
                 ))}
               </select>
             </div>
@@ -284,12 +272,8 @@ export default function GuardiansPage() {
             {error && <p className="text-xs" style={{ color: 'var(--danger)' }}>{error}</p>}
 
             <div className="flex gap-2">
-              <Button variant="primary" loading={saving} onClick={handleAssign} className="flex-1">
-                Save
-              </Button>
-              <Button variant="secondary" onClick={() => setAssigning(null)}>
-                Cancel
-              </Button>
+              <Button variant="primary" loading={saving} onClick={handleAssign} className="flex-1">{t('save')}</Button>
+              <Button variant="secondary" onClick={() => setAssigning(null)}>{t('cancel')}</Button>
             </div>
           </div>
         </div>

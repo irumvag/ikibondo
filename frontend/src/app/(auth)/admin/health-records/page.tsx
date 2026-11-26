@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { ClipboardList, ChevronDown, ChevronRight } from 'lucide-react';
@@ -43,6 +44,7 @@ interface AmendTarget { id: string; child_name: string }
 function AmendModal({ target, onDone, onCancel }: {
   target: AmendTarget; onDone: () => void; onCancel: () => void
 }) {
+  const t = useTranslations('admin.healthRecords');
   const [weightKg, setWeightKg] = useState('');
   const [heightCm, setHeightCm] = useState('');
   const [muacCm, setMuacCm] = useState('');
@@ -63,10 +65,8 @@ function AmendModal({ target, onDone, onCancel }: {
   return (
     <div style={overlay}>
       <div style={modal}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>Amend Record — {target.child_name}</h3>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 14px' }}>
-          Leave fields blank to keep current values.
-        </p>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>{t('amendRecord', { child_name: target.child_name })}</h3>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 14px' }}>{t('leaveFieldsBlankTo')}</p>
         {[
           ['Weight (kg)', weightKg, setWeightKg],
           ['Height (cm)', heightCm, setHeightCm],
@@ -83,23 +83,23 @@ function AmendModal({ target, onDone, onCancel }: {
           </div>
         ))}
         <div style={{ marginBottom: 10 }}>
-          <label htmlFor="health-records-notes" style={lbl}>Notes</label>
+          <label htmlFor="health-records-notes" style={lbl}>{t('notes')}</label>
           <textarea id="health-records-notes"
             value={notes} onChange={e => setNotes(e.target.value)}
             rows={2} style={{ ...inputStyle, resize: 'vertical', width: '100%', boxSizing: 'border-box' }}
           />
         </div>
         <div style={{ marginBottom: 14 }}>
-          <label htmlFor="health-records-amendment-reason" style={lbl}>Amendment reason <span style={{ color: 'var(--danger)' }}>*</span></label>
+          <label htmlFor="health-records-amendment-reason" style={lbl}>{t('amendmentReason')}{' '}<span style={{ color: 'var(--danger)' }}>*</span></label>
           <textarea id="health-records-amendment-reason"
             value={reason} onChange={e => setReason(e.target.value)}
             rows={2} style={{ ...inputStyle, resize: 'vertical', width: '100%', boxSizing: 'border-box' }}
-            placeholder="Why is this record being amended?"
+            placeholder={t('whyIsThisRecord')}
           />
         </div>
-        {mut.isError && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '0 0 10px' }}>Amendment failed.</p>}
+        {mut.isError && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '0 0 10px' }}>{t('amendmentFailed')}</p>}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} style={btnSecondary}>Cancel</button>
+          <button onClick={onCancel} style={btnSecondary}>{t('cancel')}</button>
           <button
             onClick={() => mut.mutate()}
             disabled={!reason.trim() || mut.isPending}
@@ -109,7 +109,7 @@ function AmendModal({ target, onDone, onCancel }: {
               opacity: (!reason.trim() || mut.isPending) ? 0.5 : 1,
             }}
           >
-            {mut.isPending ? 'Saving…' : 'Save Amendment'}
+            {mut.isPending ? t('saving') : t('saveAmendment')}
           </button>
         </div>
       </div>
@@ -120,6 +120,7 @@ function AmendModal({ target, onDone, onCancel }: {
 // ── Row expanded details ──────────────────────────────────────────────────────
 
 function RecordExpanded({ record }: { record: Record<string, unknown> }) {
+  const t = useTranslations('admin.healthRecords');
   return (
     <tr>
       <td colSpan={8} style={{ padding: '10px 16px', background: 'color-mix(in srgb, var(--primary) 4%, var(--bg-elev))' }}>
@@ -143,7 +144,7 @@ function RecordExpanded({ record }: { record: Record<string, unknown> }) {
         </div>
         {Array.isArray(record.symptom_flags) && (record.symptom_flags as string[]).length > 0 && (
           <div style={{ marginTop: 8 }}>
-            <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Symptoms: </span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('symptoms')}{' '}</span>
             {(record.symptom_flags as string[]).map(s => (
               <span key={s} style={{
                 fontSize: 11, border: '1px solid var(--warn)', color: 'var(--warn)',
@@ -163,6 +164,7 @@ const RISK_OPTIONS = ['', 'HIGH', 'MEDIUM', 'LOW'];
 const NUT_OPTIONS  = ['', 'SAM', 'MAM', 'NORMAL'];
 
 export default function AdminHealthRecordsPage() {
+  const t = useTranslations('admin.healthRecords');
   const qc = useQueryClient();
   const [riskLevel, setRiskLevel] = useState('');
   const [nutritionStatus, setNutritionStatus] = useState('');
@@ -194,27 +196,27 @@ export default function AdminHealthRecordsPage() {
     <div style={{ padding: '24px 20px', maxWidth: 1200, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
         <ClipboardList size={22} />
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Health Records</h1>
-        <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: 13 }}>{total} records</span>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{t('healthRecords')}</h1>
+        <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: 13 }}>{t('records', { total: total })}</span>
       </div>
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
         <select value={riskLevel} onChange={e => { setRiskLevel(e.target.value); setPage(1); }} style={filterSelect}>
-          <option value="">All risk levels</option>
+          <option value="">{t('allRiskLevels')}</option>
           {RISK_OPTIONS.filter(Boolean).map(o => <option key={o} value={o}>{o}</option>)}
         </select>
         <select value={nutritionStatus} onChange={e => { setNutritionStatus(e.target.value); setPage(1); }} style={filterSelect}>
-          <option value="">All nutrition</option>
+          <option value="">{t('allNutrition')}</option>
           {NUT_OPTIONS.filter(Boolean).map(o => <option key={o} value={o}>{o}</option>)}
         </select>
         <select value={camp} onChange={e => { setCamp(e.target.value); setZone(''); setPage(1); }} style={filterSelect}>
-          <option value="">All camps</option>
+          <option value="">{t('allCamps')}</option>
           {camps?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         {zones && zones.length > 0 && (
           <select value={zone} onChange={e => { setZone(e.target.value); setPage(1); }} style={filterSelect}>
-            <option value="">All zones</option>
+            <option value="">{t('allZones')}</option>
             {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
           </select>
         )}
@@ -222,13 +224,13 @@ export default function AdminHealthRecordsPage() {
 
       {/* Table */}
       {isLoading ? (
-        <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
+        <p style={{ color: 'var(--text-muted)' }}>{t('loading')}</p>
       ) : isError ? (
-        <p style={{ color: 'var(--danger)' }}>Failed to load records.</p>
+        <p style={{ color: 'var(--danger)' }}>{t('failedToLoadRecords')}</p>
       ) : records.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
           <ClipboardList size={36} style={{ marginBottom: 8, opacity: 0.4 }} />
-          <p>No records found.</p>
+          <p>{t('noRecordsFound')}</p>
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -236,15 +238,15 @@ export default function AdminHealthRecordsPage() {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                 <th style={th}></th>
-                <th style={th}>Child</th>
-                <th style={th}>Date</th>
-                <th style={th}>Wt (kg)</th>
-                <th style={th}>Ht (cm)</th>
+                <th style={th}>{t('child')}</th>
+                <th style={th}>{t('date')}</th>
+                <th style={th}>{t('wtKg')}</th>
+                <th style={th}>{t('htCm')}</th>
                 <th style={th}>MUAC</th>
-                <th style={th}>Nutrition</th>
-                <th style={th}>Risk</th>
-                <th style={th}>Recorded by</th>
-                <th style={th}>Actions</th>
+                <th style={th}>{t('nutrition')}</th>
+                <th style={th}>{t('risk')}</th>
+                <th style={th}>{t('recordedBy')}</th>
+                <th style={th}>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -272,9 +274,7 @@ export default function AdminHealthRecordsPage() {
                             background: 'none', border: '1px solid var(--border)', borderRadius: 6,
                             padding: '3px 10px', cursor: 'pointer', fontSize: 12, color: 'var(--ink)',
                           }}
-                        >
-                          Amend
-                        </button>
+                        >{t('amend')}</button>
                       </td>
                     </tr>
                     {isExpanded && <RecordExpanded key={`${id}-detail`} record={r} />}
@@ -289,9 +289,9 @@ export default function AdminHealthRecordsPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
-          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnSecondary}>← Prev</button>
+          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnSecondary}>{t('prev')}</button>
           <span style={{ lineHeight: '32px', fontSize: 13 }}>{page} / {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={btnSecondary}>Next →</button>
+          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={btnSecondary}>{t('next')}</button>
         </div>
       )}
 

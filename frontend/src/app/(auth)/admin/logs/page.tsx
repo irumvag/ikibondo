@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, FileText, Search } from 'lucide-react';
 import { useAuditLog } from '@/lib/api/queries';
@@ -21,6 +22,7 @@ function statusVariant(code: number): 'success' | 'warn' | 'danger' | 'default' 
 }
 
 export default function SystemLogsPage() {
+  const t = useTranslations('admin.logs');
   const [page, setPage]           = useState(1);
   const [userFilter, setUserFilter]     = useState('');
   const [actionFilter, setActionFilter] = useState('');
@@ -42,12 +44,8 @@ export default function SystemLogsPage() {
         <h2
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          System Logs
-        </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Audit trail for all create, update, and delete actions
-        </p>
+        >{t('systemLogs')}</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('auditTrailForAll')}</p>
       </div>
 
       {/* Filters */}
@@ -56,7 +54,7 @@ export default function SystemLogsPage() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
           <input
             type="text"
-            placeholder="Filter by user email"
+            placeholder={t('filterByUserEmail')}
             value={userFilter}
             onChange={(e) => { setUserFilter(e.target.value); setPage(1); }}
             className="text-sm pl-9 pr-3 py-2 rounded-lg border outline-none w-52"
@@ -67,7 +65,7 @@ export default function SystemLogsPage() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
           <input
             type="text"
-            placeholder="Filter by path"
+            placeholder={t('filterByPath')}
             value={pathFilter}
             onChange={(e) => { setPathFilter(e.target.value); setPage(1); }}
             className="text-sm pl-9 pr-3 py-2 rounded-lg border outline-none w-44"
@@ -79,15 +77,15 @@ export default function SystemLogsPage() {
           onChange={(e) => { setActionFilter(e.target.value); setPage(1); }}
           className="text-sm px-3 py-2 rounded-lg border outline-none"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
-          aria-label="Filter by action"
+          aria-label={t('filterByAction')}
         >
-          <option value="">All actions</option>
-          <option value="CREATE">Create</option>
-          <option value="UPDATE">Update</option>
-          <option value="DELETE">Delete</option>
+          <option value="">{t('allActions')}</option>
+          <option value="CREATE">{t('create')}</option>
+          <option value="UPDATE">{t('update')}</option>
+          <option value="DELETE">{t('delete')}</option>
         </select>
         <span className="text-sm ml-auto" style={{ color: 'var(--text-muted)' }}>
-          {data ? `${data.count.toLocaleString()} records` : ''}
+          {data ? t('recordsCount', { count: data.count }) : ''}
         </span>
       </div>
 
@@ -124,9 +122,7 @@ export default function SystemLogsPage() {
                 ? (
                     <tr>
                       <td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-                        <FileText size={24} className="mx-auto mb-2 opacity-40" />
-                        No audit log entries found.
-                      </td>
+                        <FileText size={24} className="mx-auto mb-2 opacity-40" />{t('noAuditLogEntries')}</td>
                     </tr>
                   )
                 : (data?.results ?? []).map((entry) => (
@@ -163,9 +159,7 @@ export default function SystemLogsPage() {
                       <td className="px-4 py-3 text-xs max-w-[180px]">
                         {entry.request_body && Object.keys(entry.request_body).length > 0 ? (
                           <details>
-                            <summary className="cursor-pointer text-xs" style={{ color: 'var(--text-muted)' }}>
-                              {Object.keys(entry.request_body).length} field(s)
-                            </summary>
+                            <summary className="cursor-pointer text-xs" style={{ color: 'var(--text-muted)' }}>{t('fieldS', { length: Object.keys(entry.request_body).length })}</summary>
                             <pre
                               className="mt-1 text-xs overflow-auto max-h-24 p-2 rounded"
                               style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}
@@ -189,9 +183,7 @@ export default function SystemLogsPage() {
             className="flex items-center justify-between px-5 py-3 border-t"
             style={{ borderColor: 'var(--border)' }}
           >
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              Page {page} of {totalPages}
-            </span>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('pageOf', { page: page, totalPages: totalPages })}</span>
             <div className="flex gap-1">
               <Button size="sm" variant="ghost" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
                 <ChevronLeft size={14} aria-hidden="true" />

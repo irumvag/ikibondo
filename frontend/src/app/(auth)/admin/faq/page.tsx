@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useId, useState } from 'react';
 import { Plus, Pencil, Trash2, Eye, EyeOff, GripVertical, Check, X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -30,6 +31,7 @@ interface EditorProps {
 }
 
 function FAQEditor({ initial, onSave, onCancel }: EditorProps) {
+  const t = useTranslations('admin.faq');
   const uid = useId();
   const [lang, setLang] = useState<Lang>('en');
 
@@ -46,7 +48,7 @@ function FAQEditor({ initial, onSave, onCancel }: EditorProps) {
 
   const handleSave = async () => {
     if (!question.trim() || !answer.trim()) {
-      setError('English question and answer are required.');
+      setError(t('englishQuestionAndAnswer'));
       return;
     }
     setSaving(true);
@@ -63,7 +65,7 @@ function FAQEditor({ initial, onSave, onCancel }: EditorProps) {
         is_published: isPublished,
       });
     } catch {
-      setError('Failed to save. Please try again.');
+      setError(t('failedToSavePlease'));
     } finally {
       setSaving(false);
     }
@@ -120,32 +122,30 @@ function FAQEditor({ initial, onSave, onCancel }: EditorProps) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={`${uid}-question`} className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-          Question {lang !== 'en' && <span className="font-normal opacity-70">({LANG_LABELS[lang]})</span>}
-          {lang !== 'en' && <span className="ml-1 font-normal opacity-50">optional</span>}
+        <label htmlFor={`${uid}-question`} className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('question')}{' '}{lang !== 'en' && <span className="font-normal opacity-70">({LANG_LABELS[lang]})</span>}
+          {lang !== 'en' && <span className="ml-1 font-normal opacity-50">{t('optional')}</span>}
         </label>
         <input id={`${uid}-question`}
           value={currentQuestion}
           onChange={(e) => setCurrentQ(e.target.value)}
-          placeholder={lang === 'en' ? 'Enter question…' : `${LANG_LABELS[lang]} translation…`}
+          placeholder={lang === 'en' ? t('enterQuestion') : t('translationPlaceholder', { language: LANG_LABELS[lang] })}
           style={inputStyle}
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={`${uid}-answer`} className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-          Answer {lang !== 'en' && <span className="font-normal opacity-70">({LANG_LABELS[lang]})</span>}
+        <label htmlFor={`${uid}-answer`} className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('answer')}{' '}{lang !== 'en' && <span className="font-normal opacity-70">({LANG_LABELS[lang]})</span>}
         </label>
         <textarea id={`${uid}-answer`}
           value={currentAnswer}
           onChange={(e) => setCurrentA(e.target.value)}
-          placeholder={lang === 'en' ? 'Enter answer…' : `${LANG_LABELS[lang]} translation…`}
+          placeholder={lang === 'en' ? t('enterAnswer') : t('translationPlaceholder', { language: LANG_LABELS[lang] })}
           rows={4}
           style={{ ...inputStyle, resize: 'vertical' }}
         />
       </div>
       <div className="flex items-center gap-4">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor={`${uid}-order`} className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Order</label>
+          <label htmlFor={`${uid}-order`} className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('order')}</label>
           <input id={`${uid}-order`}
             type="number"
             min={0}
@@ -162,20 +162,16 @@ function FAQEditor({ initial, onSave, onCancel }: EditorProps) {
             style={{ color: isPublished ? 'var(--success)' : 'var(--text-muted)' }}
           >
             {isPublished ? <Eye size={16} /> : <EyeOff size={16} />}
-            {isPublished ? 'Published' : 'Draft'}
+            {isPublished ? t('published') : t('draft')}
           </button>
         </div>
       </div>
       {error && <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>}
       <div className="flex gap-2">
         <Button variant="primary" size="sm" onClick={handleSave} loading={saving}>
-          <Check size={14} className="mr-1.5" />
-          Save
-        </Button>
+          <Check size={14} className="mr-1.5" />{t('save')}</Button>
         <Button variant="secondary" size="sm" onClick={onCancel} disabled={saving}>
-          <X size={14} className="mr-1.5" />
-          Cancel
-        </Button>
+          <X size={14} className="mr-1.5" />{t('cancel')}</Button>
       </div>
     </div>
   );
@@ -193,6 +189,7 @@ function FAQRow({
   onDelete: () => void;
   onTogglePublish: () => void;
 }) {
+  const t = useTranslations('admin.faq');
   const hasRw = !!(item.question_rw?.trim());
   const hasFr = !!(item.question_fr?.trim());
 
@@ -211,7 +208,7 @@ function FAQRow({
               color: item.is_published ? 'var(--success)' : 'var(--text-muted)',
             }}
           >
-            {item.is_published ? 'Published' : 'Draft'}
+            {item.is_published ? t('published') : t('draft')}
           </span>
           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>#{item.order}</span>
           {/* i18n coverage dots */}
@@ -234,7 +231,7 @@ function FAQRow({
           onClick={onTogglePublish}
           className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--bg-sand)]"
           style={{ color: 'var(--text-muted)' }}
-          title={item.is_published ? 'Unpublish' : 'Publish'}
+          title={item.is_published ? t('unpublish') : t('publish')}
         >
           {item.is_published ? <EyeOff size={15} /> : <Eye size={15} />}
         </button>
@@ -243,7 +240,7 @@ function FAQRow({
           onClick={onEdit}
           className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--bg-sand)]"
           style={{ color: 'var(--text-muted)' }}
-          title="Edit"
+          title={t('edit')}
         >
           <Pencil size={15} />
         </button>
@@ -252,7 +249,7 @@ function FAQRow({
           onClick={onDelete}
           className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--high-bg)]"
           style={{ color: 'var(--text-muted)' }}
-          title="Delete"
+          title={t('delete')}
         >
           <Trash2 size={15} />
         </button>
@@ -263,6 +260,7 @@ function FAQRow({
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function AdminFAQPage() {
+  const t = useTranslations('admin.faq');
   const qc = useQueryClient();
   const { data: items, isLoading } = useAdminFaq();
 
@@ -310,20 +308,16 @@ export default function AdminFAQPage() {
           <h2
             className="text-2xl font-bold"
             style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            FAQ Management
-          </h2>
+          >{t('faqManagement')}</h2>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
             {isLoading
               ? '—'
-              : `${allItems.length} item${allItems.length !== 1 ? 's' : ''} · ${allItems.filter((i) => i.is_published).length} published`}
+              : t('itemsPublished', { count: allItems.length, published: allItems.filter((i) => i.is_published).length })}
           </p>
         </div>
         {!creating && (
           <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
-            <Plus size={15} className="mr-1.5" />
-            New item
-          </Button>
+            <Plus size={15} className="mr-1.5" />{t('newItem')}</Button>
         )}
       </div>
 
@@ -345,10 +339,8 @@ export default function AdminFAQPage() {
           className="rounded-2xl border px-6 py-12 text-center"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
         >
-          <p className="text-sm font-semibold mb-1" style={{ color: 'var(--ink)' }}>No FAQ items yet</p>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            Click &ldquo;New item&rdquo; to add your first question.
-          </p>
+          <p className="text-sm font-semibold mb-1" style={{ color: 'var(--ink)' }}>{t('noFaqItemsYet')}</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('clickNewItemTo')}</p>
         </div>
       ) : (
         <div

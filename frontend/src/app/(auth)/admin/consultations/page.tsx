@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Inbox, Send, CheckCircle, AlertTriangle } from 'lucide-react';
@@ -30,6 +31,7 @@ function StatusBadge({ status }: { status: string }) {
 // ── Consultation card ─────────────────────────────────────────────────────────
 
 function ConsultationCard({ c, onRefresh }: { c: Consultation; onRefresh: () => void }) {
+  const t = useTranslations('admin.consultations');
   const [expanded, setExpanded] = useState(false);
   const [replyText, setReplyText] = useState('');
 
@@ -60,12 +62,9 @@ function ConsultationCard({ c, onRefresh }: { c: Consultation; onRefresh: () => 
       >
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 600, fontSize: 14 }}>{c.child_name}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-            By {c.opened_by_name ?? 'Unknown'} · {new Date(c.opened_at).toLocaleDateString()}
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{t('byNameDate', { name: c.opened_by_name ?? t('unknown'), date: new Date(c.opened_at).toLocaleDateString() })}
             {c.disputed_ai && (
-              <span style={{ marginLeft: 8, color: 'var(--warn)', fontWeight: 600 }}>
-                ⚠ AI disputed
-              </span>
+              <span style={{ marginLeft: 8, color: 'var(--warn)', fontWeight: 600 }}>{t('aiDisputed')}</span>
             )}
           </div>
         </div>
@@ -82,7 +81,7 @@ function ConsultationCard({ c, onRefresh }: { c: Consultation; onRefresh: () => 
                 <div key={m.id} style={{
                   background: 'var(--bg)', borderRadius: 8, padding: '8px 12px', fontSize: 13,
                 }}>
-                  <strong style={{ fontSize: 12, color: 'var(--text-muted)' }}>{m.author_name ?? 'Unknown'}</strong>
+                  <strong style={{ fontSize: 12, color: 'var(--text-muted)' }}>{m.author_name ?? t('unknown')}</strong>
                   <p style={{ margin: '4px 0 0' }}>{m.body}</p>
                   <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     {new Date(m.created_at).toLocaleString()}
@@ -98,7 +97,7 @@ function ConsultationCard({ c, onRefresh }: { c: Consultation; onRefresh: () => 
               <textarea
                 value={replyText}
                 onChange={e => setReplyText(e.target.value)}
-                placeholder="Write a reply…"
+                placeholder={t('writeAReply')}
                 rows={2}
                 style={{
                   flex: 1, resize: 'vertical', border: '1px solid var(--border)',
@@ -116,8 +115,7 @@ function ConsultationCard({ c, onRefresh }: { c: Consultation; onRefresh: () => 
                   opacity: (!replyText.trim() || replyMut.isPending) ? 0.5 : 1,
                 }}
               >
-                <Send size={14} /> Reply
-              </button>
+                <Send size={14} />{' '}{t('reply')}</button>
             </div>
           )}
 
@@ -133,8 +131,7 @@ function ConsultationCard({ c, onRefresh }: { c: Consultation; onRefresh: () => 
                   display: 'flex', alignItems: 'center', gap: 5,
                 }}
               >
-                <CheckCircle size={13} /> Resolve
-              </button>
+                <CheckCircle size={13} />{' '}{t('resolve')}</button>
               {!c.disputed_ai && (
                 <button
                   onClick={() => disputeMut.mutate()}
@@ -145,8 +142,7 @@ function ConsultationCard({ c, onRefresh }: { c: Consultation; onRefresh: () => 
                     display: 'flex', alignItems: 'center', gap: 5,
                   }}
                 >
-                  <AlertTriangle size={13} /> Dispute AI
-                </button>
+                  <AlertTriangle size={13} />{' '}{t('disputeAi')}</button>
               )}
             </div>
           )}
@@ -159,11 +155,10 @@ function ConsultationCard({ c, onRefresh }: { c: Consultation; onRefresh: () => 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 const STATUSES = ['', 'OPEN', 'ESCALATED', 'RESOLVED'];
-const STATUS_LABELS: Record<string, string> = {
-  '': 'All', OPEN: 'Open', ESCALATED: 'Escalated', RESOLVED: 'Resolved',
-};
+// Filter names: messages/en.json admin.consultations.status.<STATUS> ('ALL' for the empty filter)
 
 export default function AdminConsultationsPage() {
+  const t = useTranslations('admin.consultations');
   const qc = useQueryClient();
   const [status, setStatus] = useState('');
   const [camp, setCamp] = useState('');
@@ -188,10 +183,8 @@ export default function AdminConsultationsPage() {
     <div style={{ padding: '24px 20px', maxWidth: 860, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
         <Inbox size={22} />
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Consultations</h1>
-        <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: 13 }}>
-          {total} total
-        </span>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{t('consultations')}</h1>
+        <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: 13 }}>{t('total', { total: total })}</span>
       </div>
 
       {/* Filters */}
@@ -207,7 +200,7 @@ export default function AdminConsultationsPage() {
               color: status === s ? 'var(--primary)' : 'var(--ink)', fontWeight: status === s ? 600 : 400,
             }}
           >
-            {STATUS_LABELS[s]}
+            {t(`status.${(s || 'ALL') as 'ALL' | 'OPEN' | 'ESCALATED' | 'RESOLVED'}`)}
           </button>
         ))}
         <select
@@ -218,20 +211,20 @@ export default function AdminConsultationsPage() {
             padding: '5px 10px', background: 'var(--bg-elev)', color: 'var(--ink)', fontSize: 13,
           }}
         >
-          <option value="">All camps</option>
+          <option value="">{t('allCamps')}</option>
           {camps?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
 
       {/* List */}
       {isLoading ? (
-        <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
+        <p style={{ color: 'var(--text-muted)' }}>{t('loading')}</p>
       ) : isError ? (
-        <p style={{ color: 'var(--danger)' }}>Failed to load consultations.</p>
+        <p style={{ color: 'var(--danger)' }}>{t('failedToLoadConsultations')}</p>
       ) : items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
           <Inbox size={36} style={{ marginBottom: 8, opacity: 0.4 }} />
-          <p>No consultations found.</p>
+          <p>{t('noConsultationsFound')}</p>
         </div>
       ) : (
         items.map(c => <ConsultationCard key={c.id} c={c} onRefresh={onRefresh} />)
@@ -240,9 +233,9 @@ export default function AdminConsultationsPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
-          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnSecondary}>← Prev</button>
+          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnSecondary}>{t('prev')}</button>
           <span style={{ lineHeight: '32px', fontSize: 13 }}>{page} / {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={btnSecondary}>Next →</button>
+          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={btnSecondary}>{t('next')}</button>
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Baby, Search, X, ExternalLink } from 'lucide-react';
@@ -57,6 +58,7 @@ function age(dob: string) {
 function CloseModal({
   child, onDone, onCancel,
 }: { child: AdminChild; onDone: () => void; onCancel: () => void }) {
+  const t = useTranslations('admin.children');
   const [status, setStatus] = useState<'DECEASED' | 'TRANSFERRED' | 'DEPARTED'>('DECEASED');
   const [reason, setReason] = useState('');
   const mut = useMutation({
@@ -66,32 +68,30 @@ function CloseModal({
   return (
     <div style={overlay}>
       <div style={modal}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>Close record — {child.full_name}</h3>
-        <label htmlFor="children-closure-reason" style={lbl}>Closure reason</label>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>{t('closeRecord', { full_name: child.full_name })}</h3>
+        <label htmlFor="children-closure-reason" style={lbl}>{t('closureReason')}</label>
         <select id="children-closure-reason" value={status} onChange={e => setStatus(e.target.value as never)} style={input}>
-          <option value="DECEASED">Deceased</option>
-          <option value="TRANSFERRED">Transferred</option>
-          <option value="DEPARTED">Departed</option>
+          <option value="DECEASED">{t('deceased')}</option>
+          <option value="TRANSFERRED">{t('transferred')}</option>
+          <option value="DEPARTED">{t('departed')}</option>
         </select>
-        <label htmlFor="children-details-required" style={{ ...lbl, marginTop: 10 }}>Details (required)</label>
+        <label htmlFor="children-details-required" style={{ ...lbl, marginTop: 10 }}>{t('detailsRequired')}</label>
         <textarea id="children-details-required"
           value={reason} onChange={e => setReason(e.target.value)}
           rows={3} style={{ ...input, resize: 'vertical' }}
-          placeholder="Provide additional context…"
+          placeholder={t('provideAdditionalContext')}
         />
         {mut.isError && (
-          <p style={{ color: 'var(--danger)', fontSize: 13, margin: '6px 0 0' }}>
-            Failed to close record.
-          </p>
+          <p style={{ color: 'var(--danger)', fontSize: 13, margin: '6px 0 0' }}>{t('failedToCloseRecord')}</p>
         )}
         <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} style={btnSecondary}>Cancel</button>
+          <button onClick={onCancel} style={btnSecondary}>{t('cancel')}</button>
           <button
             onClick={() => mut.mutate()}
             disabled={!reason.trim() || mut.isPending}
             style={{ ...btnDanger, opacity: (!reason.trim() || mut.isPending) ? 0.5 : 1 }}
           >
-            {mut.isPending ? 'Closing…' : 'Close Record'}
+            {mut.isPending ? t('closing') : t('closeRecord2')}
           </button>
         </div>
       </div>
@@ -104,6 +104,7 @@ function CloseModal({
 function TransferModal({
   child, onDone, onCancel,
 }: { child: AdminChild; onDone: () => void; onCancel: () => void }) {
+  const t = useTranslations('admin.children');
   const [zoneId, setZoneId] = useState('');
   const [zones, setZones] = useState<{ id: string; name: string }[]>([]);
   const { data: camps } = useAdminCamps();
@@ -123,34 +124,32 @@ function TransferModal({
   return (
     <div style={overlay}>
       <div style={modal}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>Transfer Zone — {child.full_name}</h3>
-        <label htmlFor="children-camp" style={lbl}>Camp</label>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>{t('transferZone', { full_name: child.full_name })}</h3>
+        <label htmlFor="children-camp" style={lbl}>{t('camp')}</label>
         <select id="children-camp" style={input} onChange={e => loadZones(e.target.value)} defaultValue="">
-          <option value="" disabled>Select camp…</option>
+          <option value="" disabled>{t('selectCamp')}</option>
           {camps?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         {zones.length > 0 && (
           <>
-            <label htmlFor="children-zone" style={{ ...lbl, marginTop: 10 }}>Zone</label>
+            <label htmlFor="children-zone" style={{ ...lbl, marginTop: 10 }}>{t('zone')}</label>
             <select id="children-zone" value={zoneId} onChange={e => setZoneId(e.target.value)} style={input}>
-              <option value="" disabled>Select zone…</option>
+              <option value="" disabled>{t('selectZone')}</option>
               {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
             </select>
           </>
         )}
         {mut.isError && (
-          <p style={{ color: 'var(--danger)', fontSize: 13, margin: '6px 0 0' }}>
-            Transfer failed.
-          </p>
+          <p style={{ color: 'var(--danger)', fontSize: 13, margin: '6px 0 0' }}>{t('transferFailed')}</p>
         )}
         <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} style={btnSecondary}>Cancel</button>
+          <button onClick={onCancel} style={btnSecondary}>{t('cancel')}</button>
           <button
             onClick={() => mut.mutate()}
             disabled={!zoneId || mut.isPending}
             style={{ ...btnPrimary, opacity: (!zoneId || mut.isPending) ? 0.5 : 1 }}
           >
-            {mut.isPending ? 'Transferring…' : 'Transfer'}
+            {mut.isPending ? t('transferring') : t('transfer')}
           </button>
         </div>
       </div>
@@ -161,6 +160,7 @@ function TransferModal({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function AdminChildrenPage() {
+  const t = useTranslations('admin.children');
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [camp, setCamp] = useState('');
@@ -190,10 +190,8 @@ export default function AdminChildrenPage() {
     <div style={{ padding: '24px 20px', maxWidth: 1100, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
         <Baby size={22} />
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Children</h1>
-        <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: 13 }}>
-          {total} total
-        </span>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{t('children')}</h1>
+        <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: 13 }}>{t('total', { total: total })}</span>
       </div>
 
       {/* Filters */}
@@ -201,7 +199,7 @@ export default function AdminChildrenPage() {
         <div style={{ position: 'relative', flex: '1 1 220px' }}>
           <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input
-            placeholder="Search name or reg #…"
+            placeholder={t('searchNameOrReg')}
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
             style={{ ...input, paddingLeft: 32, width: '100%', boxSizing: 'border-box' }}
@@ -213,33 +211,33 @@ export default function AdminChildrenPage() {
           )}
         </div>
         <select value={camp} onChange={e => { setCamp(e.target.value); setPage(1); }} style={{ ...input, flex: '0 0 180px' }}>
-          <option value="">All camps</option>
+          <option value="">{t('allCamps')}</option>
           {camps?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
 
       {/* Table */}
       {isLoading ? (
-        <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
+        <p style={{ color: 'var(--text-muted)' }}>{t('loading')}</p>
       ) : isError ? (
-        <p style={{ color: 'var(--danger)' }}>Failed to load children.</p>
+        <p style={{ color: 'var(--danger)' }}>{t('failedToLoadChildren')}</p>
       ) : children.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
           <Baby size={36} style={{ marginBottom: 8, opacity: 0.4 }} />
-          <p>No children found.</p>
+          <p>{t('noChildrenFound')}</p>
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                <th style={th}>Name</th>
-                <th style={th}>Reg #</th>
-                <th style={th}>Camp / Zone</th>
-                <th style={th}>Age / Sex</th>
-                <th style={th}>Risk</th>
-                <th style={th}>Nutrition</th>
-                <th style={th}>Actions</th>
+                <th style={th}>{t('name')}</th>
+                <th style={th}>{t('reg')}</th>
+                <th style={th}>{t('campZone')}</th>
+                <th style={th}>{t('ageSex')}</th>
+                <th style={th}>{t('risk')}</th>
+                <th style={th}>{t('nutrition')}</th>
+                <th style={th}>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -261,10 +259,9 @@ export default function AdminChildrenPage() {
                       href={`/nurse/children/${c.id}`}
                       style={{ color: 'var(--primary)', fontSize: 12, marginRight: 8, display: 'inline-flex', alignItems: 'center', gap: 3 }}
                     >
-                      <ExternalLink size={12} /> View
-                    </Link>
-                    <button onClick={() => setTransferTarget(c)} style={btnSmall}>Transfer</button>
-                    <button onClick={() => setCloseTarget(c)} style={{ ...btnSmall, color: 'var(--danger)' }}>Close</button>
+                      <ExternalLink size={12} />{' '}{t('view')}</Link>
+                    <button onClick={() => setTransferTarget(c)} style={btnSmall}>{t('transfer')}</button>
+                    <button onClick={() => setCloseTarget(c)} style={{ ...btnSmall, color: 'var(--danger)' }}>{t('close')}</button>
                   </td>
                 </tr>
               ))}
@@ -276,9 +273,9 @@ export default function AdminChildrenPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
-          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnSecondary}>← Prev</button>
+          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnSecondary}>{t('prev')}</button>
           <span style={{ lineHeight: '32px', fontSize: 13 }}>{page} / {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={btnSecondary}>Next →</button>
+          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={btnSecondary}>{t('next')}</button>
         </div>
       )}
 

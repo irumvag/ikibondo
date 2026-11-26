@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { GitBranch, CheckCircle } from 'lucide-react';
@@ -32,6 +33,7 @@ function StatusBadge({ status }: { status: string }) {
 function CompleteModal({
   referral, onDone, onCancel,
 }: { referral: AdminReferral; onDone: () => void; onCancel: () => void }) {
+  const t = useTranslations('admin.referrals');
   const [outcome, setOutcome] = useState('');
   const mut = useMutation({
     mutationFn: () => completeReferral(referral.id, outcome),
@@ -40,23 +42,22 @@ function CompleteModal({
   return (
     <div style={overlay}>
       <div style={modal}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>Complete Referral — {referral.child_name}</h3>
-        <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text-muted)' }}>
-          Facility: <strong style={{ color: 'var(--ink)' }}>{referral.target_facility}</strong>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>{t('completeReferral', { child_name: referral.child_name })}</h3>
+        <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text-muted)' }}>{t('facility')}{' '}<strong style={{ color: 'var(--ink)' }}>{referral.target_facility}</strong>
         </p>
-        <label htmlFor="referrals-outcome-notes-required" style={lbl}>Outcome notes (required)</label>
+        <label htmlFor="referrals-outcome-notes-required" style={lbl}>{t('outcomeNotesRequired')}</label>
         <textarea id="referrals-outcome-notes-required"
           value={outcome}
           onChange={e => setOutcome(e.target.value)}
           rows={3}
           style={{ ...inputStyle, resize: 'vertical', width: '100%', boxSizing: 'border-box' }}
-          placeholder="Describe the referral outcome…"
+          placeholder={t('describeTheReferralOutcome')}
         />
         {mut.isError && (
-          <p style={{ color: 'var(--danger)', fontSize: 13, margin: '6px 0 0' }}>Failed to complete referral.</p>
+          <p style={{ color: 'var(--danger)', fontSize: 13, margin: '6px 0 0' }}>{t('failedToCompleteReferral')}</p>
         )}
         <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} style={btnSecondary}>Cancel</button>
+          <button onClick={onCancel} style={btnSecondary}>{t('cancel')}</button>
           <button
             onClick={() => mut.mutate()}
             disabled={!outcome.trim() || mut.isPending}
@@ -67,7 +68,7 @@ function CompleteModal({
             }}
           >
             <CheckCircle size={14} style={{ marginRight: 5, verticalAlign: 'middle' }} />
-            {mut.isPending ? 'Saving…' : 'Mark Complete'}
+            {mut.isPending ? t('saving') : t('markComplete')}
           </button>
         </div>
       </div>
@@ -80,6 +81,7 @@ function CompleteModal({
 const STATUSES = ['', 'PENDING', 'COMPLETED', 'CANCELLED'];
 
 export default function AdminReferralsPage() {
+  const t = useTranslations('admin.referrals');
   const qc = useQueryClient();
   const [status, setStatus] = useState('');
   const [camp, setCamp] = useState('');
@@ -106,8 +108,8 @@ export default function AdminReferralsPage() {
     <div style={{ padding: '24px 20px', maxWidth: 1100, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
         <GitBranch size={22} />
-        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Referrals</h1>
-        <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: 13 }}>{total} total</span>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{t('referrals')}</h1>
+        <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: 13 }}>{t('total', { total: total })}</span>
       </div>
 
       {/* Filters */}
@@ -123,7 +125,7 @@ export default function AdminReferralsPage() {
               color: status === s ? 'var(--primary)' : 'var(--ink)', fontWeight: status === s ? 600 : 400,
             }}
           >
-            {s || 'All'}
+            {s || t('all')}
           </button>
         ))}
         <select
@@ -131,33 +133,33 @@ export default function AdminReferralsPage() {
           onChange={e => { setCamp(e.target.value); setPage(1); }}
           style={{ marginLeft: 'auto', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px', background: 'var(--bg-elev)', color: 'var(--ink)', fontSize: 13 }}
         >
-          <option value="">All camps</option>
+          <option value="">{t('allCamps')}</option>
           {camps?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
 
       {/* Table */}
       {isLoading ? (
-        <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
+        <p style={{ color: 'var(--text-muted)' }}>{t('loading')}</p>
       ) : isError ? (
-        <p style={{ color: 'var(--danger)' }}>Failed to load referrals.</p>
+        <p style={{ color: 'var(--danger)' }}>{t('failedToLoadReferrals')}</p>
       ) : items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
           <GitBranch size={36} style={{ marginBottom: 8, opacity: 0.4 }} />
-          <p>No referrals found.</p>
+          <p>{t('noReferralsFound')}</p>
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                <th style={th}>Child</th>
-                <th style={th}>Referred by</th>
-                <th style={th}>Facility</th>
-                <th style={th}>Reason</th>
-                <th style={th}>Status</th>
-                <th style={th}>Date</th>
-                <th style={th}>Actions</th>
+                <th style={th}>{t('child')}</th>
+                <th style={th}>{t('referredBy')}</th>
+                <th style={th}>{t('facility2')}</th>
+                <th style={th}>{t('reason')}</th>
+                <th style={th}>{t('status')}</th>
+                <th style={th}>{t('date')}</th>
+                <th style={th}>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -181,14 +183,10 @@ export default function AdminReferralsPage() {
                           background: 'none', border: '1px solid var(--success)', color: 'var(--success)',
                           borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontSize: 12,
                         }}
-                      >
-                        Complete
-                      </button>
+                      >{t('complete')}</button>
                     )}
                     {r.outcome && (
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }} title={r.outcome}>
-                        Outcome logged
-                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }} title={r.outcome}>{t('outcomeLogged')}</span>
                     )}
                   </td>
                 </tr>
@@ -201,9 +199,9 @@ export default function AdminReferralsPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'center' }}>
-          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnSecondary}>← Prev</button>
+          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnSecondary}>{t('prev')}</button>
           <span style={{ lineHeight: '32px', fontSize: 13 }}>{page} / {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={btnSecondary}>Next →</button>
+          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={btnSecondary}>{t('next')}</button>
         </div>
       )}
 

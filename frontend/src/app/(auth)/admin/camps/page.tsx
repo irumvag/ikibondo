@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Globe, MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -108,19 +109,20 @@ function CampFormFields({ form, onChange }: {
   form: CampForm;
   onChange: (f: CampForm) => void;
 }) {
+  const t = useTranslations('admin.camps');
   const set = (k: keyof CampForm, v: string) => onChange({ ...form, [k]: v });
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Camp name" value={form.name} onChange={(e) => set('name', e.target.value)} required />
-        <Input label="Code" value={form.code} onChange={(e) => set('code', e.target.value)} required />
+        <Input label={t('campName')} value={form.name} onChange={(e) => set('name', e.target.value)} required />
+        <Input label={t('code')} value={form.code} onChange={(e) => set('code', e.target.value)} required />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <Input label="District" value={form.district} onChange={(e) => set('district', e.target.value)} />
-        <Input label="Province" value={form.province} onChange={(e) => set('province', e.target.value)} />
+        <Input label={t('district')} value={form.district} onChange={(e) => set('district', e.target.value)} />
+        <Input label={t('province')} value={form.province} onChange={(e) => set('province', e.target.value)} />
       </div>
       <div className="flex flex-col gap-1">
-        <label htmlFor="camps-status" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Status</label>
+        <label htmlFor="camps-status" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('status')}</label>
         <select id="camps-status"
           value={form.status}
           onChange={(e) => set('status', e.target.value)}
@@ -131,12 +133,12 @@ function CampFormFields({ form, onChange }: {
         </select>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Est. population" type="number" value={form.estimated_population} onChange={(e) => set('estimated_population', e.target.value)} />
-        <Input label="Capacity" type="number" value={form.capacity} onChange={(e) => set('capacity', e.target.value)} />
+        <Input label={t('estPopulation')} type="number" value={form.estimated_population} onChange={(e) => set('estimated_population', e.target.value)} />
+        <Input label={t('capacity')} type="number" value={form.capacity} onChange={(e) => set('capacity', e.target.value)} />
       </div>
-      <Input label="Managing body" value={form.managing_body} onChange={(e) => set('managing_body', e.target.value)} />
+      <Input label={t('managingBody')} value={form.managing_body} onChange={(e) => set('managing_body', e.target.value)} />
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Public description</span>
+        <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('publicDescription')}</span>
         <textarea
           rows={3}
           maxLength={600}
@@ -144,11 +146,9 @@ function CampFormFields({ form, onChange }: {
           onChange={(e) => set('public_description', e.target.value)}
           className="text-sm px-3 py-2 rounded-lg border outline-none"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
-          placeholder="e.g. Health centre open Monday to Friday, 8:00–16:00."
+          placeholder={t('eGHealthCentre')}
         />
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          Shown on the public website. Never include names, health data or numbers about children.
-        </span>
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('shownOnThePublic')}</span>
       </label>
     </>
   );
@@ -160,15 +160,16 @@ function ZoneFormFields({ form, onChange }: {
   form: ZoneForm;
   onChange: (f: ZoneForm) => void;
 }) {
+  const t = useTranslations('admin.camps');
   const set = (k: keyof ZoneForm, v: string) => onChange({ ...form, [k]: v });
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Zone name" value={form.name} onChange={(e) => set('name', e.target.value)} required />
-        <Input label="Code" value={form.code} onChange={(e) => set('code', e.target.value)} required />
+        <Input label={t('zoneName')} value={form.name} onChange={(e) => set('name', e.target.value)} required />
+        <Input label={t('code')} value={form.code} onChange={(e) => set('code', e.target.value)} required />
       </div>
       <div className="flex flex-col gap-1">
-        <label htmlFor="camps-status-2" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Status</label>
+        <label htmlFor="camps-status-2" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('status')}</label>
         <select id="camps-status-2"
           value={form.status}
           onChange={(e) => set('status', e.target.value)}
@@ -179,10 +180,10 @@ function ZoneFormFields({ form, onChange }: {
         </select>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Est. households" type="number" value={form.estimated_households} onChange={(e) => set('estimated_households', e.target.value)} />
-        <Input label="Est. population" type="number" value={form.estimated_population} onChange={(e) => set('estimated_population', e.target.value)} />
+        <Input label={t('estHouseholds')} type="number" value={form.estimated_households} onChange={(e) => set('estimated_households', e.target.value)} />
+        <Input label={t('estPopulation')} type="number" value={form.estimated_population} onChange={(e) => set('estimated_population', e.target.value)} />
       </div>
-      <Input label="Description" value={form.description} onChange={(e) => set('description', e.target.value)} />
+      <Input label={t('description')} value={form.description} onChange={(e) => set('description', e.target.value)} />
     </>
   );
 }
@@ -216,6 +217,7 @@ function Modal({ title, onClose, children }: {
 // ── ZonesPanel ────────────────────────────────────────────────────────────────
 
 function ZonesPanel({ campId }: { campId: string }) {
+  const t = useTranslations('admin.camps');
   const qc = useQueryClient();
   const { data: zones, isLoading } = useAdminZones(campId);
 
@@ -292,9 +294,7 @@ function ZonesPanel({ campId }: { campId: string }) {
         ? [0, 1].map((i) => <Skeleton key={i} className="h-10 rounded-lg" />)
         : (zones ?? []).length === 0
         ? (
-          <p className="text-xs py-3" style={{ color: 'var(--text-muted)' }}>
-            No zones yet. Add one below.
-          </p>
+          <p className="text-xs py-3" style={{ color: 'var(--text-muted)' }}>{t('noZonesYetAdd')}</p>
         )
         : (zones ?? []).map((z) => (
           <div
@@ -308,17 +308,15 @@ function ZonesPanel({ campId }: { campId: string }) {
             </span>
             <Badge variant={statusVariant(z.status)}>{z.status}</Badge>
             {z.estimated_population && (
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {z.estimated_population.toLocaleString()} pop.
-              </span>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('pop', { estimated_population: z.estimated_population.toLocaleString() })}</span>
             )}
             <div className="flex items-center gap-1 ml-1">
               {confirmingDelete === z.id
                 ? (
                   <>
-                    <span className="text-xs mr-1" style={{ color: 'var(--text-muted)' }}>Delete?</span>
-                    <Button size="sm" variant="danger" loading={deleting === z.id} onClick={() => handleDelete(z.id)}>Yes</Button>
-                    <Button size="sm" variant="secondary" onClick={() => setConfirmingDelete(null)}>No</Button>
+                    <span className="text-xs mr-1" style={{ color: 'var(--text-muted)' }}>{t('delete')}</span>
+                    <Button size="sm" variant="danger" loading={deleting === z.id} onClick={() => handleDelete(z.id)}>{t('yes')}</Button>
+                    <Button size="sm" variant="secondary" onClick={() => setConfirmingDelete(null)}>{t('no')}</Button>
                   </>
                 )
                 : (
@@ -337,18 +335,17 @@ function ZonesPanel({ campId }: { campId: string }) {
 
       {/* Add zone button */}
       <Button size="sm" variant="secondary" className="self-start mt-1" onClick={() => setShowCreate(true)}>
-        <Plus size={14} aria-hidden="true" />Add zone
-      </Button>
+        <Plus size={14} aria-hidden="true" />{t('addZone')}</Button>
 
       {/* Create zone modal */}
       {showCreate && (
-        <Modal title="Add zone" onClose={() => setShowCreate(false)}>
+        <Modal title={t('addZone')} onClose={() => setShowCreate(false)}>
           <form onSubmit={handleCreate} className="flex flex-col gap-3">
             <ZoneFormFields form={createForm} onChange={setCreateForm} />
             {createError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{createError}</p>}
             <div className="flex gap-2 pt-1">
-              <Button type="submit" variant="primary" loading={creating} className="flex-1">Create zone</Button>
-              <Button type="button" variant="secondary" onClick={() => { setShowCreate(false); setCreateError(''); }}>Cancel</Button>
+              <Button type="submit" variant="primary" loading={creating} className="flex-1">{t('createZone')}</Button>
+              <Button type="button" variant="secondary" onClick={() => { setShowCreate(false); setCreateError(''); }}>{t('cancel')}</Button>
             </div>
           </form>
         </Modal>
@@ -356,13 +353,13 @@ function ZonesPanel({ campId }: { campId: string }) {
 
       {/* Edit zone modal */}
       {editingZone && (
-        <Modal title={`Edit zone — ${editingZone.name}`} onClose={() => setEditingZone(null)}>
+        <Modal title={t('editZoneTitle', { name: editingZone.name })} onClose={() => setEditingZone(null)}>
           <form onSubmit={handleSave} className="flex flex-col gap-3">
             <ZoneFormFields form={editForm} onChange={setEditForm} />
             {editError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{editError}</p>}
             <div className="flex gap-2 pt-1">
-              <Button type="submit" variant="primary" loading={saving} className="flex-1">Save changes</Button>
-              <Button type="button" variant="secondary" onClick={() => setEditingZone(null)}>Cancel</Button>
+              <Button type="submit" variant="primary" loading={saving} className="flex-1">{t('saveChanges')}</Button>
+              <Button type="button" variant="secondary" onClick={() => setEditingZone(null)}>{t('cancel')}</Button>
             </div>
           </form>
         </Modal>
@@ -374,6 +371,7 @@ function ZonesPanel({ campId }: { campId: string }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function CampsPage() {
+  const t = useTranslations('admin.camps');
   const qc = useQueryClient();
   const { data: camps, isLoading } = useAdminCamps();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -453,17 +451,11 @@ export default function CampsPage() {
           <h2
             className="text-2xl font-bold"
             style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            Camps &amp; Zones
-          </h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {camps?.length ?? 0} camps &middot; {totalChildren.toLocaleString()} registered children
-          </p>
+          >{t('campsZones')}</h2>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('campsRegisteredChildren', { value: camps?.length ?? 0, totalChildren: totalChildren.toLocaleString() })}</p>
         </div>
         <Button variant="primary" onClick={() => setShowCreate(true)}>
-          <Plus size={16} className="mr-2" aria-hidden="true" />
-          New camp
-        </Button>
+          <Plus size={16} className="mr-2" aria-hidden="true" />{t('newCamp')}</Button>
       </div>
 
       {/* Camp list */}
@@ -493,9 +485,7 @@ export default function CampsPage() {
                       {camp.code}
                     </span>
                     <Badge variant={statusVariant(camp.status)}>{camp.status}</Badge>
-                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      {camp.active_children_count.toLocaleString()} children
-                    </span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('children', { active_children_count: camp.active_children_count.toLocaleString() })}</span>
                     {camp.district && (
                       <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                         <MapPin size={12} className="inline mr-0.5" aria-hidden="true" />
@@ -510,9 +500,9 @@ export default function CampsPage() {
                   {confirmingDelete === camp.id
                     ? (
                       <>
-                        <span className="text-xs mr-1" style={{ color: 'var(--text-muted)' }}>Delete camp?</span>
-                        <Button size="sm" variant="danger" loading={deleting === camp.id} onClick={() => handleDelete(camp.id)}>Yes</Button>
-                        <Button size="sm" variant="secondary" onClick={() => setConfirmingDelete(null)}>No</Button>
+                        <span className="text-xs mr-1" style={{ color: 'var(--text-muted)' }}>{t('deleteCamp')}</span>
+                        <Button size="sm" variant="danger" loading={deleting === camp.id} onClick={() => handleDelete(camp.id)}>{t('yes')}</Button>
+                        <Button size="sm" variant="secondary" onClick={() => setConfirmingDelete(null)}>{t('no')}</Button>
                       </>
                     )
                     : (
@@ -531,9 +521,7 @@ export default function CampsPage() {
               {/* Zones panel */}
               {expanded === camp.id && (
                 <div className="px-6 pb-5 pt-3" style={{ backgroundColor: 'var(--bg-sand)' }}>
-                  <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>
-                    Zones in {camp.name}
-                  </p>
+                  <p className="text-xs font-semibold mb-3" style={{ color: 'var(--text-muted)' }}>{t('zonesIn', { name: camp.name })}</p>
                   <ZonesPanel campId={camp.id} />
                 </div>
               )}
@@ -543,20 +531,20 @@ export default function CampsPage() {
         {!isLoading && (camps?.length ?? 0) === 0 && (
           <div className="text-center py-12" style={{ color: 'var(--text-muted)' }}>
             <Globe size={32} className="mx-auto mb-2 opacity-40" aria-hidden="true" />
-            <p className="text-sm font-medium">No camps registered yet.</p>
+            <p className="text-sm font-medium">{t('noCampsRegisteredYet')}</p>
           </div>
         )}
       </div>
 
       {/* Create camp modal */}
       {showCreate && (
-        <Modal title="New camp" onClose={() => setShowCreate(false)}>
+        <Modal title={t('newCamp')} onClose={() => setShowCreate(false)}>
           <form onSubmit={handleCreate} className="flex flex-col gap-3">
             <CampFormFields form={createForm} onChange={setCreateForm} />
             {createError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{createError}</p>}
             <div className="flex gap-2 pt-1">
-              <Button type="submit" variant="primary" loading={creating} className="flex-1">Create camp</Button>
-              <Button type="button" variant="secondary" onClick={() => { setShowCreate(false); setCreateError(''); }}>Cancel</Button>
+              <Button type="submit" variant="primary" loading={creating} className="flex-1">{t('createCamp')}</Button>
+              <Button type="button" variant="secondary" onClick={() => { setShowCreate(false); setCreateError(''); }}>{t('cancel')}</Button>
             </div>
           </form>
         </Modal>
@@ -564,13 +552,13 @@ export default function CampsPage() {
 
       {/* Edit camp modal */}
       {editingCamp && (
-        <Modal title={`Edit camp — ${editingCamp.name}`} onClose={() => setEditingCamp(null)}>
+        <Modal title={t('editCampTitle', { name: editingCamp.name })} onClose={() => setEditingCamp(null)}>
           <form onSubmit={handleSave} className="flex flex-col gap-3">
             <CampFormFields form={editForm} onChange={setEditForm} />
             {editError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{editError}</p>}
             <div className="flex gap-2 pt-1">
-              <Button type="submit" variant="primary" loading={saving} className="flex-1">Save changes</Button>
-              <Button type="button" variant="secondary" onClick={() => setEditingCamp(null)}>Cancel</Button>
+              <Button type="submit" variant="primary" loading={saving} className="flex-1">{t('saveChanges')}</Button>
+              <Button type="button" variant="secondary" onClick={() => setEditingCamp(null)}>{t('cancel')}</Button>
             </div>
           </form>
         </Modal>

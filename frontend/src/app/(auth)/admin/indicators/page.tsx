@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RotateCcw, Target } from 'lucide-react';
@@ -13,12 +14,7 @@ import {
 
 const input = { borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' };
 
-const HOW_JUDGED: Record<IndicatorSetting['kind'], string> = {
-  wasting: 'Judged by the WHO/UNICEF wasting bands (fixed)',
-  stunting: 'Judged by the WHO/UNICEF stunting bands (fixed)',
-  target: 'Judged against the target below',
-  info: 'Shown for information, no target',
-};
+// How each kind is judged: messages/en.json admin.indicators.howJudged.<kind>
 
 /**
  * The indicators government and partner users see (Statistics): what each is called,
@@ -26,16 +22,14 @@ const HOW_JUDGED: Record<IndicatorSetting['kind'], string> = {
  * and Sphere; change them to the Ministry's or the programme's own targets.
  */
 export default function IndicatorsPage() {
+  const t = useTranslations('admin.indicators');
   const { data, isLoading } = useQuery({ queryKey: ['indicator-settings'], queryFn: listIndicatorSettings });
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
       <div>
-        <h2 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>Indicators</h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          The indicators on the Statistics page and in reports. Change a name, a target or the explanation to match the
-          Ministry&apos;s or your programme&apos;s standards. Changes show to every government and partner account straight away.
-        </p>
+        <h2 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>{t('indicators')}</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('theIndicatorsOnThe')}</p>
       </div>
       {isLoading
         ? [...Array(4)].map((_, i) => <Skeleton key={i} className="h-40" />)
@@ -45,6 +39,7 @@ export default function IndicatorsPage() {
 }
 
 function IndicatorEditor({ setting }: { setting: IndicatorSetting }) {
+  const t = useTranslations('admin.indicators');
   const qc = useQueryClient();
   const toast = useToast();
   const [label, setLabel] = useState(setting.current.label);
@@ -61,9 +56,9 @@ function IndicatorEditor({ setting }: { setting: IndicatorSetting }) {
       await saveIndicatorSetting(setting.key, { label, benchmark, target: isTarget && target !== '' ? Number(target) : null });
       await qc.invalidateQueries({ queryKey: ['indicator-settings'] });
       await qc.invalidateQueries({ queryKey: ['insights'] });
-      toast.success(`${label} saved`);
+      toast.success(t('savedLabel', { label }));
     } catch (err: unknown) {
-      toast.error((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Could not save.');
+      toast.error((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? t('couldNotSave'));
     } finally {
       setBusy(false);
     }
@@ -75,7 +70,7 @@ function IndicatorEditor({ setting }: { setting: IndicatorSetting }) {
       await resetIndicatorSetting(setting.key);
       await qc.invalidateQueries({ queryKey: ['indicator-settings'] });
       await qc.invalidateQueries({ queryKey: ['insights'] });
-      toast.success('Back to the built-in settings');
+      toast.success(t('backToTheBuilt'));
     } finally {
       setBusy(false);
     }
@@ -91,41 +86,39 @@ function IndicatorEditor({ setting }: { setting: IndicatorSetting }) {
         <div className="flex-1 min-w-[12rem]">
           <p className="font-semibold" style={{ color: 'var(--ink)' }}>{setting.current.label}</p>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {HOW_JUDGED[setting.kind]}
+            {t(`howJudged.${setting.kind}`)}
             {isTarget && ` · ${setting.higher_is_better ? 'higher is better' : 'lower is better'}`}
           </p>
         </div>
-        {setting.edited && <Badge variant="info">Edited</Badge>}
+        {setting.edited && <Badge variant="info">{t('edited')}</Badge>}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-[1fr_9rem] gap-3">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium" style={{ color: 'var(--ink)' }}>Name shown</span>
+          <span className="font-medium" style={{ color: 'var(--ink)' }}>{t('nameShown')}</span>
           <input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={80}
             className="px-3 py-2 rounded-lg border outline-none" style={input} placeholder={setting.default.label} />
         </label>
         {isTarget && (
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium" style={{ color: 'var(--ink)' }}>Target (%)</span>
+            <span className="font-medium" style={{ color: 'var(--ink)' }}>{t('target')}</span>
             <input value={target} onChange={(e) => setTarget(e.target.value)} inputMode="decimal"
               className="px-3 py-2 rounded-lg border outline-none" style={input} placeholder={String(setting.default.target ?? '')} />
           </label>
         )}
       </div>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium" style={{ color: 'var(--ink)' }}>Explanation (benchmark and source)</span>
+        <span className="font-medium" style={{ color: 'var(--ink)' }}>{t('explanationBenchmarkAndSource')}</span>
         <textarea value={benchmark} onChange={(e) => setBenchmark(e.target.value)} rows={2} maxLength={300}
           className="px-3 py-2 rounded-lg border outline-none" style={input} placeholder={setting.default.benchmark} />
       </label>
-      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-        Built-in: “{setting.default.label}”{setting.default.target != null && `, target ${setting.default.target}%`}.
+      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{setting.default.target != null ? t('builtInTarget', { label: setting.default.label, target: setting.default.target }) : t('builtInOnly', { label: setting.default.label })}
       </p>
       <div className="flex flex-wrap gap-2">
-        <Button variant="primary" size="sm" loading={busy} disabled={!dirty || !label.trim()} onClick={save}>Save</Button>
+        <Button variant="primary" size="sm" loading={busy} disabled={!dirty || !label.trim()} onClick={save}>{t('save')}</Button>
         {setting.edited && (
           <Button variant="secondary" size="sm" disabled={busy} onClick={reset}>
-            <RotateCcw size={14} className="mr-1.5" aria-hidden="true" /> Built-in
-          </Button>
+            <RotateCcw size={14} className="mr-1.5" aria-hidden="true" />{' '}{t('builtIn2')}</Button>
         )}
       </div>
     </section>
