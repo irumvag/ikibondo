@@ -1,5 +1,6 @@
 import base64
 import io
+import uuid
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -10,6 +11,7 @@ from apps.core.responses import success_response, created_response, error_respon
 from apps.core.pagination import StandardPagination
 from apps.accounts.models import UserRole
 from apps.accounts.permissions import IsSupervisorOrAdmin, IsNurseOrSupervisorOrAdmin
+from django.db.models import Q
 from django.utils import timezone as tz
 from .models import Child, Guardian, VisitRequest, VisitRequestStatus, VisitUrgency, ChildClosure, ChildZoneTransfer
 from .serializers import ChildSerializer, ChildCreateSerializer, GuardianSerializer, VisitRequestSerializer
@@ -826,10 +828,18 @@ def guardian_lookup_view(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def scan_qr_view(request, qr_code):
-    """GET /api/v1/children/scan/<qr_code>/ — look up a child by QR code string."""
+    """
+    GET /api/v1/children/scan/<code>/ — find a child from a scanned QR card or a typed code.
+    Accepts the card's QR code, the registration number (any case) or the child's id.
+    """
+    code = qr_code.strip()
+    match = Q(qr_code=code) | Q(registration_number__iexact=code)
     try:
-        child = Child.objects.get(qr_code=qr_code, is_active=True)
-    except Child.DoesNotExist:
+        match |= Q(id=uuid.UUID(code))
+    except ValueError:
+        pass
+    child = Child.objects.filter(match, is_active=True).first()
+    if child is None:
         return error_response('Child not found.', 'NOT_FOUND', status_code=404)
     # CHWs may identify any child in their camp in the field; everyone else follows normal scoping
     same_camp_chw = (

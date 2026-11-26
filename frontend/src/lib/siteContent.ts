@@ -21,6 +21,8 @@ export interface SiteContent {
   about: { title: string; intro_1: string; intro_2: string; principles_title: string; principles: Principle[]; closing: string };
   footer: { tagline: string };
   contact: { title: string; body: string; email: string; phone: string; address: string };
+  'app.parent_home': { title: string; body: string };
+  'app.certificate': { title: string; body: string; steps: Step[] };
 }
 
 export type SectionKey = keyof SiteContent;
@@ -102,6 +104,19 @@ export const DEFAULTS: SiteContent = {
     phone: '',
     address: '',
   },
+  'app.parent_home': {
+    title: 'Your child’s health, in one place',
+    body: 'See each child’s growth and vaccinations, ask for a home visit, and get reminders before a dose is due. Your community health worker is one tap away.',
+  },
+  'app.certificate': {
+    title: 'Getting a vaccination certificate',
+    body: 'The app shows every dose your child has received. For an official, stamped certificate:',
+    steps: [
+      { title: 'Open Vaccines', description: 'Check that every dose your child received is marked as given.' },
+      { title: 'Visit your health centre', description: 'Bring the child’s QR card or registration number to the nurse at your camp.' },
+      { title: 'Collect the certificate', description: 'The nurse prints and stamps the certificate from Ikibondo.' },
+    ],
+  },
 };
 
 // ── Admin editor form description ─────────────────────────────────────────────
@@ -179,6 +194,24 @@ export const SECTIONS: { key: SectionKey; label: string; page: string; fields: F
     key: 'footer', label: 'Footer', page: '/',
     fields: [
       { name: 'tagline', label: 'Text after “Ikibondo”', kind: 'text' },
+    ],
+  },
+  {
+    key: 'app.parent_home', label: 'Mobile app — parent home', page: '',
+    fields: [
+      { name: 'title', label: 'Heading', kind: 'text' },
+      { name: 'body', label: 'Text', kind: 'textarea' },
+    ],
+  },
+  {
+    key: 'app.certificate', label: 'Mobile app — vaccination certificate', page: '',
+    fields: [
+      { name: 'title', label: 'Heading', kind: 'text' },
+      { name: 'body', label: 'Introduction', kind: 'textarea' },
+      { name: 'steps', label: 'Steps', kind: 'list', itemLabel: 'Step', fields: [
+        { name: 'title', label: 'Title', kind: 'text' },
+        { name: 'description', label: 'Description', kind: 'textarea' },
+      ] },
     ],
   },
 ];

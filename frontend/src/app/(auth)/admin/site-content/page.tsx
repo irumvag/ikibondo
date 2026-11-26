@@ -137,10 +137,12 @@ function SectionEditor({ sectionKey, stored, onBack }: { sectionKey: SectionKey;
           <h2 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>{section.label}</h2>
         </div>
         <div className="flex gap-2">
-          <Link href={section.page} target="_blank" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border text-sm font-semibold"
-            style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}>
-            <ExternalLink size={14} aria-hidden="true" /> View page
-          </Link>
+          {section.page && (
+            <Link href={section.page} target="_blank" className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border text-sm font-semibold"
+              style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}>
+              <ExternalLink size={14} aria-hidden="true" /> View page
+            </Link>
+          )}
           {row && (
             <Button variant="secondary" size="sm" onClick={reset}>
               <RotateCcw size={14} className="mr-1.5" aria-hidden="true" /> Built-in text
@@ -203,6 +205,25 @@ function Preview({ sectionKey, content }: { sectionKey: SectionKey; content: unk
         <p className="p-6 text-sm" style={{ color: 'var(--text-muted)' }}>
           <span className="font-extrabold" style={{ color: 'var(--ink)' }}>Ikibondo</span> {c.tagline}
         </p>
+      );
+    }
+    case 'app.parent_home':
+    case 'app.certificate': {
+      const c = content as typeof DEFAULTS['app.certificate'];
+      // Rough phone preview of how the app shows this card
+      return (
+        <div className="p-6 flex justify-center" style={{ backgroundColor: 'var(--bg)' }}>
+          <div className="w-72 rounded-2xl border p-4 flex flex-col gap-2" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Mobile app</p>
+            <h3 className="font-bold" style={{ color: 'var(--ink)' }}>{c.title}</h3>
+            <p className="text-sm" style={{ color: 'var(--text)' }}>{c.body}</p>
+            {(c.steps ?? []).map((st, i) => (
+              <p key={i} className="text-sm" style={{ color: 'var(--text)' }}>
+                <span className="font-semibold">{i + 1}. {st.title}</span> — {st.description}
+              </p>
+            ))}
+          </div>
+        </div>
       );
     }
     case 'about': {
