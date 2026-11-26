@@ -23,6 +23,7 @@ Creates:
 import logging
 from datetime import date, timedelta
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 from django.db import transaction
 
 logger = logging.getLogger(__name__)
@@ -183,7 +184,9 @@ class Command(BaseCommand):
             password = data.pop('password')
             email = data['email']
             if not CustomUser.objects.filter(email=email).exists():
-                user = CustomUser.objects.create_user(password=password, **data)
+                # Demo accounts skip the first-sign-in wizard, so they open straight on their
+                # dashboard (the browser flows rely on it). New accounts still see it.
+                user = CustomUser.objects.create_user(password=password, onboarded_at=timezone.now(), **data)
                 self.stdout.write(f'  User: {user.full_name} ({user.role}) - created')
             else:
                 user = CustomUser.objects.get(email=email)
@@ -396,6 +399,7 @@ class Command(BaseCommand):
             parent = CustomUser.objects.create_user(
                 email='parent@ikibondo.rw', password='parent123', full_name='Uwimana Marie',
                 role=UserRole.PARENT, phone_number='+250781234567', is_approved=True, camp=camps[0],
+                onboarded_at=timezone.now(),
             )
         guardian = children[0].guardian
         if guardian.user_id is None:
@@ -454,7 +458,8 @@ class Command(BaseCommand):
         ):
             if not CustomUser.objects.filter(email=email).exists():
                 CustomUser.objects.create_user(email=email, password=role.lower() + '123', full_name=name,
-                                               role=role, organization=org, is_approved=True)
+                                               role=role, organization=org, is_approved=True,
+                                               onboarded_at=timezone.now())
         self.stdout.write('  Oversight users: Test Ministry of Health (all camps), Test Nutrition NGO (one camp)')
 
         vaccine = Vaccine.objects.order_by('name').first()
