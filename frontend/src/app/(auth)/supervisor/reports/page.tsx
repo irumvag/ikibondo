@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Download, FileBarChart } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -47,6 +48,7 @@ function ZoneReportRow({
   campId: string;
   zone: { id: string; name: string; code: string };
 }) {
+  const t = useTranslations('supervisor.reports');
   const { data: stats, isLoading } = useZoneStats(campId, zone.id);
 
   if (isLoading) return <Skeleton className="h-16 rounded-xl" />;
@@ -67,16 +69,16 @@ function ZoneReportRow({
 
       {stats ? (
         <div className="flex flex-wrap gap-3 flex-1">
-          <Chip label="Children" value={stats.total_children} />
-          <Chip label="HIGH risk" value={stats.risk_distribution.HIGH} variant="danger" />
+          <Chip label={t('children')} value={stats.total_children} />
+          <Chip label={t('highRisk')} value={stats.risk_distribution.HIGH} variant="danger" />
           <Chip label="MEDIUM" value={stats.risk_distribution.MEDIUM} variant="warn" />
-          <Chip label="Active CHWs" value={stats.active_chws} variant="success" />
-          <Chip label="Visits/wk" value={stats.visits_this_week} />
-          <Chip label="Vax coverage" value={`${Math.round(stats.vaccination_coverage_pct)}%`} />
-          <Chip label="Never visited" value={stats.children_never_visited} variant={stats.children_never_visited > 0 ? 'warn' : 'default'} />
+          <Chip label={t('activeChws')} value={stats.active_chws} variant="success" />
+          <Chip label={t('visitsWk')} value={stats.visits_this_week} />
+          <Chip label={t('vaxCoverage')} value={`${Math.round(stats.vaccination_coverage_pct)}%`} />
+          <Chip label={t('neverVisited')} value={stats.children_never_visited} variant={stats.children_never_visited > 0 ? 'warn' : 'default'} />
         </div>
       ) : (
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No data available.</p>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noDataAvailable')}</p>
       )}
 
       {/* Mini risk bar */}
@@ -99,7 +101,7 @@ function ZoneReportRow({
               ) : null;
             })}
           </div>
-          <p className="text-xs text-right" style={{ color: 'var(--text-muted)' }}>risk split</p>
+          <p className="text-xs text-right" style={{ color: 'var(--text-muted)' }}>{t('riskSplit')}</p>
         </div>
       )}
     </div>
@@ -122,6 +124,7 @@ function Chip({ label, value, variant = 'default' }: {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ReportsPage() {
+  const t = useTranslations('supervisor.reports');
   const user = useAuthStore((s) => s.user);
   const campId = user?.camp ?? null;
 
@@ -155,12 +158,10 @@ export default function ReportsPage() {
           <h2
             className="text-2xl font-bold"
             style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            Reports
-          </h2>
+          >{t('reports')}</h2>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {camp ? `${camp.name} · ${camp.code}` : user?.camp_name ?? 'Camp summary'}
-            {zones ? ` · ${zones.length} zones` : ''}
+            {camp ? `${camp.name} · ${camp.code}` : user?.camp_name ?? t('campSummary')}
+            {zones ? t('zoneCount', { count: zones.length }) : ''}
           </p>
         </div>
         <Button
@@ -169,9 +170,7 @@ export default function ReportsPage() {
           loading={exporting}
           disabled={!zones?.length}
         >
-          <Download size={15} className="mr-2" aria-hidden="true" />
-          Export CSV
-        </Button>
+          <Download size={15} className="mr-2" aria-hidden="true" />{t('exportCsv')}</Button>
       </div>
 
       {/* Camp header card */}
@@ -183,25 +182,25 @@ export default function ReportsPage() {
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
         >
           <div>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Camp</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('camp')}</p>
             <p className="font-bold text-lg" style={{ color: 'var(--ink)', fontFamily: 'var(--font-fraunces)' }}>{camp.name}</p>
           </div>
           <div>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Code</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('code')}</p>
             <p className="font-mono font-semibold" style={{ color: 'var(--ink)' }}>{camp.code}</p>
           </div>
           {camp.district && (
             <div>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>District</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('district')}</p>
               <p className="font-semibold" style={{ color: 'var(--ink)' }}>{camp.district}</p>
             </div>
           )}
           <div>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Children</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('children')}</p>
             <p className="font-semibold" style={{ color: 'var(--ink)' }}>{camp.active_children_count.toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Status</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('status')}</p>
             <Badge variant={camp.status === 'ACTIVE' ? 'success' : 'default'}>{camp.status}</Badge>
           </div>
         </div>
@@ -211,7 +210,7 @@ export default function ReportsPage() {
       <div>
         <div className="flex items-center gap-2 mb-4">
           <FileBarChart size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-          <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>Per-zone breakdown</h3>
+          <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{t('perZoneBreakdown')}</h3>
         </div>
         {zonesLoading ? (
           <div className="flex flex-col gap-3">
@@ -224,16 +223,12 @@ export default function ReportsPage() {
             ))}
           </div>
         ) : (
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            No zones configured for this camp.
-          </p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noZonesConfiguredFor')}</p>
         )}
       </div>
 
       {/* Print note */}
-      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-        Use your browser&apos;s print function (Ctrl+P) to print this report, or click Export CSV for a spreadsheet.
-      </p>
+      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('useYourBrowserS')}</p>
     </div>
   );
 }

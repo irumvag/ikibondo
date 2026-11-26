@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ClipboardList, ChevronRight, ChevronDown } from 'lucide-react';
 import { useHealthRecords, useAdminZones } from '@/lib/api/queries';
@@ -20,6 +21,7 @@ function NutBadge({ status }: { status: string | null }) {
 }
 
 function RecordExpanded({ record }: { record: Record<string, unknown> }) {
+  const t = useTranslations('supervisor.healthRecords');
   return (
     <tr>
       <td colSpan={9} style={{ padding: '10px 16px', background: 'color-mix(in srgb, var(--primary) 4%, var(--bg-elev))', borderBottom: '1px solid var(--border)' }}>
@@ -39,7 +41,7 @@ function RecordExpanded({ record }: { record: Record<string, unknown> }) {
         </div>
         {Array.isArray(record.symptom_flags) && (record.symptom_flags as string[]).length > 0 && (
           <div style={{ marginTop: 8 }}>
-            <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Symptoms: </span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('symptoms')}{' '}</span>
             {(record.symptom_flags as string[]).map(s => (
               <span key={s} style={{ fontSize: 11, border: '1px solid var(--warn)', color: 'var(--warn)', borderRadius: 6, padding: '1px 6px', marginRight: 4 }}>{s}</span>
             ))}
@@ -54,6 +56,7 @@ const RISK_OPTIONS = ['', 'HIGH', 'MEDIUM', 'LOW'];
 const NUT_OPTIONS  = ['', 'SAM', 'MAM', 'NORMAL'];
 
 export default function SupervisorHealthRecordsPage() {
+  const t = useTranslations('supervisor.healthRecords');
   const user = useAuthStore(s => s.user);
   const campId = user?.camp ?? null;
   const [riskLevel, setRiskLevel] = useState('');
@@ -77,37 +80,35 @@ export default function SupervisorHealthRecordsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-          Health Records
-        </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{total} records in your camp</p>
+        <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('healthRecords')}</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('recordsInYourCamp', { total: total })}</p>
       </div>
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <select value={riskLevel} onChange={e => { setRiskLevel(e.target.value); setPage(1); }} style={filterSt}>
-          <option value="">All risk levels</option>
+          <option value="">{t('allRiskLevels')}</option>
           {RISK_OPTIONS.filter(Boolean).map(o => <option key={o} value={o}>{o}</option>)}
         </select>
         <select value={nutritionStatus} onChange={e => { setNutritionStatus(e.target.value); setPage(1); }} style={filterSt}>
-          <option value="">All nutrition</option>
+          <option value="">{t('allNutrition')}</option>
           {NUT_OPTIONS.filter(Boolean).map(o => <option key={o} value={o}>{o}</option>)}
         </select>
         <select value={zone} onChange={e => { setZone(e.target.value); setPage(1); }} style={filterSt}>
-          <option value="">All zones</option>
+          <option value="">{t('allZones')}</option>
           {(zones ?? []).map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
         </select>
       </div>
 
       {/* Table */}
       {isLoading ? (
-        <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
+        <p style={{ color: 'var(--text-muted)' }}>{t('loading')}</p>
       ) : isError ? (
-        <p style={{ color: 'var(--danger)' }}>Failed to load records.</p>
+        <p style={{ color: 'var(--danger)' }}>{t('failedToLoadRecords')}</p>
       ) : records.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
           <ClipboardList size={36} style={{ marginBottom: 8, opacity: 0.4 }} />
-          <p>No records found.</p>
+          <p>{t('noRecordsFound')}</p>
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -149,9 +150,9 @@ export default function SupervisorHealthRecordsPage() {
 
       {totalPages > 1 && (
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnSec}>← Prev</button>
+          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnSec}>{t('prev')}</button>
           <span style={{ lineHeight: '32px', fontSize: 13 }}>{page} / {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={btnSec}>Next →</button>
+          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={btnSec}>{t('next')}</button>
         </div>
       )}
     </div>

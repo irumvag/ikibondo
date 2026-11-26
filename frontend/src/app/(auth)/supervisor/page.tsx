@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Baby, AlertTriangle, Activity, Syringe, Users, Eye } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -12,6 +13,7 @@ import { useAdminZones, useZoneStats } from '@/lib/api/queries';
 
 
 export default function SupervisorDashboard() {
+  const t = useTranslations('supervisor.home');
   const user = useAuthStore((s) => s.user);
   const campId = user?.camp ?? null;
 
@@ -37,11 +39,8 @@ export default function SupervisorDashboard() {
           <h2
             className="text-2xl font-bold"
             style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            Zone Overview
-          </h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Welcome back, {user?.full_name ?? 'Supervisor'} &middot; {user?.camp_name ?? '—'}
+          >{t('zoneOverview')}</h2>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('welcomeBackName', { name: user?.full_name ?? t('supervisor'), camp: user?.camp_name ?? '—' })}
           </p>
         </div>
         {zonesLoading ? (
@@ -50,7 +49,7 @@ export default function SupervisorDashboard() {
           <Select
             value={activeZoneId ?? ''}
             onChange={(e) => setSelectedZone(e.target.value)}
-            aria-label="Select zone"
+            aria-label={t('selectZone')}
             options={zones.map((z) => ({ value: z.id, label: `${z.name} (${z.code})` }))}
             className="w-48"
           />
@@ -59,40 +58,38 @@ export default function SupervisorDashboard() {
 
       {/* Alert zone */}
       {stats && stats.children_never_visited > 0 && (
-        <Alert variant="warn" title={`${stats.children_never_visited} child${stats.children_never_visited !== 1 ? 'ren have' : ' has'} never been visited`}>
-          These children have had no CHW home visit recorded. Assign a CHW or schedule a visit.
-        </Alert>
+        <Alert variant="warn" title={t('neverVisited2', { count: stats.children_never_visited })}>{t('theseChildrenHaveHad')}</Alert>
       )}
 
       {/* KPIs — 2-up on phones (matches CHW dashboard) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KPICard
-          label="Children in zone"
+          label={t('childrenInZone')}
           value={stats ? stats.total_children.toLocaleString() : '—'}
           icon={<Baby size={18} />}
           isLoading={statsLoading}
         />
         <KPICard
-          label="HIGH-risk alerts"
+          label={t('highRiskAlerts')}
           value={stats ? stats.risk_distribution.HIGH.toString() : '—'}
           icon={<AlertTriangle size={18} />}
           variant={stats && stats.risk_distribution.HIGH > 0 ? 'danger' : 'default'}
-          subtext="Needs follow-up"
+          subtext={t('needsFollowUp')}
           isLoading={statsLoading}
         />
         <KPICard
-          label="Active CHWs"
+          label={t('activeChws')}
           value={stats ? stats.active_chws.toString() : '—'}
           icon={<Activity size={18} />}
           variant="success"
-          subtext={stats ? `${stats.visits_this_week} visits this week` : undefined}
+          subtext={stats ? t('visitsThisWeek2', { count: stats.visits_this_week }) : undefined}
           isLoading={statsLoading}
         />
         <KPICard
-          label="Vaccination coverage"
+          label={t('vaccinationCoverage')}
           value={stats ? `${Math.round(stats.vaccination_coverage_pct)}%` : '—'}
           icon={<Syringe size={18} />}
-          subtext="Zone average"
+          subtext={t('zoneAverage')}
           isLoading={statsLoading}
         />
       </div>
@@ -104,9 +101,7 @@ export default function SupervisorDashboard() {
           className="rounded-2xl border p-5 flex flex-col gap-4"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
         >
-          <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>
-            Risk distribution
-          </h3>
+          <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{t('riskDistribution')}</h3>
           {statsLoading ? (
             <div className="flex flex-col gap-2">
               {[0, 1, 2].map((i) => <Skeleton key={i} className="h-8 rounded-lg" />)}
@@ -145,7 +140,7 @@ export default function SupervisorDashboard() {
               })}
             </div>
           ) : (
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No data — select a zone above.</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noDataSelectA')}</p>
           )}
         </div>
 
@@ -154,9 +149,7 @@ export default function SupervisorDashboard() {
           className="rounded-2xl border p-5 flex flex-col gap-4"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
         >
-          <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>
-            Workforce snapshot
-          </h3>
+          <h3 className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{t('workforceSnapshot')}</h3>
           {statsLoading ? (
             <div className="flex flex-col gap-2">
               {[0, 1, 2].map((i) => <Skeleton key={i} className="h-8 rounded-lg" />)}
@@ -164,10 +157,10 @@ export default function SupervisorDashboard() {
           ) : stats ? (
             <div className="flex flex-col gap-3">
               {[
-                { icon: Users,   label: 'Active CHWs',          value: stats.active_chws,             variant: 'success' as const },
-                { icon: Users,   label: 'Inactive CHWs',        value: stats.inactive_chws,           variant: stats.inactive_chws > 0 ? 'warn' as const : 'default' as const },
-                { icon: Eye,     label: 'Visits this week',     value: stats.visits_this_week,        variant: 'default' as const },
-                { icon: Baby,    label: 'Never visited',        value: stats.children_never_visited,  variant: stats.children_never_visited > 0 ? 'danger' as const : 'default' as const },
+                { icon: Users,   label: t('activeChws'),          value: stats.active_chws,             variant: 'success' as const },
+                { icon: Users,   label: t('inactiveChws'),        value: stats.inactive_chws,           variant: stats.inactive_chws > 0 ? 'warn' as const : 'default' as const },
+                { icon: Eye,     label: t('visitsThisWeek'),     value: stats.visits_this_week,        variant: 'default' as const },
+                { icon: Baby,    label: t('neverVisited'),        value: stats.children_never_visited,  variant: stats.children_never_visited > 0 ? 'danger' as const : 'default' as const },
               ].map(({ icon: Icon, label, value, variant }) => (
                 <div key={label} className="flex items-center justify-between py-2 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
                   <div className="flex items-center gap-2">
@@ -179,7 +172,7 @@ export default function SupervisorDashboard() {
               ))}
             </div>
           ) : (
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No data — select a zone above.</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noDataSelectA')}</p>
           )}
         </div>
       </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import Link from 'next/link';
 import { Baby, ArrowRight, AlertTriangle } from 'lucide-react';
@@ -11,26 +12,28 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import type { SupervisedChild } from '@/lib/api/supervisor';
 
+type ColumnsT = ReturnType<typeof useTranslations<'supervisor.children'>>;
+
 type ChildWithDeletion = SupervisedChild & { deletion_requested_at?: string | null };
 
-const STATUS_OPTIONS = [
-  { value: '',       label: 'All statuses' },
+const STATUS_OPTIONS = (t: ColumnsT) => [
+  { value: '',       label: t('optAllStatuses') },
   { value: 'SAM',    label: 'SAM'    },
   { value: 'MAM',    label: 'MAM'    },
-  { value: 'NORMAL', label: 'Normal' },
+  { value: 'NORMAL', label: t('optNormal') },
 ];
 
-const VAX_STATUS_OPTIONS = [
-  { value: '',            label: 'All vaccination statuses' },
-  { value: 'OVERDUE',     label: 'Overdue'                  },
-  { value: 'UP_TO_DATE',  label: 'Up to date'               },
-  { value: 'NOT_STARTED', label: 'Not started'              },
+const VAX_STATUS_OPTIONS = (t: ColumnsT) => [
+  { value: '',            label: t('optAllVaccinationStatuses') },
+  { value: 'OVERDUE',     label: t('optOverdue')                  },
+  { value: 'UP_TO_DATE',  label: t('optUpToDate')               },
+  { value: 'NOT_STARTED', label: t('optNotStarted')              },
 ];
 
-const SEX_OPTIONS = [
-  { value: '',  label: 'All' },
-  { value: 'M', label: 'Male'   },
-  { value: 'F', label: 'Female' },
+const SEX_OPTIONS = (t: ColumnsT) => [
+  { value: '',  label: t('optAll') },
+  { value: 'M', label: t('optMale')   },
+  { value: 'F', label: t('optFemale') },
 ];
 
 // ── Close modal ───────────────────────────────────────────────────────────────
@@ -38,6 +41,7 @@ const SEX_OPTIONS = [
 function CloseModal({ child, onDone, onCancel }: {
   child: SupervisedChild; campId: string; onDone: () => void; onCancel: () => void;
 }) {
+  const t = useTranslations('supervisor.children');
   const [status, setStatus] = useState<'DECEASED' | 'TRANSFERRED' | 'DEPARTED'>('DECEASED');
   const [reason, setReason] = useState('');
   const mut = useMutation({
@@ -47,22 +51,22 @@ function CloseModal({ child, onDone, onCancel }: {
   return (
     <div style={overlay}>
       <div style={modal}>
-        <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 700 }}>Close record — {child.full_name}</h3>
-        <label htmlFor="children-closure-reason" style={lbl}>Closure reason</label>
+        <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 700 }}>{t('closeRecord', { full_name: child.full_name })}</h3>
+        <label htmlFor="children-closure-reason" style={lbl}>{t('closureReason')}</label>
         <select id="children-closure-reason" value={status} onChange={e => setStatus(e.target.value as never)} style={inputSt}>
-          <option value="DECEASED">Deceased</option>
-          <option value="TRANSFERRED">Transferred</option>
-          <option value="DEPARTED">Departed</option>
+          <option value="DECEASED">{t('deceased')}</option>
+          <option value="TRANSFERRED">{t('transferred')}</option>
+          <option value="DEPARTED">{t('departed')}</option>
         </select>
-        <label htmlFor="children-details-required" style={{ ...lbl, marginTop: 10 }}>Details (required)</label>
+        <label htmlFor="children-details-required" style={{ ...lbl, marginTop: 10 }}>{t('detailsRequired')}</label>
         <textarea id="children-details-required" value={reason} onChange={e => setReason(e.target.value)} rows={3}
-          style={{ ...inputSt, resize: 'vertical' }} placeholder="Provide additional context…" />
-        {mut.isError && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '6px 0 0' }}>Failed to close record.</p>}
+          style={{ ...inputSt, resize: 'vertical' }} placeholder={t('provideAdditionalContext')} />
+        {mut.isError && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '6px 0 0' }}>{t('failedToCloseRecord')}</p>}
         <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} style={btnSec}>Cancel</button>
+          <button onClick={onCancel} style={btnSec}>{t('cancel')}</button>
           <button onClick={() => mut.mutate()} disabled={!reason.trim() || mut.isPending}
             style={{ ...btnDanger, opacity: (!reason.trim() || mut.isPending) ? 0.5 : 1 }}>
-            {mut.isPending ? 'Closing…' : 'Close Record'}
+            {mut.isPending ? t('closing') : t('closeRecord2')}
           </button>
         </div>
       </div>
@@ -75,6 +79,7 @@ function CloseModal({ child, onDone, onCancel }: {
 function TransferModal({ child, campId, onDone, onCancel }: {
   child: SupervisedChild; campId: string; onDone: () => void; onCancel: () => void;
 }) {
+  const t = useTranslations('supervisor.children');
   const [zoneId, setZoneId] = useState('');
   const { data: zones } = useAdminZones(campId);
   const mut = useMutation({
@@ -84,18 +89,18 @@ function TransferModal({ child, campId, onDone, onCancel }: {
   return (
     <div style={overlay}>
       <div style={modal}>
-        <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 700 }}>Transfer Zone — {child.full_name}</h3>
-        <label htmlFor="children-new-zone" style={lbl}>New zone</label>
+        <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 700 }}>{t('transferZone', { full_name: child.full_name })}</h3>
+        <label htmlFor="children-new-zone" style={lbl}>{t('newZone')}</label>
         <select id="children-new-zone" value={zoneId} onChange={e => setZoneId(e.target.value)} style={inputSt}>
-          <option value="" disabled>Select zone…</option>
+          <option value="" disabled>{t('selectZone')}</option>
           {(zones ?? []).map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
         </select>
-        {mut.isError && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '6px 0 0' }}>Transfer failed.</p>}
+        {mut.isError && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '6px 0 0' }}>{t('transferFailed')}</p>}
         <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} style={btnSec}>Cancel</button>
+          <button onClick={onCancel} style={btnSec}>{t('cancel')}</button>
           <button onClick={() => mut.mutate()} disabled={!zoneId || mut.isPending}
             style={{ ...btnPrimary, opacity: (!zoneId || mut.isPending) ? 0.5 : 1 }}>
-            {mut.isPending ? 'Transferring…' : 'Transfer'}
+            {mut.isPending ? t('transferring') : t('transfer')}
           </button>
         </div>
       </div>
@@ -106,11 +111,12 @@ function TransferModal({ child, campId, onDone, onCancel }: {
 // ── Columns factory ───────────────────────────────────────────────────────────
 
 const COLUMNS = (
+  t: ColumnsT,
   onClose: (c: SupervisedChild) => void,
   onTransfer: (c: SupervisedChild) => void,
 ) => [
   {
-    key: 'full_name', header: 'Child', width: '220px',
+    key: 'full_name', header: t('colChild'), width: '220px',
     render: (v: unknown, row: unknown) => {
       const c = row as ChildWithDeletion;
       return (
@@ -121,7 +127,7 @@ const COLUMNS = (
                 {v as string}
               </p>
               {c.deletion_requested_at && (
-                <span title="Deletion pending"><AlertTriangle size={12} style={{ color: 'var(--danger)' }} /></span>
+                <span title={t('deletionPending')}><AlertTriangle size={12} style={{ color: 'var(--danger)' }} /></span>
               )}
             </div>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{c.registration_number}</p>
@@ -131,20 +137,20 @@ const COLUMNS = (
       );
     },
   },
-  { key: 'age_display', header: 'Age',  width: '90px'  },
+  { key: 'age_display', header: t('colAge'),  width: '90px'  },
   {
-    key: 'sex', header: 'Sex', width: '70px',
-    render: (v: unknown) => (v === 'M' ? 'Male' : 'Female'),
+    key: 'sex', header: t('colSex'), width: '70px',
+    render: (v: unknown) => (v === 'M' ? t('male') : t('female')),
   },
-  { key: 'camp_name',     header: 'Camp',     width: '140px', render: (v: unknown) => (v as string) || '—' },
-  { key: 'guardian_name', header: 'Guardian', width: '150px', render: (v: unknown) => (v as string) || '—' },
+  { key: 'camp_name',     header: t('colCamp'),     width: '140px', render: (v: unknown) => (v as string) || '—' },
+  { key: 'guardian_name', header: t('colGuardian'), width: '150px', render: (v: unknown) => (v as string) || '—' },
   {
-    key: 'guardian_phone', header: 'Phone', width: '130px',
+    key: 'guardian_phone', header: t('colPhone'), width: '130px',
     render: (v: unknown) => (v as string) || '—',
   },
   {
-    key: 'is_active', header: 'Active', width: '80px',
-    render: (v: unknown) => <Badge variant={v ? 'success' : 'default'}>{v ? 'Yes' : 'No'}</Badge>,
+    key: 'is_active', header: t('colActive'), width: '80px',
+    render: (v: unknown) => <Badge variant={v ? 'success' : 'default'}>{v ? t('yes') : t('no')}</Badge>,
   },
   {
     key: 'id', header: '', width: '160px',
@@ -152,8 +158,8 @@ const COLUMNS = (
       const c = row as SupervisedChild;
       return (
         <div style={{ display: 'flex', gap: 5 }}>
-          <button onClick={() => onTransfer(c)} style={btnSmall}>Transfer</button>
-          <button onClick={() => onClose(c)} style={{ ...btnSmall, color: 'var(--danger)' }}>Close</button>
+          <button onClick={() => onTransfer(c)} style={btnSmall}>{t('transfer')}</button>
+          <button onClick={() => onClose(c)} style={{ ...btnSmall, color: 'var(--danger)' }}>{t('close')}</button>
         </div>
       );
     },
@@ -161,6 +167,7 @@ const COLUMNS = (
 ];
 
 export default function ChildrenPage() {
+  const t = useTranslations('supervisor.children');
   const qc = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const campId = user?.camp ?? '';
@@ -198,11 +205,9 @@ export default function ChildrenPage() {
         <h2
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          Children
-        </h2>
+        >{t('children')}</h2>
         <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          {data ? `${data.count.toLocaleString()} registered in your camp` : 'All registered children in your camp.'}
+          {data ? t('registeredInCamp', { count: data.count }) : t('allRegisteredChildrenIn')}
         </p>
       </div>
 
@@ -212,19 +217,19 @@ export default function ChildrenPage() {
         <input
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          placeholder="Search by name or parent…"
+          placeholder={t('searchByNameOr')}
           className="text-sm px-3 py-1.5 rounded-lg border outline-none flex-1 min-w-[200px]"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
-          aria-label="Search children"
+          aria-label={t('searchChildren')}
         />
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           className="text-sm px-3 py-1.5 rounded-lg border outline-none"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
-          aria-label="Filter by nutrition status"
+          aria-label={t('filterByNutritionStatus')}
         >
-          {STATUS_OPTIONS.map((o) => (
+          {STATUS_OPTIONS(t).map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
@@ -233,9 +238,9 @@ export default function ChildrenPage() {
           onChange={(e) => { setVaxFilter(e.target.value); setPage(1); }}
           className="text-sm px-3 py-1.5 rounded-lg border outline-none"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
-          aria-label="Filter by vaccination status"
+          aria-label={t('filterByVaccinationStatus')}
         >
-          {VAX_STATUS_OPTIONS.map((o) => (
+          {VAX_STATUS_OPTIONS(t).map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
@@ -244,16 +249,16 @@ export default function ChildrenPage() {
           onChange={(e) => setSexFilter(e.target.value)}
           className="text-sm px-3 py-1.5 rounded-lg border outline-none"
           style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
-          aria-label="Filter by sex"
+          aria-label={t('filterBySex')}
         >
-          {SEX_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label === 'All' ? 'All sexes' : o.label}</option>
+          {SEX_OPTIONS(t).map((o) => (
+            <option key={o.value} value={o.value}>{o.label === 'All' ? t('allSexes') : o.label}</option>
           ))}
         </select>
       </div>
 
       <DataTable
-        columns={COLUMNS(setCloseTarget, setTransferTarget) as Parameters<typeof DataTable>[0]['columns']}
+        columns={COLUMNS(t, setCloseTarget, setTransferTarget) as Parameters<typeof DataTable>[0]['columns']}
         data={displayed}
         keyField="id"
         isLoading={isLoading}

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { GitBranch, CheckCircle } from 'lucide-react';
@@ -18,25 +19,25 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function CompleteModal({ referral, onDone, onCancel }: { referral: AdminReferral; onDone: () => void; onCancel: () => void }) {
+  const t = useTranslations('supervisor.referrals');
   const [outcome, setOutcome] = useState('');
   const mut = useMutation({ mutationFn: () => completeReferral(referral.id, outcome), onSuccess: onDone });
   return (
     <div style={overlay}>
       <div style={modal}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700 }}>Complete Referral — {referral.child_name}</h3>
-        <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text-muted)' }}>
-          Facility: <strong style={{ color: 'var(--ink)' }}>{referral.target_facility}</strong>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700 }}>{t('completeReferral', { child_name: referral.child_name })}</h3>
+        <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text-muted)' }}>{t('facility')}{' '}<strong style={{ color: 'var(--ink)' }}>{referral.target_facility}</strong>
         </p>
-        <label htmlFor="referrals-outcome-notes-required" style={lbl}>Outcome notes (required)</label>
+        <label htmlFor="referrals-outcome-notes-required" style={lbl}>{t('outcomeNotesRequired')}</label>
         <textarea id="referrals-outcome-notes-required" value={outcome} onChange={e => setOutcome(e.target.value)} rows={3}
-          style={{ ...inputSt, resize: 'vertical' }} placeholder="Describe the referral outcome…" />
-        {mut.isError && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '6px 0 0' }}>Failed to complete referral.</p>}
+          style={{ ...inputSt, resize: 'vertical' }} placeholder={t('describeTheReferralOutcome')} />
+        {mut.isError && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '6px 0 0' }}>{t('failedToCompleteReferral')}</p>}
         <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} style={btnSec}>Cancel</button>
+          <button onClick={onCancel} style={btnSec}>{t('cancel')}</button>
           <button onClick={() => mut.mutate()} disabled={!outcome.trim() || mut.isPending}
             style={{ background: 'var(--success)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, opacity: (!outcome.trim() || mut.isPending) ? 0.5 : 1 }}>
             <CheckCircle size={14} style={{ marginRight: 5, verticalAlign: 'middle' }} />
-            {mut.isPending ? 'Saving…' : 'Mark Complete'}
+            {mut.isPending ? t('saving') : t('markComplete')}
           </button>
         </div>
       </div>
@@ -47,6 +48,7 @@ function CompleteModal({ referral, onDone, onCancel }: { referral: AdminReferral
 const STATUSES = ['', 'PENDING', 'COMPLETED', 'CANCELLED'];
 
 export default function SupervisorReferralsPage() {
+  const t = useTranslations('supervisor.referrals');
   const qc = useQueryClient();
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
@@ -62,10 +64,8 @@ export default function SupervisorReferralsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-          Referrals
-        </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{total} referrals in your camp</p>
+        <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('referrals')}</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('referralsInYourCamp', { total: total })}</p>
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -76,18 +76,18 @@ export default function SupervisorReferralsPage() {
             background: status === s ? 'color-mix(in srgb, var(--primary) 10%, var(--bg-elev))' : 'var(--bg-elev)',
             color: status === s ? 'var(--primary)' : 'var(--ink)', fontWeight: status === s ? 600 : 400,
           }}>
-            {s || 'All'}
+            {s || t('all')}
           </button>
         ))}
       </div>
 
       {isLoading ? (
-        <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
+        <p style={{ color: 'var(--text-muted)' }}>{t('loading')}</p>
       ) : isError ? (
-        <p style={{ color: 'var(--danger)' }}>Failed to load referrals.</p>
+        <p style={{ color: 'var(--danger)' }}>{t('failedToLoadReferrals')}</p>
       ) : items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-          <GitBranch size={36} style={{ marginBottom: 8, opacity: 0.4 }} /><p>No referrals found.</p>
+          <GitBranch size={36} style={{ marginBottom: 8, opacity: 0.4 }} /><p>{t('noReferralsFound')}</p>
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -113,9 +113,7 @@ export default function SupervisorReferralsPage() {
                   <td style={td}>
                     {r.status === 'PENDING' && (
                       <button onClick={() => setCompleteTarget(r)}
-                        style={{ background: 'none', border: '1px solid var(--success)', color: 'var(--success)', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontSize: 12 }}>
-                        Complete
-                      </button>
+                        style={{ background: 'none', border: '1px solid var(--success)', color: 'var(--success)', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontSize: 12 }}>{t('complete')}</button>
                     )}
                   </td>
                 </tr>
@@ -127,9 +125,9 @@ export default function SupervisorReferralsPage() {
 
       {totalPages > 1 && (
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnSec}>← Prev</button>
+          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnSec}>{t('prev')}</button>
           <span style={{ lineHeight: '32px', fontSize: 13 }}>{page} / {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={btnSec}>Next →</button>
+          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={btnSec}>{t('next')}</button>
         </div>
       )}
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { MapPin, Plus, X, Check } from 'lucide-react';
@@ -31,6 +32,7 @@ const EMPTY_FORM: ZoneForm = {
 const STATUS_OPTIONS = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
 
 export default function SupervisorZonesPage() {
+  const t = useTranslations('supervisor.zones');
   const user   = useAuthStore((s) => s.user);
   const campId = user?.camp ?? '';
   const qc     = useQueryClient();
@@ -84,10 +86,10 @@ export default function SupervisorZonesPage() {
       };
       if (editing) {
         await updateZone(campId, editing.id, payload);
-        setToast(`Zone "${form.name}" updated.`);
+        setToast(t('zoneUpdated', { name: form.name }));
       } else {
         await createZone(campId, payload);
-        setToast(`Zone "${form.name}" created.`);
+        setToast(t('zoneCreated', { name: form.name }));
       }
       await invalidate();
       setShowCreate(false);
@@ -102,15 +104,15 @@ export default function SupervisorZonesPage() {
   }
 
   async function handleDelete(z: Zone) {
-    if (!confirm(`Delete zone "${z.name}"? This cannot be undone.`)) return;
+    if (!confirm(t('confirmDeleteZone', { name: z.name }))) return;
     setDeleting(z.id);
     try {
       await deleteZone(campId, z.id);
       await invalidate();
-      setToast(`Zone "${z.name}" deleted.`);
+      setToast(t('zoneDeleted', { name: z.name }));
       setTimeout(() => setToast(''), 4000);
     } catch {
-      alert('Failed to delete zone.');
+      alert(t('failedToDeleteZone'));
     } finally {
       setDeleting(null);
     }
@@ -139,17 +141,12 @@ export default function SupervisorZonesPage() {
           <h2
             className="text-2xl font-bold"
             style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            Zones
-          </h2>
+          >{t('zones')}</h2>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {user?.camp_name ?? 'Your camp'} — manage geographic zones
-          </p>
+            {t('campZones', { camp: user?.camp_name ?? t('yourCamp') })}</p>
         </div>
         <Button variant="primary" onClick={openCreate}>
-          <Plus size={16} className="mr-1.5" aria-hidden="true" />
-          Add zone
-        </Button>
+          <Plus size={16} className="mr-1.5" aria-hidden="true" />{t('addZone')}</Button>
       </div>
 
       {/* Zone list */}
@@ -160,9 +157,9 @@ export default function SupervisorZonesPage() {
       ) : zones.length === 0 ? (
         <EmptyState
           icon={<MapPin size={28} />}
-          title="No zones yet"
-          description="Add zones to organise your camp into areas managed by CHWs."
-          action={{ label: 'Add first zone', onClick: openCreate }}
+          title={t('noZonesYet')}
+          description={t('addZonesToOrganise')}
+          action={{ label: t('addFirstZone'), onClick: openCreate }}
         />
       ) : (
         <div
@@ -187,21 +184,19 @@ export default function SupervisorZonesPage() {
                   <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{z.description}</p>
                 )}
                 <div className="flex gap-4 mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                  {z.estimated_households != null && <span>{z.estimated_households.toLocaleString()} households</span>}
-                  {z.estimated_population != null && <span>{z.estimated_population.toLocaleString()} people</span>}
+                  {z.estimated_households != null && <span>{t('households', { estimated_households: z.estimated_households.toLocaleString() })}</span>}
+                  {z.estimated_population != null && <span>{t('people', { estimated_population: z.estimated_population.toLocaleString() })}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <Button size="sm" variant="secondary" onClick={() => openEdit(z)}>
-                  Edit
-                </Button>
+                <Button size="sm" variant="secondary" onClick={() => openEdit(z)}>{t('edit')}</Button>
                 <button
                   type="button"
                   onClick={() => handleDelete(z)}
                   disabled={deleting === z.id}
                   className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-[var(--high-bg)] disabled:opacity-50"
                   style={{ color: 'var(--text-muted)' }}
-                  aria-label={`Delete zone ${z.name}`}
+                  aria-label={t('deleteZoneLabel', { name: z.name })}
                 >
                   {deleting === z.id ? '…' : <X size={14} aria-hidden="true" />}
                 </button>
@@ -226,26 +221,26 @@ export default function SupervisorZonesPage() {
               className="font-bold text-lg"
               style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
             >
-              {editing ? 'Edit zone' : 'New zone'}
+              {editing ? t('editZone') : t('newZone')}
             </h3>
 
             <form onSubmit={handleSave} className="flex flex-col gap-3">
               <Input
-                label="Zone name"
+                label={t('zoneName')}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
-                placeholder="e.g. North Block A"
+                placeholder={t('eGNorthBlock')}
               />
               <Input
-                label="Zone code"
+                label={t('zoneCode')}
                 value={form.code}
                 onChange={(e) => setForm({ ...form, code: e.target.value })}
                 required
-                placeholder="e.g. NBA-01"
+                placeholder={t('eGNba01')}
               />
               <div className="flex flex-col gap-1">
-                <p id="zones-status-label" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Status</p>
+                <p id="zones-status-label" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('status')}</p>
                 <div role="group" aria-labelledby="zones-status-label" className="flex gap-2">
                   {STATUS_OPTIONS.map((s) => (
                     <button
@@ -267,14 +262,14 @@ export default function SupervisorZonesPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Input
-                  label="Est. households"
+                  label={t('estHouseholds')}
                   type="number"
                   value={form.estimated_households}
                   onChange={(e) => setForm({ ...form, estimated_households: e.target.value })}
                   placeholder="e.g. 500"
                 />
                 <Input
-                  label="Est. population"
+                  label={t('estPopulation')}
                   type="number"
                   value={form.estimated_population}
                   onChange={(e) => setForm({ ...form, estimated_population: e.target.value })}
@@ -282,12 +277,12 @@ export default function SupervisorZonesPage() {
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="zones-description-optional" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Description (optional)</label>
+                <label htmlFor="zones-description-optional" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{t('descriptionOptional')}</label>
                 <textarea id="zones-description-optional"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   rows={2}
-                  placeholder="Brief description of this zone..."
+                  placeholder={t('briefDescriptionOfThis')}
                   className="px-3 py-2 rounded-xl border text-sm resize-none outline-none"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
                 />
@@ -299,15 +294,13 @@ export default function SupervisorZonesPage() {
 
               <div className="flex gap-2 pt-1">
                 <Button type="submit" variant="primary" loading={saving} className="flex-1">
-                  {editing ? 'Save changes' : 'Create zone'}
+                  {editing ? t('saveChanges') : t('createZone')}
                 </Button>
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={() => { setShowCreate(false); setSaveError(''); }}
-                >
-                  Cancel
-                </Button>
+                >{t('cancel')}</Button>
               </div>
             </form>
           </div>

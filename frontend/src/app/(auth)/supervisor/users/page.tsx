@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -16,17 +17,20 @@ import { Input } from '@/components/ui/Input';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { AuthUser } from '@/store/authStore';
 
+type ColumnsT = ReturnType<typeof useTranslations<'supervisor.users'>>;
+
 const STAFF_ROLES = ['CHW', 'NURSE'] as const;
 type StaffRole = (typeof STAFF_ROLES)[number];
 
-const ROLE_LABELS: Record<string, string> = { CHW: 'Community Health Worker', NURSE: 'Nurse', PARENT: 'Parent' };
+// Text: messages/en.json supervisor.users.roleName.<code>
+const ROLES = ['CHW', 'NURSE', 'PARENT'] as const;
 
-const TABS = [
-  { id: 'approvals', label: 'Pending approvals', icon: UserCheck },
-  { id: 'staff',     label: 'CHWs & Nurses',     icon: Users },
-  { id: 'assign',    label: 'Assign CHW',         icon: UserCog },
+const TABS = (tt: ColumnsT) => [
+  { id: 'approvals', label: tt('tabPendingApprovals'), icon: UserCheck },
+  { id: 'staff',     label: tt('tabChwsNurses'),     icon: Users },
+  { id: 'assign',    label: tt('tabAssignChw'),         icon: UserCog },
 ] as const;
-type Tab = (typeof TABS)[number]['id'];
+type Tab = ReturnType<typeof TABS>[number]['id'];
 
 const TOAST_MS = 5000;
 
@@ -42,6 +46,7 @@ function PendingRow({ user, onApprove, approving }: {
   onApprove: (id: string) => void;
   approving: string | null;
 }) {
+  const tt = useTranslations('supervisor.users');
   return (
     <div
       className="flex items-center gap-4 px-5 py-4 border-b last:border-b-0"
@@ -59,16 +64,15 @@ function PendingRow({ user, onApprove, approving }: {
           {user.email} {user.phone_number ? `· ${user.phone_number}` : ''}
         </p>
       </div>
-      <Badge variant="warn">Pending</Badge>
-      <Button size="sm" variant="secondary" loading={approving === user.id} onClick={() => onApprove(user.id)}>
-        Approve
-      </Button>
+      <Badge variant="warn">{tt('pending')}</Badge>
+      <Button size="sm" variant="secondary" loading={approving === user.id} onClick={() => onApprove(user.id)}>{tt('approve')}</Button>
     </div>
   );
 }
 
 // ── Staff row ─────────────────────────────────────────────────────────────────
 function StaffRow({ user }: { user: AuthUser }) {
+  const tt = useTranslations('supervisor.users');
   return (
     <div
       className="flex items-center gap-4 px-5 py-4 border-b last:border-b-0"
@@ -87,10 +91,10 @@ function StaffRow({ user }: { user: AuthUser }) {
         </p>
       </div>
       <Badge variant={user.role === 'NURSE' ? 'info' : 'default'}>
-        {ROLE_LABELS[user.role] ?? user.role}
+        {(ROLES as readonly string[]).includes(user.role) ? tt(`roleName.${user.role as (typeof ROLES)[number]}`) : user.role}
       </Badge>
       <Badge variant={user.is_approved ? 'success' : 'warn'}>
-        {user.is_approved ? 'Active' : 'Pending'}
+        {user.is_approved ? tt('active') : tt('pending')}
       </Badge>
     </div>
   );
@@ -102,6 +106,7 @@ function GuardianRow({ g, chws, onAssign }: {
   chws: AuthUser[];
   onAssign: (guardianId: string, chwId: string | null) => Promise<void>;
 }) {
+  const tt = useTranslations('supervisor.users');
   const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState(g.assigned_chw ?? '');
 
@@ -139,9 +144,7 @@ function GuardianRow({ g, chws, onAssign }: {
           {g.phone_number} · {g.relationship}
           {g.has_account && (
             <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
-              style={{ backgroundColor: '#f0fdf4', color: 'var(--success)' }}>
-              Has app account
-            </span>
+              style={{ backgroundColor: '#f0fdf4', color: 'var(--success)' }}>{tt('hasAppAccount')}</span>
           )}
         </p>
       </div>
@@ -155,13 +158,13 @@ function GuardianRow({ g, chws, onAssign }: {
           onChange={(e) => handleChange(e.target.value)}
           style={inputStyle}
         >
-          <option value="">— No CHW —</option>
+          <option value="">{tt('noChw')}</option>
           {chws.map((c) => (
             <option key={c.id} value={c.id}>{c.full_name}</option>
           ))}
         </select>
         {saving && (
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Saving…</span>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{tt('saving')}</span>
         )}
         {!saving && selected && (
           <Check size={13} style={{ color: 'var(--success)' }} />
@@ -173,6 +176,7 @@ function GuardianRow({ g, chws, onAssign }: {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function SupervisorUsersPage() {
+  const tt = useTranslations('supervisor.users');
   const qc   = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const campId = user?.camp ?? null;
@@ -241,7 +245,7 @@ export default function SupervisorUsersPage() {
       qc.invalidateQueries({ queryKey: QK.adminUsers });
       setShowCreate(false);
       setForm(EMPTY_FORM);
-      setToast(`Account created. Welcome email sent to ${created.email}.`);
+      setToast(tt('accountCreatedEmail', { email: created.email }));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setCreateError(msg ?? 'Failed to create account. Please try again.');
@@ -271,18 +275,12 @@ export default function SupervisorUsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-            Camp staff & families
-          </h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Approve parents, manage CHWs, and assign families to health workers.
-          </p>
+          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{tt('campStaffFamilies')}</h2>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{tt('approveParentsManageChws')}</p>
         </div>
         {activeTab === 'staff' && (
           <Button variant="primary" onClick={() => setShowCreate(true)}>
-            <UserPlus size={16} className="mr-2" />
-            Add staff
-          </Button>
+            <UserPlus size={16} className="mr-2" />{tt('addStaff')}</Button>
         )}
       </div>
 
@@ -291,7 +289,7 @@ export default function SupervisorUsersPage() {
         className="flex rounded-xl p-1 gap-1"
         style={{ backgroundColor: 'var(--bg-elev)', border: '1px solid var(--border)' }}
       >
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {TABS(tt).map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
@@ -330,10 +328,8 @@ export default function SupervisorUsersPage() {
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
             >
               <UserCheck size={36} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
-              <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>No pending approvals</p>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                All parent registrations in your camp have been reviewed.
-              </p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{tt('noPendingApprovals')}</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{tt('allParentRegistrationsIn')}</p>
             </div>
           ) : (
             <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
@@ -358,10 +354,8 @@ export default function SupervisorUsersPage() {
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
             >
               <Users size={36} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
-              <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>No staff accounts yet</p>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                Use &ldquo;Add staff&rdquo; to create a CHW or Nurse account.
-              </p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{tt('noStaffAccountsYet')}</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{tt('useAddStaffTo')}</p>
             </div>
           ) : (
             <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
@@ -375,9 +369,7 @@ export default function SupervisorUsersPage() {
       {activeTab === 'assign' && (
         <>
           <div className="flex flex-col gap-1">
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Assign a CHW to each guardian family so they can conduct home visits and view health records.
-            </p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{tt('assignAChwTo')}</p>
           </div>
 
           {/* Search */}
@@ -387,7 +379,7 @@ export default function SupervisorUsersPage() {
               type="text"
               value={guardianSearch}
               onChange={(e) => setGuardianSearch(e.target.value)}
-              placeholder="Search family by name or phone…"
+              placeholder={tt('searchFamilyByName')}
               className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border outline-none"
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
             />
@@ -397,9 +389,7 @@ export default function SupervisorUsersPage() {
             <div
               className="flex items-center gap-3 p-4 rounded-xl text-sm"
               style={{ backgroundColor: 'color-mix(in srgb, var(--warn) 8%, var(--bg-elev))', border: '1px solid var(--warn)', color: 'var(--ink)' }}
-            >
-              No active CHWs in your camp yet. Create CHW accounts in the &ldquo;CHWs &amp; Nurses&rdquo; tab first.
-            </div>
+            >{tt('noActiveChwsIn')}</div>
           )}
 
           {guardiansLoading ? (
@@ -413,7 +403,7 @@ export default function SupervisorUsersPage() {
             >
               <Baby size={36} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
               <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-                {guardianSearch ? 'No families match your search' : 'No guardian families yet'}
+                {guardianSearch ? tt('noFamiliesMatchYour') : tt('noGuardianFamiliesYet')}
               </p>
             </div>
           ) : (
@@ -438,19 +428,17 @@ export default function SupervisorUsersPage() {
             style={{ backgroundColor: 'var(--bg-elev)', border: '1px solid var(--border)' }}
           >
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-lg" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-                Add staff account
-              </h3>
+              <h3 className="font-bold text-lg" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{tt('addStaffAccount')}</h3>
               <button type="button" onClick={() => setShowCreate(false)}>
                 <X size={18} style={{ color: 'var(--text-muted)' }} />
               </button>
             </div>
             <form onSubmit={handleCreate} className="flex flex-col gap-3">
-              <Input label="Full name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required />
-              <Input label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-              <Input label="Phone number (optional)" type="tel" value={form.phone_number} onChange={(e) => setForm({ ...form, phone_number: e.target.value })} />
+              <Input label={tt('fullName')} value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required />
+              <Input label={tt('email')} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+              <Input label={tt('phoneNumberOptional')} type="tel" value={form.phone_number} onChange={(e) => setForm({ ...form, phone_number: e.target.value })} />
               <div className="flex flex-col gap-1.5">
-                <p id="users-role-label" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Role</p>
+                <p id="users-role-label" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{tt('role')}</p>
                 <div role="group" aria-labelledby="users-role-label" className="flex gap-2">
                   {STAFF_ROLES.map((r) => (
                     <button
@@ -464,21 +452,21 @@ export default function SupervisorUsersPage() {
                         color:           form.role === r ? 'var(--bg)' : 'var(--text-muted)',
                       }}
                     >
-                      {r === 'CHW' ? 'CHW' : 'Nurse'}
+                      {r === 'CHW' ? 'CHW' : tt('nurse')}
                     </button>
                   ))}
                 </div>
               </div>
               <Input
-                label="Temporary password (optional — leave blank to auto-generate)"
+                label={tt('temporaryPasswordOptionalLeave')}
                 type="password" value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 autoComplete="new-password"
               />
               {createError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{createError}</p>}
               <div className="flex gap-2 pt-1">
-                <Button type="submit" variant="primary" loading={creating} className="flex-1">Create account</Button>
-                <Button type="button" variant="secondary" onClick={() => { setShowCreate(false); setCreateError(''); }}>Cancel</Button>
+                <Button type="submit" variant="primary" loading={creating} className="flex-1">{tt('createAccount')}</Button>
+                <Button type="button" variant="secondary" onClick={() => { setShowCreate(false); setCreateError(''); }}>{tt('cancel')}</Button>
               </div>
             </form>
           </div>

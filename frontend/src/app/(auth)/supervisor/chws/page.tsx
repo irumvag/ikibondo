@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Activity, Phone } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -9,10 +10,12 @@ import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { CHWActivity } from '@/lib/api/supervisor';
 
-const COLUMNS = [
-  { key: 'full_name', header: 'CHW Name', width: '180px' },
+type ColumnsT = ReturnType<typeof useTranslations<'supervisor.chws'>>;
+
+const COLUMNS = (t: ColumnsT) => [
+  { key: 'full_name', header: t('colChwName'), width: '180px' },
   {
-    key: 'phone_number', header: 'Phone', width: '140px',
+    key: 'phone_number', header: t('colPhone'), width: '140px',
     render: (v: unknown) =>
       v ? (
         <span className="flex items-center gap-1 text-sm">
@@ -22,15 +25,15 @@ const COLUMNS = [
       ) : <span style={{ color: 'var(--text-muted)' }}>—</span>,
   },
   {
-    key: 'status', header: 'Visit activity', width: '130px',
+    key: 'status', header: t('colVisitActivity'), width: '130px',
     render: (v: unknown) => (
       <Badge variant={(v as string) === 'active' ? 'success' : 'warn'}>
-        {(v as string) === 'active' ? 'Active this week' : 'No recent visits'}
+        {(v as string) === 'active' ? t('activeThisWeek2') : t('noRecentVisits')}
       </Badge>
     ),
   },
   {
-    key: 'visits_7d', header: 'Visits (7d)', width: '110px',
+    key: 'visits_7d', header: t('colVisits7d'), width: '110px',
     render: (v: unknown) => (
       <span
         className="font-semibold"
@@ -41,19 +44,20 @@ const COLUMNS = [
     ),
   },
   {
-    key: 'visits_30d', header: 'Visits (30d)', width: '110px',
+    key: 'visits_30d', header: t('colVisits30d'), width: '110px',
     render: (v: unknown) => v as number,
   },
   {
-    key: 'last_visit_at', header: 'Last visit', width: '140px',
+    key: 'last_visit_at', header: t('colLastVisit'), width: '140px',
     render: (v: unknown) =>
       v ? new Date(v as string).toLocaleDateString() : (
-        <Badge variant="warn">Never</Badge>
+        <Badge variant="warn">{t('never')}</Badge>
       ),
   },
 ];
 
 export default function CHWsPage() {
+  const t = useTranslations('supervisor.chws');
   const user = useAuthStore((s) => s.user);
   const campId = user?.camp ?? null;
 
@@ -74,11 +78,9 @@ export default function CHWsPage() {
           <h2
             className="text-2xl font-bold"
             style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            CHW Activity
-          </h2>
+          >{t('chwActivity')}</h2>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {chws ? `${activeCount} active · ${inactiveCount} inactive` : 'Tracking field worker visits by zone.'}
+            {chws ? t('activeInactive', { active: activeCount, inactive: inactiveCount }) : t('trackingFieldWorkerVisits')}
           </p>
         </div>
 
@@ -94,7 +96,7 @@ export default function CHWsPage() {
               backgroundColor: 'var(--bg-elev)',
               color: 'var(--ink)',
             }}
-            aria-label="Select zone"
+            aria-label={t('selectZone')}
           >
             {zones?.map((z) => (
               <option key={z.id} value={z.id}>{z.name} ({z.code})</option>
@@ -108,19 +110,19 @@ export default function CHWsPage() {
         <div className="flex gap-3 flex-wrap">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm" style={{ backgroundColor: 'var(--bg-sand)' }}>
             <Activity size={14} style={{ color: 'var(--success, #22c55e)' }} aria-hidden="true" />
-            <span style={{ color: 'var(--ink)' }}><strong>{activeCount}</strong> active this week</span>
+            <span style={{ color: 'var(--ink)' }}><strong>{activeCount}</strong>{' '}{t('activeThisWeek')}</span>
           </div>
           {inactiveCount > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm" style={{ backgroundColor: 'var(--bg-sand)' }}>
               <Activity size={14} style={{ color: 'var(--warn, #f59e0b)' }} aria-hidden="true" />
-              <span style={{ color: 'var(--ink)' }}><strong>{inactiveCount}</strong> inactive</span>
+              <span style={{ color: 'var(--ink)' }}><strong>{inactiveCount}</strong>{' '}{t('inactive')}</span>
             </div>
           )}
         </div>
       )}
 
       <DataTable
-        columns={COLUMNS as Parameters<typeof DataTable>[0]['columns']}
+        columns={COLUMNS(t) as Parameters<typeof DataTable>[0]['columns']}
         data={(chws ?? []) }
         keyField="user_id"
         isLoading={chwsLoading || zonesLoading}

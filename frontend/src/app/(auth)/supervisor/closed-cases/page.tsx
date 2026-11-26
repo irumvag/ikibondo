@@ -8,6 +8,7 @@
  * grouped first because they're the most sensitive class and often what
  * a reviewer specifically wants to find.
  */
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
@@ -19,11 +20,11 @@ type StatusFilter = 'ALL' | 'DECEASED' | 'TRANSFERRED' | 'DEPARTED';
 
 const STATUS_META: Record<
   ClosedCase['status'],
-  { label: string; bg: string; fg: string }
+  { bg: string; fg: string }
 > = {
-  DECEASED:    { label: 'Deceased',    bg: 'var(--high-bg)', fg: 'var(--danger)'  },
-  TRANSFERRED: { label: 'Transferred', bg: 'var(--med-bg)',  fg: 'var(--warn)'    },
-  DEPARTED:    { label: 'Departed',    bg: 'var(--low-bg)',  fg: 'var(--success)' },
+  DECEASED:    { bg: 'var(--high-bg)', fg: 'var(--danger)'  },
+  TRANSFERRED: { bg: 'var(--med-bg)',  fg: 'var(--warn)'    },
+  DEPARTED:    { bg: 'var(--low-bg)',  fg: 'var(--success)' },
 };
 
 function fmtDate(iso: string): string {
@@ -34,6 +35,7 @@ function fmtDate(iso: string): string {
 }
 
 export default function ClosedCasesPage() {
+  const t = useTranslations('supervisor.closedCases');
   const [filter, setFilter] = useState<StatusFilter>('ALL');
 
   const { data, isLoading, error } = useQuery({
@@ -52,9 +54,7 @@ export default function ClosedCasesPage() {
     <div className="max-w-4xl mx-auto flex flex-col gap-6">
       <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
         <Link href="/supervisor" className="flex items-center gap-1 hover:underline">
-          <ArrowLeft size={14} aria-hidden="true" />
-          Back
-        </Link>
+          <ArrowLeft size={14} aria-hidden="true" />{t('back')}</Link>
       </div>
 
       <div>
@@ -62,14 +62,8 @@ export default function ClosedCasesPage() {
           className="text-2xl md:text-3xl font-bold flex items-center gap-2"
           style={{ fontFamily: 'var(--font-serif)', color: 'var(--ink)' }}
         >
-          <ClipboardList size={22} aria-hidden="true" />
-          Closed cases
-        </h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Deceased, transferred, and departed children. This is the audit trail
-          — closed cases stay in the database and stop appearing in active
-          lists, dashboards, and reports.
-        </p>
+          <ClipboardList size={22} aria-hidden="true" />{t('closedCases')}</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('deceasedTransferredAndDeparted')}</p>
       </div>
 
       {/* Filter chips — scroll on narrow screens */}
@@ -90,7 +84,7 @@ export default function ClosedCasesPage() {
                 borderColor: active ? 'var(--ink)' : 'var(--border)',
               }}
             >
-              {f === 'ALL' ? 'All' : STATUS_META[f].label}
+              {f === 'ALL' ? t('all') : t(`status.${f}`)}
               <span className="ml-2 text-xs opacity-70">{badge}</span>
             </button>
           );
@@ -109,17 +103,14 @@ export default function ClosedCasesPage() {
           className="flex items-start gap-3 p-4 rounded-xl text-sm"
           style={{ background: 'var(--high-bg)', color: 'var(--danger)' }}
         >
-          <AlertCircle size={16} aria-hidden="true" />
-          Could not load the closed-cases report. Try refreshing.
-        </div>
+          <AlertCircle size={16} aria-hidden="true" />{t('couldNotLoadThe')}</div>
       ) : cases.length === 0 ? (
         <div
           className="flex flex-col items-center gap-3 py-16 text-center rounded-xl"
           style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }}
         >
           <Users size={28} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            No closed cases {filter === 'ALL' ? 'yet' : `with status ${filter.toLowerCase()}`}.
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{filter === 'ALL' ? t('noneYet') : t('noneWithStatus', { status: filter.toLowerCase() })}
           </p>
         </div>
       ) : (
@@ -147,7 +138,7 @@ export default function ClosedCasesPage() {
                     color: STATUS_META[c.status].fg,
                   }}
                 >
-                  {STATUS_META[c.status].label}
+                  {t(`status.${c.status}`)}
                 </span>
               </div>
 
@@ -155,10 +146,8 @@ export default function ClosedCasesPage() {
                 {c.reason}
               </p>
 
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                Closed on {fmtDate(c.closed_at)}
-                {c.closed_by_name ? ` · by ${c.closed_by_name}` : ''}
-                {c.guardian_name ? ` · Guardian: ${c.guardian_name}` : ''}
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{c.closed_by_name ? t('closedOnBy', { date: fmtDate(c.closed_at), name: c.closed_by_name }) : t('closedOnDate', { date: fmtDate(c.closed_at) })}
+                {c.guardian_name ? t('guardianName', { name: c.guardian_name }) : ''}
               </p>
             </article>
           ))}

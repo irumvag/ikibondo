@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -8,23 +9,25 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import type { HealthRecord } from '@/lib/api/supervisor';
 
-const COLUMNS = [
-  { key: 'child_name',     header: 'Child',       width: '160px' },
+type ColumnsT = ReturnType<typeof useTranslations<'supervisor.alerts'>>;
+
+const COLUMNS = (t: ColumnsT) => [
+  { key: 'child_name',     header: t('colChild'),       width: '160px' },
   {
-    key: 'measurement_date', header: 'Date', width: '120px',
+    key: 'measurement_date', header: t('colDate'), width: '120px',
     render: (v: unknown) => new Date(v as string).toLocaleDateString(),
   },
-  { key: 'zone_name', header: 'Zone', width: '130px', render: (v: unknown) => (v as string) || '—' },
+  { key: 'zone_name', header: t('colZone'), width: '130px', render: (v: unknown) => (v as string) || '—' },
   {
-    key: 'weight_kg', header: 'Weight (kg)', width: '110px',
+    key: 'weight_kg', header: t('colWeightKg'), width: '110px',
     render: (v: unknown) => (v != null ? `${parseFloat(v as string).toFixed(1)} kg` : '—'),
   },
   {
-    key: 'muac_cm', header: 'MUAC (cm)', width: '110px',
+    key: 'muac_cm', header: t('colMuacCm'), width: '110px',
     render: (v: unknown) => (v != null ? `${parseFloat(v as string).toFixed(1)} cm` : '—'),
   },
   {
-    key: 'nutrition_status_display', header: 'Status', width: '100px',
+    key: 'nutrition_status_display', header: t('colStatus'), width: '100px',
     render: (_: unknown, row: unknown) => {
       const r = row as HealthRecord;
       const variant = r.nutrition_status === 'SAM' ? 'danger' : r.nutrition_status === 'MAM' ? 'warn' : 'success';
@@ -32,7 +35,7 @@ const COLUMNS = [
     },
   },
   {
-    key: 'risk_factors', header: 'Key risk factors', width: '220px',
+    key: 'risk_factors', header: t('colKeyRiskFactors'), width: '220px',
     render: (v: unknown) => {
       const factors = v as string[];
       if (!factors?.length) return <span style={{ color: 'var(--text-muted)' }}>—</span>;
@@ -44,12 +47,13 @@ const COLUMNS = [
     },
   },
   {
-    key: 'ml_confidence', header: 'Confidence', width: '100px',
+    key: 'ml_confidence', header: t('colConfidence'), width: '100px',
     render: (v: unknown) => (v != null ? `${Math.round(parseFloat(v as string) * 100)}%` : '—'),
   },
 ];
 
 export default function AlertsPage() {
+  const t = useTranslations('supervisor.alerts');
   const user = useAuthStore((s) => s.user);
   const campId = user?.camp ?? null;
   const [zoneFilter, setZoneFilter] = useState('');
@@ -66,12 +70,8 @@ export default function AlertsPage() {
           <h2
             className="text-2xl font-bold"
             style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            High-Risk Alerts
-          </h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Children flagged HIGH by the ML model — needs immediate follow-up.
-          </p>
+          >{t('highRiskAlerts')}</h2>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('childrenFlaggedHighBy')}</p>
         </div>
 
         {/* Zone filter */}
@@ -84,9 +84,9 @@ export default function AlertsPage() {
             backgroundColor: 'var(--bg-elev)',
             color: 'var(--ink)',
           }}
-          aria-label="Filter by zone"
+          aria-label={t('filterByZone')}
         >
-          <option value="">All zones</option>
+          <option value="">{t('allZones')}</option>
           {zones?.map((z) => (
             <option key={z.id} value={z.id}>{z.name}</option>
           ))}
@@ -99,13 +99,11 @@ export default function AlertsPage() {
           className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium"
           style={{ backgroundColor: 'var(--high-bg, #fef2f2)', color: 'var(--danger, #ef4444)' }}
         >
-          <AlertTriangle size={16} aria-hidden="true" />
-          {data!.count} HIGH-risk {data!.count === 1 ? 'record' : 'records'} require follow-up.
-        </div>
+          <AlertTriangle size={16} aria-hidden="true" />{t('highRiskRecords', { count: data!.count })}</div>
       )}
 
       <DataTable
-        columns={COLUMNS as Parameters<typeof DataTable>[0]['columns']}
+        columns={COLUMNS(t) as Parameters<typeof DataTable>[0]['columns']}
         data={(data?.items ?? []) }
         keyField="id"
         isLoading={isLoading}

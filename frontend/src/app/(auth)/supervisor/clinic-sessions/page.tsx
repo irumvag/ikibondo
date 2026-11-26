@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Syringe, ChevronRight, ChevronDown, Plus, X } from 'lucide-react';
@@ -27,6 +28,7 @@ function StatusBadge({ status }: { status: string }) {
 function SessionRow({ session, onClose }: {
   session: ClinicSession; onClose: (id: string) => void; onRefresh: () => void;
 }) {
+  const t = useTranslations('supervisor.clinicSessions');
   const [expanded, setExpanded] = useState(false);
   const [attendees, setAttendees] = useState<ClinicAttendee[]>([]);
   const [loadingAttendees, setLoadingAttendees] = useState(false);
@@ -53,9 +55,7 @@ function SessionRow({ session, onClose }: {
         <td style={{ ...td, whiteSpace: 'nowrap' }}>
           {session.status === 'OPEN' && (
             <button onClick={() => onClose(session.id)}
-              style={{ background: 'none', border: '1px solid var(--warn)', color: 'var(--warn)', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontSize: 12 }}>
-              Close session
-            </button>
+              style={{ background: 'none', border: '1px solid var(--warn)', color: 'var(--warn)', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontSize: 12 }}>{t('closeSession')}</button>
           )}
         </td>
       </tr>
@@ -63,9 +63,9 @@ function SessionRow({ session, onClose }: {
         <tr>
           <td colSpan={7} style={{ padding: '10px 16px', background: 'color-mix(in srgb, var(--ink) 4%, var(--bg-elev))', borderBottom: '1px solid var(--border)' }}>
             {loadingAttendees ? (
-              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading attendees…</span>
+              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{t('loadingAttendees')}</span>
             ) : attendees.length === 0 ? (
-              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>No attendees recorded yet.</span>
+              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{t('noAttendeesRecordedYet')}</span>
             ) : (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {attendees.map(a => (
@@ -85,6 +85,7 @@ function SessionRow({ session, onClose }: {
 // ── Create modal ──────────────────────────────────────────────────────────────
 
 function CreateModal({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+  const t = useTranslations('supervisor.clinicSessions');
   const [vaccines, setVaccines] = useState<VaccineRecord[]>([]);
   const [vaccineId, setVaccineId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -102,22 +103,22 @@ function CreateModal({ onDone, onCancel }: { onDone: () => void; onCancel: () =>
     <div style={overlay}>
       <div style={modal}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>New Clinic Session</h3>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{t('newClinicSession')}</h3>
           <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
         </div>
-        <label htmlFor="clinic-sessions-vaccine" style={lbl}>Vaccine</label>
+        <label htmlFor="clinic-sessions-vaccine" style={lbl}>{t('vaccine')}</label>
         <select id="clinic-sessions-vaccine" value={vaccineId} onChange={e => setVaccineId(e.target.value)} style={inputSt}>
-          <option value="" disabled>Select vaccine…</option>
-          {vaccines.map(v => <option key={v.id} value={v.id}>{v.name} (dose {v.dose_number})</option>)}
+          <option value="" disabled>{t('selectVaccine')}</option>
+          {vaccines.map(v => <option key={v.id} value={v.id}>{t('dose', { name: v.name, dose_number: v.dose_number })}</option>)}
         </select>
-        <label htmlFor="clinic-sessions-session-date" style={{ ...lbl, marginTop: 12 }}>Session date</label>
+        <label htmlFor="clinic-sessions-session-date" style={{ ...lbl, marginTop: 12 }}>{t('sessionDate')}</label>
         <input id="clinic-sessions-session-date" type="date" value={date} onChange={e => setDate(e.target.value)} style={inputSt} />
-        {mut.isError && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '8px 0 0' }}>Failed to create session.</p>}
+        {mut.isError && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '8px 0 0' }}>{t('failedToCreateSession')}</p>}
         <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} style={btnSec}>Cancel</button>
+          <button onClick={onCancel} style={btnSec}>{t('cancel')}</button>
           <button onClick={() => mut.mutate()} disabled={!vaccineId || !date || mut.isPending}
             style={{ background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, opacity: (!vaccineId || !date || mut.isPending) ? 0.5 : 1 }}>
-            {mut.isPending ? 'Creating…' : 'Create Session'}
+            {mut.isPending ? t('creating') : t('createSession')}
           </button>
         </div>
       </div>
@@ -130,6 +131,7 @@ function CreateModal({ onDone, onCancel }: { onDone: () => void; onCancel: () =>
 const STATUSES = ['', 'OPEN', 'CLOSED'];
 
 export default function SupervisorClinicSessionsPage() {
+  const t = useTranslations('supervisor.clinicSessions');
   const toast = useToast();
   const qc = useQueryClient();
   const [status, setStatus] = useState('');
@@ -143,7 +145,7 @@ export default function SupervisorClinicSessionsPage() {
 
   const closeMut = useMutation({
     mutationFn: (id: string) => closeClinicSession(id),
-    onSuccess: () => { toast.success('Session closed'); qc.invalidateQueries({ queryKey: QK.supervisorClinicSessions() }); },
+    onSuccess: () => { toast.success(t('sessionClosed')); qc.invalidateQueries({ queryKey: QK.supervisorClinicSessions() }); },
   });
 
   function invalidate() {
@@ -155,17 +157,12 @@ export default function SupervisorClinicSessionsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-            Clinic Sessions
-          </h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Vaccination clinic sessions in your camp · {total} total
-          </p>
+          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('clinicSessions')}</h2>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('vaccinationClinicSessionsIn', { total: total })}</p>
         </div>
         <button onClick={() => setShowCreate(true)}
           style={{ background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Plus size={15} /> New Session
-        </button>
+          <Plus size={15} />{' '}{t('newSession')}</button>
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -176,23 +173,21 @@ export default function SupervisorClinicSessionsPage() {
             background: status === s ? 'color-mix(in srgb, var(--ink) 10%, var(--bg-elev))' : 'var(--bg-elev)',
             color: status === s ? 'var(--ink)' : 'var(--ink)', fontWeight: status === s ? 600 : 400,
           }}>
-            {s || 'All'}
+            {s || t('all')}
           </button>
         ))}
       </div>
 
       {isLoading ? (
-        <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
+        <p style={{ color: 'var(--text-muted)' }}>{t('loading')}</p>
       ) : isError ? (
-        <p style={{ color: 'var(--danger)' }}>Failed to load clinic sessions.</p>
+        <p style={{ color: 'var(--danger)' }}>{t('failedToLoadClinic')}</p>
       ) : sessions.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
           <Syringe size={36} style={{ marginBottom: 8, opacity: 0.4 }} />
-          <p>No clinic sessions found.</p>
+          <p>{t('noClinicSessionsFound')}</p>
           <button onClick={() => setShowCreate(true)}
-            style={{ marginTop: 12, background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13 }}>
-            Create first session
-          </button>
+            style={{ marginTop: 12, background: 'var(--ink)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13 }}>{t('createFirstSession')}</button>
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -200,12 +195,12 @@ export default function SupervisorClinicSessionsPage() {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                 <th style={th}></th>
-                <th style={th}>Vaccine</th>
-                <th style={th}>Date</th>
-                <th style={th}>Status</th>
-                <th style={th}>Attendees</th>
-                <th style={th}>Opened by</th>
-                <th style={th}>Actions</th>
+                <th style={th}>{t('vaccine')}</th>
+                <th style={th}>{t('date')}</th>
+                <th style={th}>{t('status')}</th>
+                <th style={th}>{t('attendees')}</th>
+                <th style={th}>{t('openedBy')}</th>
+                <th style={th}>{t('actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -224,9 +219,9 @@ export default function SupervisorClinicSessionsPage() {
 
       {totalPages > 1 && (
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnSec}>← Prev</button>
+          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={btnSec}>{t('prev')}</button>
           <span style={{ lineHeight: '32px', fontSize: 13 }}>{page} / {totalPages}</span>
-          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={btnSec}>Next →</button>
+          <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} style={btnSec}>{t('next')}</button>
         </div>
       )}
 

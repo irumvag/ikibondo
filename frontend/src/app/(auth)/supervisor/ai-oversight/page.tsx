@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Flag, Loader2, CheckCircle, Brain } from 'lucide-react';
@@ -57,6 +58,7 @@ function HighRiskCard({
   disputed: boolean;
   disputing: boolean;
 }) {
+  const t = useTranslations('supervisor.aiOversight');
   const factors = Array.isArray(rec.risk_factors) ? rec.risk_factors.slice(0, 4) : [];
   const confidence = rec.ml_confidence ? Math.round(parseFloat(rec.ml_confidence) * 100) : null;
 
@@ -80,7 +82,7 @@ function HighRiskCard({
           <p className="font-semibold truncate" style={{ color: 'var(--ink)' }}>
             {rec.child_name}
           </p>
-          <Badge variant="danger" className="shrink-0">HIGH RISK</Badge>
+          <Badge variant="danger" className="shrink-0">{t('highRisk')}</Badge>
         </div>
 
         {disputed ? (
@@ -88,9 +90,7 @@ function HighRiskCard({
             className="shrink-0 flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
             style={{ backgroundColor: 'color-mix(in srgb, var(--success) 10%, transparent)', color: 'var(--success)' }}
           >
-            <CheckCircle size={13} aria-hidden="true" />
-            Disputed
-          </span>
+            <CheckCircle size={13} aria-hidden="true" />{t('disputed')}</span>
         ) : (
           <button
             type="button"
@@ -102,27 +102,24 @@ function HighRiskCard({
               backgroundColor: 'color-mix(in srgb, var(--warn) 8%, var(--bg-elev))',
               color: 'var(--warn)',
             }}
-            aria-label={`Dispute classification for ${rec.child_name}`}
+            aria-label={t('disputeFor', { name: rec.child_name })}
           >
             {disputing
               ? <Loader2 size={13} className="animate-spin" aria-hidden="true" />
-              : <Flag size={13} aria-hidden="true" />}
-            Dispute
-          </button>
+              : <Flag size={13} aria-hidden="true" />}{t('dispute')}</button>
         )}
       </div>
 
       {/* Meta row */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-        <span>Assessment: {new Date(rec.measurement_date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
+        <span>{t('assessmentDate', { date: new Date(rec.measurement_date).toLocaleDateString(undefined, { dateStyle: 'medium' }) })}</span>
         {confidence !== null && (
           <span className="flex items-center gap-1">
-            <Brain size={11} aria-hidden="true" />
-            AI confidence: <strong style={{ color: 'var(--ink)' }}>{confidence}%</strong>
+            <Brain size={11} aria-hidden="true" />{t('aiConfidence')}{' '}<strong style={{ color: 'var(--ink)' }}>{confidence}%</strong>
           </span>
         )}
-        {rec.muac_cm != null && <span>MUAC: {rec.muac_cm} cm</span>}
-        {rec.weight_kg != null && <span>Weight: {rec.weight_kg} kg</span>}
+        {rec.muac_cm != null && <span>{t('muacCm', { muac_cm: rec.muac_cm })}</span>}
+        {rec.weight_kg != null && <span>{t('weightKg', { weight_kg: rec.weight_kg })}</span>}
         {rec.nutrition_status && (
           <Badge variant={rec.nutrition_status === 'SAM' ? 'danger' : rec.nutrition_status === 'MAM' ? 'warn' : 'default'}>
             {rec.nutrition_status}
@@ -157,6 +154,7 @@ function HighRiskCard({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AIOverviewPage() {
+  const t = useTranslations('supervisor.aiOversight');
   const qc = useQueryClient();
   const [disputedIds, setDisputedIds] = useState<Set<string>>(new Set());
   const [disputingId, setDisputingId] = useState<string | null>(null);
@@ -186,12 +184,8 @@ export default function AIOverviewPage() {
         <h2
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          AI Oversight
-        </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          High-risk ML classifications in your camp. Confirm or dispute each assessment to open a consultation thread.
-        </p>
+        >{t('aiOversight')}</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('highRiskMlClassifications')}</p>
       </div>
 
       {/* Summary bar */}
@@ -206,10 +200,8 @@ export default function AIOverviewPage() {
         >
           <AlertTriangle size={16} aria-hidden="true" />
           <span>
-            <strong>{records.length}</strong> child{records.length !== 1 ? 'ren' : ''} flagged HIGH risk ·{' '}
-            <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>
-              {disputedIds.size} disputed this session
-            </span>
+            {t.rich('childrenFlagged', { count: records.length, b: (chunks) => <strong>{chunks}</strong> })}{' '}
+            <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{t('disputedThisSession', { size: disputedIds.size })}</span>
           </span>
         </div>
       )}
@@ -222,8 +214,8 @@ export default function AIOverviewPage() {
       ) : records.length === 0 ? (
         <EmptyState
           icon={<CheckCircle size={28} />}
-          title="No high-risk flags"
-          description="No children are currently classified as high risk in your camp."
+          title={t('noHighRiskFlags')}
+          description={t('noChildrenAreCurrently')}
         />
       ) : (
         <div className="flex flex-col gap-3">
