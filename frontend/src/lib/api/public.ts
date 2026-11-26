@@ -9,6 +9,17 @@ export interface LandingStats {
   high_risk_30d: number;
   vaccination_coverage_pct: number;
   risk_distribution: { LOW: number; MEDIUM: number; HIGH: number };
+  // Admin overview (GET /stats/landing/ is admin-only)
+  camp_stats?: { id: string; name: string; total_children: number; high_risk: number }[];
+  /** Children by their latest measurement */
+  children_by_risk?: { HIGH: number; MEDIUM: number; LOW: number; NOT_MEASURED: number };
+  children_by_nutrition?: { SAM: number; MAM: number; NORMAL: number; NOT_MEASURED: number };
+  visits_30d?: number;
+  referrals_open?: number;
+  visit_requests_open?: number;
+  organizations?: number;
+  announcements_active?: number;
+  trend?: { month: string; children_seen: number; sam: number; mam: number }[];
 }
 
 /** Public camp listing — the API returns only these fields to anonymous visitors. */

@@ -141,3 +141,29 @@ class TestLandingStatsEndpoint:
         res = client.get(LANDING_URL)
         dist = res.json()['risk_distribution']
         assert dist == {'LOW': 0, 'MEDIUM': 0, 'HIGH': 0}
+
+
+@pytest.mark.django_db
+def test_admin_overview_figures(settings):
+    """Children counted by their latest measurement; trend covers 12 months."""
+    from datetime import date, timedelta
+    from django.core.cache import cache
+    from rest_framework.test import APIClient
+    from apps.accounts.tests.factories import AdminUserFactory
+    from apps.children.tests.factories import ChildFactory
+    from apps.health_records.tests.factories import HealthRecordFactory
+
+    cache.clear()
+    measured = ChildFactory()
+    ChildFactory()  # never measured
+    HealthRecordFactory(child=measured, measurement_date=date.today() - timedelta(days=40), risk_level='HIGH', nutrition_status='SAM')
+    HealthRecordFactory(child=measured, measurement_date=date.today() - timedelta(days=2), risk_level='LOW', nutrition_status='NORMAL')
+    client = APIClient()
+    client.force_authenticate(AdminUserFactory())
+    data = client.get(LANDING_URL).json()
+    data = data.get('data', data)
+    assert data['children_by_risk']['LOW'] == 1 and data['children_by_risk']['HIGH'] == 0
+    assert data['children_by_risk']['NOT_MEASURED'] == 1
+    assert data['children_by_nutrition']['NORMAL'] == 1
+    assert len(data['trend']) == 12 and data['trend'][-1]['month'] == date.today().strftime('%Y-%m')
+    assert data['visits_30d'] == 1

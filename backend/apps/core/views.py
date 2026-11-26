@@ -113,6 +113,39 @@ def landing_stats_view(request):
                 'high_risk': high_risk,
             })
 
+        # Each child's status from their latest measurement (not every record)
+        from django.db.models import OuterRef, Subquery
+        latest = HealthRecord.objects.filter(child=OuterRef('pk'), is_active=True).order_by(
+            '-measurement_date', '-created_at')
+        kids = Child.objects.filter(is_active=True).annotate(
+            r=Subquery(latest.values('risk_level')[:1]),
+            n=Subquery(latest.values('nutrition_status')[:1]),
+        )
+        children_by_risk = {'HIGH': 0, 'MEDIUM': 0, 'LOW': 0, 'NOT_MEASURED': 0}
+        children_by_nutrition = {'SAM': 0, 'MAM': 0, 'NORMAL': 0, 'NOT_MEASURED': 0}
+        for r, n in kids.values_list('r', 'n'):
+            children_by_risk[r if r in children_by_risk else 'NOT_MEASURED'] += 1
+            children_by_nutrition[n if n in children_by_nutrition else 'NOT_MEASURED'] += 1
+
+        # Last 12 months: children measured, and how many were SAM / MAM
+        from apps.referrals.models import Referral, ReferralStatus
+        from apps.children.models import VisitRequest, VisitRequestStatus
+        from apps.accounts.models import Organization
+        from apps.core.models import Announcement
+        today = timezone.now().date()
+        trend = []
+        for back in range(11, -1, -1):
+            y, m = today.year, today.month - back
+            while m <= 0:
+                y, m = y - 1, m + 12
+            month = HealthRecord.objects.filter(is_active=True, measurement_date__year=y, measurement_date__month=m)
+            trend.append({
+                'month': f'{y}-{m:02d}',
+                'children_seen': month.values('child').distinct().count(),
+                'sam': month.filter(nutrition_status='SAM').values('child').distinct().count(),
+                'mam': month.filter(nutrition_status='MAM').values('child').distinct().count(),
+            })
+
         return {
             'total_children': total_children,
             'total_camps': total_camps,
@@ -121,6 +154,16 @@ def landing_stats_view(request):
             'vaccination_coverage_pct': vaccination_coverage_pct,
             'risk_distribution': risk_distribution,
             'camp_stats': camp_stats,
+            'children_by_risk': children_by_risk,
+            'children_by_nutrition': children_by_nutrition,
+            'visits_30d': HealthRecord.objects.filter(is_active=True, measurement_date__gte=thirty_days_ago).count(),
+            'referrals_open': Referral.objects.filter(
+                status__in=[ReferralStatus.PENDING, ReferralStatus.ACCEPTED]).count(),
+            'visit_requests_open': VisitRequest.objects.filter(
+                status__in=[VisitRequestStatus.PENDING, VisitRequestStatus.ACCEPTED]).count(),
+            'organizations': Organization.objects.filter(is_active=True).count(),
+            'announcements_active': Announcement.objects.filter(is_active=True).count(),
+            'trend': trend,
         }
 
     data = cache.get_or_set(_LANDING_CACHE_KEY, _compute, _LANDING_CACHE_TTL)
