@@ -1,20 +1,22 @@
 import type { Metadata } from 'next';
+import { getLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { HowItWorks } from '@/components/public/HowItWorks';
 import { RoleHighlights } from '@/components/public/RoleHighlights';
 import { FAQSection } from '@/components/public/FAQSection';
 import { ContactSection } from '@/components/public/ContactSection';
-import { fetchSiteContent, resolveSection } from '@/lib/siteContent';
+import { fetchSiteContent, resolveSection, type Lang } from '@/lib/siteContent';
 
-export const metadata: Metadata = {
-  title: 'About — Ikibondo',
-  description:
-    "Why Ikibondo exists and how it helps health workers in Rwanda's refugee camps find malnourished children early.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('meta');
+  return { title: t('aboutTitle'), description: t('aboutDescription') };
+}
 
 export default async function AboutPage() {
   const stored = await fetchSiteContent();
-  const about = resolveSection(stored, 'about');
+  const lang = (await getLocale()) as Lang;
+  const t = await getTranslations();
+  const about = resolveSection(stored, 'about', lang);
   return (
     <main>
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 sm:pt-16 sm:pb-20">
@@ -47,8 +49,8 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      <HowItWorks content={resolveSection(stored, 'home.how_it_works')} />
-      <RoleHighlights content={resolveSection(stored, 'home.roles')} />
+      <HowItWorks content={resolveSection(stored, 'home.how_it_works', lang)} />
+      <RoleHighlights content={resolveSection(stored, 'home.roles', lang)} />
 
       <section className="border-t py-16" style={{ borderColor: 'var(--rule)' }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
@@ -57,18 +59,18 @@ export default async function AboutPage() {
             <Link href="/login"
                   className="inline-flex items-center h-12 px-7 rounded-[var(--radius-md)] font-bold transition-colors bg-[var(--ink)] hover:bg-[var(--ink-soft)]"
                   style={{ color: 'var(--bg)' }}>
-              Sign in
+              {t('nav.signIn')}
             </Link>
             <Link href="/register"
                   className="inline-flex items-center h-12 px-6 rounded-[var(--radius-md)] font-bold border-2 transition-colors hover:bg-[var(--bg-sand)]"
                   style={{ borderColor: 'var(--ink)', color: 'var(--ink)' }}>
-              Register as a parent
+              {t('public.registerAsParent')}
             </Link>
           </div>
         </div>
       </section>
 
-      <ContactSection content={resolveSection(stored, 'contact')} />
+      <ContactSection content={resolveSection(stored, 'contact', lang)} />
       <FAQSection />
     </main>
   );

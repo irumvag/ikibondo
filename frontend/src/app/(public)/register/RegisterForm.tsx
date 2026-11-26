@@ -5,6 +5,8 @@ import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { CheckCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useValidationMessage } from '@/i18n/useValidationMessage';
 import {
   registerSchema,
   type RegisterFormValues,
@@ -18,6 +20,8 @@ import { Alert } from '@/components/ui/Alert';
 import { Select } from '@/components/ui/Select';
 
 export function RegisterForm() {
+  const t = useTranslations('register');
+  const tv = useValidationMessage();
   const [success,  setSuccess]  = useState(false);
   const [apiError, setApiError] = useState('');
   const { data: camps = [] }    = usePublicCamps();
@@ -65,7 +69,7 @@ export function RegisterForm() {
               .flatMap(([, v]) => (Array.isArray(v) ? v : [String(v)]))
               .slice(0, 3)
               .join(' ')
-          : 'Registration failed. Please try again.');
+          : t('failed'));
       setApiError(String(msg));
     }
   };
@@ -92,18 +96,17 @@ export function RegisterForm() {
           className="text-xl font-bold mb-3"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
         >
-          Account created!
+          {t('successTitle')}
         </h2>
         <p className="text-sm mb-6 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-          Your account is pending approval by your camp supervisor or
-          administrator. You&apos;ll receive an email once your account is activated.
+          {t('successBody')}
         </p>
         <Link
           href="/login"
           className="inline-flex items-center px-5 py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-85"
           style={{ backgroundColor: 'var(--ink)', color: 'var(--bg)' }}
         >
-          Back to sign in
+          {t('backToSignIn')}
         </Link>
       </div>
     );
@@ -116,7 +119,7 @@ export function RegisterForm() {
   ).map(([value, label]) => ({ value, label }));
 
   const campOptions = [
-    { value: '', label: 'Select camp…' },
+    { value: '', label: t('selectCamp') },
     ...camps.map((c) => ({ value: String(c.id), label: c.name })),
   ];
 
@@ -134,13 +137,13 @@ export function RegisterForm() {
           className="text-2xl font-bold mb-1"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
         >
-          Parent / guardian sign-up
+          {t('title')}
         </h1>
         <p className="text-sm leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-          Create your account — pending supervisor approval.
+          {t('subtitle')}
         </p>
         <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-          Health workers (CHW, Nurse, Supervisor)? Ask your supervisor or admin to create your account.
+          {t('staffNote')}
         </p>
       </div>
 
@@ -153,69 +156,69 @@ export function RegisterForm() {
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
 
         <Input
-          label="Full name"
+          label={t('fullName')}
           type="text"
-          placeholder="Gentille Tumukunde"
+          placeholder={t('fullNamePlaceholder')}
           autoComplete="name"
           required
-          error={errors.full_name?.message}
+          error={tv(errors.full_name?.message)}
           {...register('full_name')}
         />
 
         <Input
-          label="Phone number"
+          label={t('phone')}
           type="tel"
-          placeholder="+250 7XX XXX XXX"
+          placeholder={t('phonePlaceholder')}
           autoComplete="tel"
           required
-          hint="Used to log in — keep it reachable"
-          error={errors.phone_number?.message}
+          hint={t('phoneHint')}
+          error={tv(errors.phone_number?.message)}
           {...register('phone_number')}
         />
 
         <Input
-          label="Email address"
+          label={t('email')}
           type="email"
-          placeholder="you@example.com (optional)"
+          placeholder={t('emailPlaceholder')}
           autoComplete="email"
-          error={errors.email?.message}
+          error={tv(errors.email?.message)}
           {...register('email')}
         />
 
         <Select
-          label="Language preference"
+          label={t('language')}
           options={langOptions}
-          error={errors.preferred_language?.message}
+          error={tv(errors.preferred_language?.message)}
           {...register('preferred_language')}
         />
 
         {camps.length > 0 && (
           <Select
-            label="Camp"
-            hint="Where your child is registered"
+            label={t('camp')}
+            hint={t('campHint')}
             options={campOptions}
-            error={errors.camp?.message}
+            error={tv(errors.camp?.message)}
             {...register('camp')}
           />
         )}
 
         <Input
-          label="Password"
+          label={t('password')}
           type="password"
-          placeholder="At least 8 characters"
+          placeholder={t('passwordPlaceholder')}
           autoComplete="new-password"
           required
-          error={errors.password?.message}
+          error={tv(errors.password?.message)}
           {...register('password')}
         />
 
         <Input
-          label="Confirm password"
+          label={t('confirmPassword')}
           type="password"
           placeholder="••••••••"
           autoComplete="new-password"
           required
-          error={errors.password_confirm?.message}
+          error={tv(errors.password_confirm?.message)}
           {...register('password_confirm')}
         />
 
@@ -226,18 +229,18 @@ export function RegisterForm() {
           size="lg"
           className="mt-2 w-full"
         >
-          Create account
+          {t('submit')}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-        Already have an account?{' '}
+        {t('haveAccount')}{' '}
         <Link
           href="/login"
           className="font-semibold underline-offset-2 hover:underline"
           style={{ color: 'var(--ink)' }}
         >
-          Sign in
+          {t('signIn')}
         </Link>
       </p>
     </div>

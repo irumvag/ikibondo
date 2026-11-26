@@ -1,13 +1,15 @@
 import { PublicNav } from '@/components/layout/PublicNav';
 import { AnnouncementBanner } from '@/components/layout/AnnouncementBanner';
-import { fetchSiteContent, resolveSection } from '@/lib/siteContent';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { fetchSiteContent, resolveSection, type Lang } from '@/lib/siteContent';
 
 export default async function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const footer = resolveSection(await fetchSiteContent(), 'footer');
+  const footer = resolveSection(await fetchSiteContent(), 'footer', (await getLocale()) as Lang);
+  const t = await getTranslations('footer');
   return (
     <>
       <AnnouncementBanner where="public" />
@@ -22,7 +24,7 @@ export default async function PublicLayout({
             <span className="font-extrabold" style={{ color: 'var(--ink)' }}>Ikibondo</span>
             {' '}{footer.tagline}
           </p>
-          <p>&copy; {new Date().getFullYear()} Ikibondo, Rwanda</p>
+          <p>{t('copyright', { year: new Date().getFullYear() })}</p>
         </div>
       </footer>
     </>

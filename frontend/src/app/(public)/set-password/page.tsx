@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 import { SetPasswordForm } from './SetPasswordForm';
 
-export const metadata: Metadata = { title: 'Set your password', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getTranslations('meta'))('setPassword'), robots: { index: false } };
+}
 
 export default function SetPasswordPage() {
   return (

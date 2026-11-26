@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import { FAQ_DATA } from '@/data/faq';
 import type { FAQItem } from '@/lib/api/public';
 import { useFaq } from '@/lib/api/queries';
@@ -102,6 +103,7 @@ function LangSwitcher({
   onChange: (l: Lang) => void;
   items: FAQItem[];
 }) {
+  const t = useTranslations('faq');
   const hasRw = items.some((i) => i.question_rw?.trim());
   const hasFr = items.some((i) => i.question_fr?.trim());
   if (!hasRw && !hasFr) return null;
@@ -111,7 +113,7 @@ function LangSwitcher({
       className="flex gap-1 p-1 rounded-[var(--radius-md)] self-start"
       style={{ backgroundColor: 'var(--bg-sand)', border: '1px solid var(--border)' }}
       role="group"
-      aria-label="Language"
+      aria-label={t('language')}
     >
       {(['en', 'rw', 'fr'] as Lang[]).filter((l) => l === 'en' || (l === 'rw' && hasRw) || (l === 'fr' && hasFr)).map((l) => (
         <button
@@ -138,8 +140,10 @@ interface FAQSectionProps {
 }
 
 export function FAQSection({ variant = 'standalone' }: FAQSectionProps) {
+  const t = useTranslations('faq');
   const { data: apiItems, isLoading } = useFaq();
-  const [lang, setLang] = useState<Lang>('en');
+  // Start in the visitor's language; questions without a translation stay in English.
+  const [lang, setLang] = useState<Lang>(useLocale() as Lang);
 
   const source = apiItems && apiItems.length > 0 ? apiItems : FAQ_DATA;
   const published = source
@@ -187,10 +191,10 @@ export function FAQSection({ variant = 'standalone' }: FAQSectionProps) {
           className="text-3xl sm:text-4xl font-extrabold text-balance mb-3"
           style={{ color: 'var(--ink)', letterSpacing: '-0.02em' }}
         >
-          Questions people ask
+          {t('title')}
         </h2>
         <p className="text-base mb-10" style={{ color: 'var(--text-muted)' }}>
-          If your question isn&apos;t here, ask your camp supervisor.
+          {t('subtitle')}
         </p>
         {inner}
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { DEFAULTS, type SiteContent } from '@/lib/siteContent';
 
 // WHO MUAC cut-offs for children 6–59 months.
@@ -9,29 +10,11 @@ const MAX_CM = 16;
 const SAM_BELOW = 11.5;
 const MAM_BELOW = 12.5;
 
+// Band of a MUAC reading; its title and action text are in messages/en.json under "muac".
 function classify(cm: number) {
-  if (cm < SAM_BELOW) {
-    return {
-      band: 'Red',
-      color: 'var(--muac-red)',
-      title: 'Severe acute malnutrition',
-      action: 'The health worker refers the child for treatment the same day. Ikibondo marks the child high risk and alerts the nurse.',
-    };
-  }
-  if (cm < MAM_BELOW) {
-    return {
-      band: 'Yellow',
-      color: 'var(--muac-yellow)',
-      title: 'Moderate acute malnutrition',
-      action: 'The child is enrolled in supplementary feeding and measured again at the next visit. Ikibondo schedules the follow-up.',
-    };
-  }
-  return {
-    band: 'Green',
-    color: 'var(--muac-green)',
-    title: 'No acute malnutrition',
-    action: 'Growth is on track. The health worker keeps to the routine visit schedule.',
-  };
+  if (cm < SAM_BELOW) return { band: 'red', color: 'var(--muac-red)' } as const;
+  if (cm < MAM_BELOW) return { band: 'yellow', color: 'var(--muac-yellow)' } as const;
+  return { band: 'green', color: 'var(--muac-green)' } as const;
 }
 
 const pct = (cm: number) => ((cm - MIN_CM) / (MAX_CM - MIN_CM)) * 100;
@@ -39,7 +22,10 @@ const pct = (cm: number) => ((cm - MIN_CM) / (MAX_CM - MIN_CM)) * 100;
 export function MuacExplainer({ content = DEFAULTS['home.muac'] }: { content?: SiteContent['home.muac'] }) {
   const [cm, setCm] = useState(13.2);
   const id = useId();
+  const t = useTranslations('muac');
   const result = classify(cm);
+  const band = t(`band.${result.band}`);
+  const title = t(`${result.band}.title`);
 
   return (
     <section className="py-16 sm:py-24 border-y" style={{ backgroundColor: 'var(--bg-elev)', borderColor: 'var(--rule)' }}
@@ -63,7 +49,7 @@ export function MuacExplainer({ content = DEFAULTS['home.muac'] }: { content?: S
               style={{ left: `${pct(cm)}%`, background: 'var(--ink)', color: 'var(--bg)' }}
               aria-hidden="true"
             >
-              {cm.toFixed(1)} cm
+              {t('cm', { value: cm.toFixed(1) })}
             </div>
             <div className="relative flex h-12 overflow-hidden rounded-[var(--radius-sm)]" aria-hidden="true">
               <div style={{ width: `${pct(SAM_BELOW)}%`, background: 'var(--muac-red)' }} />
@@ -81,7 +67,7 @@ export function MuacExplainer({ content = DEFAULTS['home.muac'] }: { content?: S
                 <span key={v} className="absolute -translate-x-1/2" style={{ left: `${pct(v)}%` }}>{v}</span>
               ))}
             </div>
-            <label htmlFor={`${id}-range`} className="sr-only">Arm circumference in centimetres</label>
+            <label htmlFor={`${id}-range`} className="sr-only">{t('rangeLabel')}</label>
             <input
               id={`${id}-range`}
               type="range"
@@ -90,19 +76,19 @@ export function MuacExplainer({ content = DEFAULTS['home.muac'] }: { content?: S
               step={0.1}
               value={cm}
               onChange={(e) => setCm(Number(e.target.value))}
-              aria-valuetext={`${cm.toFixed(1)} centimetres, ${result.band} band, ${result.title}`}
+              aria-valuetext={t('valueText', { value: cm.toFixed(1), band, title })}
               className="w-full mt-2 accent-[var(--ink)] h-8 cursor-pointer"
             />
           </div>
 
           {/* What it means — announced to screen readers as the value changes */}
           <div className="mt-6 pl-4 border-l-4" style={{ borderColor: result.color }} aria-live="polite">
-            <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>{result.band} band</p>
-            <p className="text-xl font-extrabold mt-1" style={{ color: 'var(--ink)' }}>{result.title}</p>
-            <p className="text-base leading-relaxed mt-2 max-w-prose" style={{ color: 'var(--text)' }}>{result.action}</p>
+            <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>{t('bandLabel', { band })}</p>
+            <p className="text-xl font-extrabold mt-1" style={{ color: 'var(--ink)' }}>{title}</p>
+            <p className="text-base leading-relaxed mt-2 max-w-prose" style={{ color: 'var(--text)' }}>{t(`${result.band}.action`)}</p>
           </div>
           <p className="mt-4 text-xs" style={{ color: 'var(--text-muted)' }}>
-            WHO cut-offs for children aged 6–59 months. A MUAC reading is one input; oedema and weight-for-height are checked too.
+            {t('note')}
           </p>
         </div>
       </div>

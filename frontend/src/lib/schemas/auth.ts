@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
+// Error messages are keys under "validation" in messages/en.json (see useValidationMessage).
 export const loginSchema = z.object({
-  identifier: z.string().min(1, 'Email or phone number is required'),
-  password: z.string().min(1, 'Password is required'),
+  identifier: z.string().min(1, 'identifierRequired'),
+  password: z.string().min(1, 'passwordRequired'),
 });
 
 export type LoginFormValues = z.infer<typeof loginSchema>;
@@ -30,17 +31,17 @@ export const registerSchema = z
   .object({
     full_name: z
       .string()
-      .min(2, 'Full name must be at least 2 characters')
+      .min(2, 'fullNameMin')
       .trim(),
     email: z
-      .union([z.string().email('Invalid email address'), z.literal('')])
+      .union([z.string().email('emailInvalid'), z.literal('')])
       .optional(),
     phone_number: z
       .string()
-      .min(10, 'Phone number must be at least 10 digits')
-      .regex(/^\+?[\d\s\-()]{10,}$/, 'Invalid phone number format'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
-    password_confirm: z.string().min(1, 'Please confirm your password'),
+      .min(10, 'phoneMin')
+      .regex(/^\+?[\d\s\-()]{10,}$/, 'phoneFormat'),
+    password: z.string().min(8, 'passwordMin'),
+    password_confirm: z.string().min(1, 'passwordConfirm'),
     preferred_language: z.enum(LANGUAGES),
     camp: z
       .string()
@@ -48,7 +49,7 @@ export const registerSchema = z
       .or(z.literal('')),
   })
   .refine((d) => d.password === d.password_confirm, {
-    message: "Passwords don't match",
+    message: 'passwordsMatch',
     path: ['password_confirm'],
   });
 

@@ -1,6 +1,8 @@
+import { useTranslations } from 'next-intl';
 import { DEFAULTS, type SiteContent } from '@/lib/siteContent';
 
 export function RoleHighlights({ content = DEFAULTS['home.roles'] }: { content?: SiteContent['home.roles'] }) {
+  const t = useTranslations('roles');
   return (
     <section className="py-20 sm:py-28 border-t" style={{ background: 'var(--bg)', borderColor: 'var(--rule)' }}
              aria-labelledby="roles-heading">
@@ -19,7 +21,7 @@ export function RoleHighlights({ content = DEFAULTS['home.roles'] }: { content?:
               <dd className="text-base leading-relaxed max-w-prose" style={{ color: 'var(--text)' }}>{description}</dd>
               <dd>
                 <ul className="flex flex-col gap-1 text-sm" style={{ color: 'var(--text-muted)' }}
-                    aria-label={`Features for ${role.toLowerCase()}`}>
+                    aria-label={t('featuresFor', { role: role.toLowerCase() })}>
                   {features.split(';').map((f) => f.trim()).filter(Boolean).map((f) => <li key={f}>{f}</li>)}
                 </ul>
               </dd>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Info, AlertTriangle, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { getActiveAnnouncements } from '@/lib/api/content';
 
 const DISMISSED_KEY = 'ikibondo_dismissed_announcements';
@@ -25,6 +26,7 @@ export function AnnouncementBanner({ where }: { where: 'public' | 'dashboard' })
     retry: false,
   });
   const [dismissed, setDismissed] = useState<string[]>(() => (typeof window === 'undefined' ? [] : readDismissed()));
+  const t = useTranslations('announcement');
 
   const visible = data.filter((a) => !dismissed.includes(a.id));
   if (visible.length === 0) return null;
@@ -54,11 +56,11 @@ export function AnnouncementBanner({ where }: { where: 'public' | 'dashboard' })
               {a.link_url && (
                 <>
                   {' '}
-                  <Link href={a.link_url} className="font-bold underline underline-offset-2">Learn more</Link>
+                  <Link href={a.link_url} className="font-bold underline underline-offset-2">{t('learnMore')}</Link>
                 </>
               )}
             </p>
-            <button type="button" onClick={() => dismiss(a.id)} aria-label="Dismiss announcement"
+            <button type="button" onClick={() => dismiss(a.id)} aria-label={t('dismiss')}
               className="p-0.5 rounded hover:opacity-70">
               <X size={15} aria-hidden="true" />
             </button>

@@ -61,4 +61,9 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// Translations: next-intl reads the language for each request from src/i18n/request.ts
+// next.config.js is CommonJS, so the plugin is loaded with require().
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const withNextIntl = require("next-intl/plugin")("./src/i18n/request.ts");
+
+module.exports = withNextIntl(nextConfig);

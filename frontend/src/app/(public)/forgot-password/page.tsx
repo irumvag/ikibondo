@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { ForgotPasswordForm } from './ForgotPasswordForm';
 
-export const metadata: Metadata = { title: 'Reset password' };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getTranslations('meta'))('forgotPassword') };
+}
 
 export default function ForgotPasswordPage() {
   return (

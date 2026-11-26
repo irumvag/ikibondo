@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { RegisterForm } from './RegisterForm';
 
-export const metadata: Metadata = { title: 'Request access' };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getTranslations('meta'))('register') };
+}
 
 export default function RegisterPage() {
   return (

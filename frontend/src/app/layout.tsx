@@ -2,7 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Atkinson_Hyperlegible_Next } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale } from "next-intl/server";
 import { Providers } from "@/components/layout/Providers";
+import { LocaleSync } from "@/components/layout/LocaleSync";
 import { THEME_SCRIPT } from "@/lib/theme";
 
 // One family for the whole product: Atkinson Hyperlegible was designed for
@@ -32,11 +35,12 @@ export const viewport: Viewport = {
   themeColor: '#16324F',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getLocale();
   return (
-    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
+    <html lang={locale} suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         {/* Blocking theme script — runs before CSS paint to prevent flash */}
         <Script
@@ -53,7 +57,12 @@ export default function RootLayout({
           color: "var(--text)",
         }}
       >
-        <Providers>{children}</Providers>
+        <NextIntlClientProvider>
+          <Providers>
+            <LocaleSync />
+            {children}
+          </Providers>
+        </NextIntlClientProvider>
         <Script
           id="sw-register"
           strategy="afterInteractive"

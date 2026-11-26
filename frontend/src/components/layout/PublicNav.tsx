@@ -4,21 +4,23 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { ThemeToggle } from './ThemeToggle';
 
 // Each link can target a hash anchor on a specific page
 interface NavLink {
   href: string;
-  label: string;
+  /** Key in messages/en.json under "nav" */
+  label: 'home' | 'howItWorks' | 'faq' | 'about';
   /** If provided, this link is only highlighted when the pathname matches */
   matchPath?: string;
 }
 
 const NAV_LINKS: NavLink[] = [
-  { href: '/',                label: 'Home',         matchPath: '/' },
-  { href: '/#how-it-works',   label: 'How it works', matchPath: '/' },
-  { href: '/#faq',            label: 'FAQ',          matchPath: '/' },
-  { href: '/about',           label: 'About',        matchPath: '/about' },
+  { href: '/',                label: 'home',         matchPath: '/' },
+  { href: '/#how-it-works',   label: 'howItWorks',   matchPath: '/' },
+  { href: '/#faq',            label: 'faq',          matchPath: '/' },
+  { href: '/about',           label: 'about',        matchPath: '/about' },
 ];
 
 function isActive(link: NavLink, pathname: string): boolean {
@@ -28,6 +30,7 @@ function isActive(link: NavLink, pathname: string): boolean {
 }
 
 export function PublicNav() {
+  const t = useTranslations('nav');
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -57,7 +60,7 @@ export function PublicNav() {
           {/* Desktop nav links */}
           <nav
             className="hidden md:flex items-center gap-0.5"
-            aria-label="Primary navigation"
+            aria-label={t('primary')}
           >
             {NAV_LINKS.map(link => {
               const active = isActive(link, pathname);
@@ -73,7 +76,7 @@ export function PublicNav() {
                       : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-sand)]',
                   ].join(' ')}
                 >
-                  {link.label}
+                  {t(link.label)}
                 </Link>
               );
             })}
@@ -88,7 +91,7 @@ export function PublicNav() {
               className="hidden sm:inline-flex items-center px-4 h-8 rounded-lg text-sm font-medium border transition-colors hover:bg-[var(--bg-sand)]"
               style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
             >
-              Register
+              {t('register')}
             </Link>
 
             <Link
@@ -96,7 +99,7 @@ export function PublicNav() {
               className="inline-flex items-center px-4 h-9 rounded-[var(--radius-sm)] text-sm font-bold transition-colors bg-[var(--ink)] hover:bg-[var(--ink-soft)]"
               style={{ color: 'var(--bg)' }}
             >
-              Sign in
+              {t('signIn')}
             </Link>
 
             {/* Mobile menu toggle */}
@@ -105,7 +108,7 @@ export function PublicNav() {
               className="md:hidden flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-[var(--bg-sand)]"
               style={{ color: 'var(--ink)' }}
               onClick={() => setMobileOpen(v => !v)}
-              aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+              aria-label={mobileOpen ? t('closeMenu') : t('openMenu')}
               aria-expanded={mobileOpen}
               aria-controls="mobile-nav"
             >
@@ -138,7 +141,7 @@ export function PublicNav() {
                     : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-sand)]',
                 ].join(' ')}
               >
-                {link.label}
+                {t(link.label)}
               </Link>
             );
           })}
@@ -149,7 +152,7 @@ export function PublicNav() {
               className="block px-3 py-2.5 rounded-lg text-sm font-medium border transition-colors hover:bg-[var(--bg-sand)]"
               style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
             >
-              Register
+              {t('register')}
             </Link>
           </div>
         </div>

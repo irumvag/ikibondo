@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 export default function PublicError({
   reset,
@@ -8,6 +9,7 @@ export default function PublicError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useTranslations('error');
   return (
     <div
       className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center gap-4"
@@ -17,10 +19,10 @@ export default function PublicError({
         className="text-xl font-bold"
         style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
       >
-        Something went wrong
+        {t('title')}
       </h2>
       <p className="text-sm max-w-xs" style={{ color: 'var(--text-muted)' }}>
-        An unexpected error occurred. Please try again or return to the home page.
+        {t('body')}
       </p>
       <div className="flex gap-3">
         <button
@@ -28,14 +30,14 @@ export default function PublicError({
           className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-80"
           style={{ backgroundColor: 'var(--ink)', color: 'var(--bg)' }}
         >
-          Try again
+          {t('retry')}
         </button>
         <Link
           href="/"
           className="px-5 py-2.5 rounded-xl text-sm font-semibold border transition-colors hover:bg-[var(--bg-elev)]"
           style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
         >
-          Go home
+          {t('home')}
         </Link>
       </div>
     </div>

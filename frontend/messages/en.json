@@ -1,0 +1,194 @@
+{
+  "nav": {
+    "home": "Home",
+    "howItWorks": "How it works",
+    "faq": "FAQ",
+    "about": "About",
+    "register": "Register",
+    "signIn": "Sign in",
+    "primary": "Primary navigation",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "camps": {
+    "title": "Where Ikibondo is used",
+    "subtitle": "Camps and settlements in Rwanda currently recording visits.",
+    "unavailable": "The camp list isn't available right now.",
+    "camp": "Camp",
+    "district": "District"
+  },
+  "roles": {
+    "featuresFor": "Features for {role}"
+  },
+  "muac": {
+    "band": {
+      "red": "Red",
+      "yellow": "Yellow",
+      "green": "Green"
+    },
+    "red": {
+      "title": "Severe acute malnutrition",
+      "action": "The health worker refers the child for treatment the same day. Ikibondo marks the child high risk and alerts the nurse."
+    },
+    "yellow": {
+      "title": "Moderate acute malnutrition",
+      "action": "The child is enrolled in supplementary feeding and measured again at the next visit. Ikibondo schedules the follow-up."
+    },
+    "green": {
+      "title": "No acute malnutrition",
+      "action": "Growth is on track. The health worker keeps to the routine visit schedule."
+    },
+    "cm": "{value} cm",
+    "rangeLabel": "Arm circumference in centimetres",
+    "valueText": "{value} centimetres, {band} band, {title}",
+    "bandLabel": "{band} band",
+    "note": "WHO cut-offs for children aged 6–59 months. A MUAC reading is one input; oedema and weight-for-height are checked too."
+  },
+  "faq": {
+    "title": "Questions people ask",
+    "subtitle": "If your question isn't here, ask your camp supervisor.",
+    "language": "Language"
+  },
+  "growthChart": {
+    "notes": {
+      "0": "Birth weight recorded at registration.",
+      "1": "Gaining well, close to the median.",
+      "2": "Still on track.",
+      "3": "Weight gain has slowed.",
+      "4": "Weight dropped since the last visit. Ikibondo flags the child and the CHW refers her to the nurse.",
+      "5": "Enrolled in supplementary feeding after the referral. Gaining again.",
+      "6": "Back near her earlier growth line.",
+      "7": "Recovered. Routine visits resume."
+    },
+    "band": {
+      "belowMinus3": "below −3 SD",
+      "minus3to2": "between −3 and −2 SD",
+      "minus2toMedian": "between −2 SD and the median",
+      "atOrAbove": "at or above the median"
+    },
+    "title": "A child's weight plotted against WHO growth bands",
+    "desc": "The child follows the median until month 6, falls toward minus two standard deviations at month 8, is referred, and returns toward the median by month 15.",
+    "median": "median",
+    "minus2": "−2 SD",
+    "ageInMonths": "Age in months",
+    "kg": "kg",
+    "visitLabel": "Visit at month {month}: {kg} kilograms",
+    "flagged": "Month 8: flagged, referred",
+    "hint": "Tap a visit on the chart to see what the health worker recorded.",
+    "selected": "Month {month}: {kg} kg, {band}",
+    "caption": "Weight-for-age, girls 0–24 months. Illustrative child; bands approximate the WHO Child Growth Standards."
+  },
+  "meta": {
+    "homeTitle": "Ikibondo — Child Health Platform",
+    "homeDescription": "Child nutrition and health monitoring for displacement camps in Rwanda. Empowering community health workers with ML-powered malnutrition risk assessment.",
+    "aboutTitle": "About — Ikibondo",
+    "aboutDescription": "Why Ikibondo exists and how it helps health workers in Rwanda's refugee camps find malnourished children early.",
+    "signIn": "Sign in",
+    "register": "Request access",
+    "forgotPassword": "Reset password",
+    "setPassword": "Set your password"
+  },
+  "public": {
+    "registerAsParent": "Register as a parent"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "body": "An unexpected error occurred. Please try again or return to the home page.",
+    "retry": "Try again",
+    "home": "Go home"
+  },
+  "footer": {
+    "copyright": "© {year} Ikibondo, Rwanda"
+  },
+  "validation": {
+    "identifierRequired": "Email or phone number is required",
+    "passwordRequired": "Password is required",
+    "fullNameMin": "Full name must be at least 2 characters",
+    "emailInvalid": "Invalid email address",
+    "phoneMin": "Phone number must be at least 10 digits",
+    "phoneFormat": "Invalid phone number format",
+    "passwordMin": "Password must be at least 8 characters",
+    "passwordConfirm": "Please confirm your password",
+    "passwordsMatch": "Passwords don't match"
+  },
+  "login": {
+    "title": "Welcome back",
+    "subtitle": "Sign in to your Ikibondo account",
+    "invalid": "Invalid credentials. Please try again.",
+    "identifier": "Email or phone number",
+    "identifierPlaceholder": "you@example.com or +250 7XX XXX XXX",
+    "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "forgot": "Forgot password?",
+    "submit": "Sign in",
+    "noAccount": "Don't have an account?",
+    "requestAccess": "Request access"
+  },
+  "register": {
+    "failed": "Registration failed. Please try again.",
+    "successTitle": "Account created!",
+    "successBody": "Your account is pending approval by your camp supervisor or administrator. You'll receive an email once your account is activated.",
+    "backToSignIn": "Back to sign in",
+    "selectCamp": "Select camp…",
+    "title": "Parent / guardian sign-up",
+    "subtitle": "Create your account — pending supervisor approval.",
+    "staffNote": "Health workers (CHW, Nurse, Supervisor)? Ask your supervisor or admin to create your account.",
+    "fullName": "Full name",
+    "fullNamePlaceholder": "Gentille Tumukunde",
+    "phone": "Phone number",
+    "phonePlaceholder": "+250 7XX XXX XXX",
+    "phoneHint": "Used to log in — keep it reachable",
+    "email": "Email address",
+    "emailPlaceholder": "you@example.com (optional)",
+    "language": "Language preference",
+    "camp": "Camp",
+    "campHint": "Where your child is registered",
+    "password": "Password",
+    "passwordPlaceholder": "At least 8 characters",
+    "confirmPassword": "Confirm password",
+    "submit": "Create account",
+    "haveAccount": "Already have an account?",
+    "signIn": "Sign in"
+  },
+  "forgotPassword": {
+    "enterIdentifier": "Enter the email or phone number you sign in with.",
+    "sendFailed": "We couldn't send a code right now. Wait a few minutes and try again.",
+    "mismatch": "The two passwords don’t match.",
+    "resetFailed": "We couldn't reset your password. Check the code and try again.",
+    "doneTitle": "Password updated",
+    "title": "Reset your password",
+    "requestIntro": "We'll send a 6-digit code to the phone or email on your account.",
+    "identifier": "Email or phone number",
+    "sendCode": "Send code",
+    "codeSent": "If an account matches <strong>{identifier}</strong>, a code is on its way. It expires in 10 minutes.",
+    "code": "6-digit code",
+    "newPassword": "New password",
+    "passwordHint": "At least 8 characters. Avoid common words and your name.",
+    "confirmNew": "Confirm new password",
+    "setNew": "Set new password",
+    "resend": "Send a new code",
+    "doneBody": "You've been signed out on every device. Sign in with your new password.",
+    "signIn": "Sign in",
+    "remembered": "Remembered it? <link>Sign in</link>"
+  },
+  "setPassword": {
+    "mismatch": "The two passwords don’t match.",
+    "failed": "We couldn't set your password. Try again, or ask the nurse for a new link.",
+    "doneTitle": "You’re all set",
+    "title": "Choose your password",
+    "broken": "This link is incomplete. Open the full link from your SMS or email, or ask the nurse to send a new one.",
+    "intro": "A nurse created your Ikibondo account. Pick a password only you know. This link works once.",
+    "password": "Password",
+    "passwordHint": "At least 8 characters. Avoid common words and your name.",
+    "confirm": "Confirm password",
+    "submit": "Set password",
+    "doneBody": "Sign in with your phone number (or email) and the password you just chose.",
+    "signIn": "Sign in",
+    "alreadySet": "Already set it? <link>Sign in</link>"
+  },
+  "announcement": {
+    "learnMore": "Learn more",
+    "dismiss": "Dismiss announcement"
+  }
+}

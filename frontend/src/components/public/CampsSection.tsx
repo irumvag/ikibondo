@@ -1,9 +1,11 @@
 'use client';
 
 import { usePublicCamps } from '@/lib/api/queries';
+import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 export function CampsSection() {
+  const t = useTranslations('camps');
   const { data: camps = [], isLoading } = usePublicCamps();
 
   return (
@@ -13,10 +15,10 @@ export function CampsSection() {
         <div>
           <h2 id="camps-heading" className="text-3xl sm:text-4xl font-extrabold text-balance mb-3"
               style={{ color: 'var(--ink)', letterSpacing: '-0.02em' }}>
-            Where Ikibondo is used
+            {t('title')}
           </h2>
           <p className="text-base" style={{ color: 'var(--text-muted)' }}>
-            Camps and settlements in Rwanda currently recording visits.
+            {t('subtitle')}
           </p>
         </div>
 
@@ -25,13 +27,13 @@ export function CampsSection() {
             {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12" />)}
           </div>
         ) : camps.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)' }}>The camp list isn&apos;t available right now.</p>
+          <p style={{ color: 'var(--text-muted)' }}>{t('unavailable')}</p>
         ) : (
           <table className="w-full text-left text-base">
             <thead>
               <tr className="border-b-2" style={{ borderColor: 'var(--ink)' }}>
-                <th scope="col" className="py-2 pr-4 text-sm font-bold" style={{ color: 'var(--ink)' }}>Camp</th>
-                <th scope="col" className="py-2 text-sm font-bold" style={{ color: 'var(--ink)' }}>District</th>
+                <th scope="col" className="py-2 pr-4 text-sm font-bold" style={{ color: 'var(--ink)' }}>{t('camp')}</th>
+                <th scope="col" className="py-2 text-sm font-bold" style={{ color: 'var(--ink)' }}>{t('district')}</th>
               </tr>
             </thead>
             <tbody>

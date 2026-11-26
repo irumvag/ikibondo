@@ -6,6 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useValidationMessage } from '@/i18n/useValidationMessage';
 import { loginSchema, type LoginFormValues } from '@/lib/schemas/auth';
 import { loginUser } from '@/lib/api/auth';
 import { useAuthStore, type UserRole } from '@/store/authStore';
@@ -24,6 +26,8 @@ const ROLE_ROUTES: Record<UserRole, string> = {
 };
 
 export function LoginForm() {
+  const t = useTranslations('login');
+  const tv = useValidationMessage();
   const router  = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [showPw,   setShowPw]   = useState(false);
@@ -62,7 +66,7 @@ export function LoginForm() {
         (typeof d?.error === 'string' ? d.error : d?.error?.detail) ??
         d?.detail ??
         d?.non_field_errors?.[0] ??
-        'Invalid credentials. Please try again.';
+        t('invalid');
       setApiError(msg);
     }
   };
@@ -82,10 +86,10 @@ export function LoginForm() {
           className="text-2xl font-bold mb-1"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
         >
-          Welcome back
+          {t('title')}
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          Sign in to your Ikibondo account
+          {t('subtitle')}
         </p>
       </div>
 
@@ -98,30 +102,30 @@ export function LoginForm() {
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
         <Input
-          label="Email or phone number"
+          label={t('identifier')}
           type="text"
-          placeholder="you@example.com or +250 7XX XXX XXX"
+          placeholder={t('identifierPlaceholder')}
           autoComplete="username"
           required
-          error={errors.identifier?.message}
+          error={tv(errors.identifier?.message)}
           {...register('identifier')}
         />
 
         {/* Password with show/hide */}
         <div className="relative">
           <Input
-            label="Password"
+            label={t('password')}
             type={showPw ? 'text' : 'password'}
             placeholder="••••••••"
             autoComplete="current-password"
             required
-            error={errors.password?.message}
+            error={tv(errors.password?.message)}
             {...register('password')}
           />
           <button
             type="button"
             onClick={() => setShowPw((v) => !v)}
-            aria-label={showPw ? 'Hide password' : 'Show password'}
+            aria-label={showPw ? t('hidePassword') : t('showPassword')}
             className="absolute right-3 transition-colors"
             style={{
               top: errors.password ? '2.05rem' : '2.3rem',
@@ -137,7 +141,7 @@ export function LoginForm() {
           className="self-end -mt-2 text-sm font-bold underline-offset-2 hover:underline"
           style={{ color: 'var(--ink)' }}
         >
-          Forgot password?
+          {t('forgot')}
         </Link>
 
         <Button
@@ -148,18 +152,18 @@ export function LoginForm() {
           className="mt-2 w-full"
         >
           <LogIn size={18} aria-hidden="true" />
-          Sign in
+          {t('submit')}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-        Don&apos;t have an account?{' '}
+        {t('noAccount')}{' '}
         <Link
           href="/register"
           className="font-semibold underline-offset-2 hover:underline"
           style={{ color: 'var(--ink)' }}
         >
-          Request access
+          {t('requestAccess')}
         </Link>
       </p>
     </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 // Illustrative weight-for-age chart (girls, 0–24 months) with one child's visits.
 // Reference values approximate the WHO Child Growth Standards; this is a picture
@@ -31,17 +32,7 @@ const VISITS: [number, number][] = [
 ];
 const FLAGGED_INDEX = 4;
 
-// What the health worker saw at each visit (shown when a visit is selected)
-const VISIT_NOTES = [
-  'Birth weight recorded at registration.',
-  'Gaining well, close to the median.',
-  'Still on track.',
-  'Weight gain has slowed.',
-  'Weight dropped since the last visit. Ikibondo flags the child and the CHW refers her to the nurse.',
-  'Enrolled in supplementary feeding after the referral. Gaining again.',
-  'Back near her earlier growth line.',
-  'Recovered. Routine visits resume.',
-];
+// What the health worker saw at each visit: messages/en.json growthChart.notes.0 … .7
 
 // Linear interpolation of one reference line at a given month
 function refAt(month: number, sdIndex: number) {
@@ -53,11 +44,12 @@ function refAt(month: number, sdIndex: number) {
   return REFERENCE[REFERENCE.length - 1][1][sdIndex];
 }
 
-function bandLabel(month: number, kg: number) {
-  if (kg < refAt(month, 0)) return 'below −3 SD';
-  if (kg < refAt(month, 1)) return 'between −3 and −2 SD';
-  if (kg < refAt(month, 2)) return 'between −2 SD and the median';
-  return 'at or above the median';
+// Key under growthChart.band for where a weight falls on the reference lines
+function bandKey(month: number, kg: number) {
+  if (kg < refAt(month, 0)) return 'belowMinus3';
+  if (kg < refAt(month, 1)) return 'minus3to2';
+  if (kg < refAt(month, 2)) return 'minus2toMedian';
+  return 'atOrAbove';
 }
 
 const x = (month: number) => PAD.left + (month / MAX_MONTH) * (W - PAD.left - PAD.right);
@@ -77,6 +69,7 @@ const childPath = VISITS.map(([m, kg], i) => `${i ? 'L' : 'M'}${x(m).toFixed(1)}
 const [flagMonth, flagKg] = VISITS[FLAGGED_INDEX];
 
 export function GrowthChartHero() {
+  const t = useTranslations('growthChart');
   const [selected, setSelected] = useState<number | null>(null);
 
   return (
@@ -87,11 +80,8 @@ export function GrowthChartHero() {
         role="img"
         aria-labelledby="growth-chart-title growth-chart-desc"
       >
-        <title id="growth-chart-title">A child&apos;s weight plotted against WHO growth bands</title>
-        <desc id="growth-chart-desc">
-          The child follows the median until month 6, falls toward minus two standard deviations at month 8,
-          is referred, and returns toward the median by month 15.
-        </desc>
+        <title id="growth-chart-title">{t('title')}</title>
+        <desc id="growth-chart-desc">{t('desc')}</desc>
 
         {/* Chart-paper grid */}
         {Array.from({ length: MAX_MONTH / 3 + 1 }, (_, i) => i * 3).map((m) => (
@@ -113,9 +103,9 @@ export function GrowthChartHero() {
 
         {/* Band labels at the right edge */}
         <text x={W - PAD.right - 4} y={y(REFERENCE[8][1][2]) - 6} textAnchor="end"
-              fontSize="11" fill="var(--success)" fontWeight={700}>median</text>
+              fontSize="11" fill="var(--success)" fontWeight={700}>{t('median')}</text>
         <text x={W - PAD.right - 4} y={y(REFERENCE[8][1][1]) + 14} textAnchor="end"
-              fontSize="11" fill="var(--danger)" fontWeight={700}>−2 SD</text>
+              fontSize="11" fill="var(--danger)" fontWeight={700}>{t('minus2')}</text>
 
         {/* Axes */}
         {[0, 6, 12, 18, 24].map((m) => (
@@ -123,12 +113,12 @@ export function GrowthChartHero() {
                 fontSize="11" fill="var(--text-muted)">{m}</text>
         ))}
         <text x={(PAD.left + W - PAD.right) / 2} y={H - 4} textAnchor="middle"
-              fontSize="11" fill="var(--text-muted)">Age in months</text>
+              fontSize="11" fill="var(--text-muted)">{t('ageInMonths')}</text>
         {[0, 6, 12].map((kg) => (
           <text key={`yl${kg}`} x={PAD.left - 8} y={y(kg) + 4} textAnchor="end"
                 fontSize="11" fill="var(--text-muted)">{kg}</text>
         ))}
-        <text x={12} y={PAD.top + 4} fontSize="11" fill="var(--text-muted)">kg</text>
+        <text x={12} y={PAD.top + 4} fontSize="11" fill="var(--text-muted)">{t('kg')}</text>
 
         {/* The child — the single orchestrated moment on the page */}
         <path
@@ -150,7 +140,7 @@ export function GrowthChartHero() {
               role="button"
               tabIndex={0}
               aria-pressed={isSelected}
-              aria-label={`Visit at month ${m}: ${kg} kilograms`}
+              aria-label={t('visitLabel', { month: m, kg })}
               className="cursor-pointer focus:outline-none group"
               onClick={() => setSelected(isSelected ? null : i)}
               onMouseEnter={() => setSelected(i)}
@@ -182,7 +172,7 @@ export function GrowthChartHero() {
           <line x1={x(flagMonth)} y1={y(flagKg) + 9} x2={x(flagMonth)} y2={y(flagKg) + 40}
                 stroke="var(--ink)" strokeWidth={1} />
           <text x={x(flagMonth) + 6} y={y(flagKg) + 36} fontSize="12" fill="var(--ink)" fontWeight={700}>
-            Month 8: flagged, referred
+            {t('flagged')}
           </text>
         </g>
       </svg>
@@ -191,19 +181,19 @@ export function GrowthChartHero() {
            style={{ borderColor: selected === null ? 'var(--rule)' : 'var(--accent)' }}>
         {selected === null ? (
           <p className="text-sm pt-1" style={{ color: 'var(--text-muted)' }}>
-            Tap a visit on the chart to see what the health worker recorded.
+            {t('hint')}
           </p>
         ) : (
           <>
             <p className="text-sm font-bold" style={{ color: 'var(--ink)' }}>
-              Month {VISITS[selected][0]}: {VISITS[selected][1].toFixed(1)} kg, {bandLabel(...VISITS[selected])}
+              {t('selected', { month: VISITS[selected][0], kg: VISITS[selected][1].toFixed(1), band: t(`band.${bandKey(...VISITS[selected])}`) })}
             </p>
-            <p className="text-sm mt-1" style={{ color: 'var(--text)' }}>{VISIT_NOTES[selected]}</p>
+            <p className="text-sm mt-1" style={{ color: 'var(--text)' }}>{t(`notes.${selected}` as 'notes.0')}</p>
           </>
         )}
       </div>
       <figcaption className="mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-        Weight-for-age, girls 0–24 months. Illustrative child; bands approximate the WHO Child Growth Standards.
+        {t('caption')}
       </figcaption>
     </figure>
   );
