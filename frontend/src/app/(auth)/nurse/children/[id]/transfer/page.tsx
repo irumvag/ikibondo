@@ -120,10 +120,10 @@ export default function TransferZonePage({ params }: { params: Promise<{ id: str
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {/* Camp (optional — for cross-camp) */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+          <label htmlFor="transfer-destination-camp-leave" className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
             Destination camp <span className="font-normal" style={{ color: 'var(--text-muted)' }}>(leave unchanged for intra-camp)</span>
           </label>
-          <select
+          <select id="transfer-destination-camp-leave"
             value={toCamp}
             onChange={(e) => { setToCamp(e.target.value); setToZone(''); }}
             className="text-sm px-3 py-2 rounded-lg border outline-none"
@@ -138,13 +138,14 @@ export default function TransferZonePage({ params }: { params: Promise<{ id: str
 
         {/* Zone */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+          <label htmlFor="transfer-destination-zone" className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
             Destination zone
           </label>
           {zonesLoading ? (
             <Skeleton className="h-10 rounded-lg" />
           ) : (
             <select
+              id="transfer-destination-zone"
               value={toZone}
               onChange={(e) => setToZone(e.target.value)}
               className="text-sm px-3 py-2 rounded-lg border outline-none"
@@ -160,10 +161,10 @@ export default function TransferZonePage({ params }: { params: Promise<{ id: str
 
         {/* Reason */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+          <label htmlFor="transfer-reason" className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
             Reason <span style={{ color: 'var(--danger)' }}>*</span>
           </label>
-          <textarea
+          <textarea id="transfer-reason"
             rows={3}
             placeholder="Reason for transfer (e.g. relocation, boundary revision, request from family)…"
             value={reason}

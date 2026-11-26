@@ -103,10 +103,10 @@ export default function CloseCasePage({ params }: { params: Promise<{ id: string
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {/* Status selection */}
         <div>
-          <label className="text-sm font-semibold block mb-3" style={{ color: 'var(--ink)' }}>
+          <p id="close-reason-label" className="text-sm font-semibold block mb-3" style={{ color: 'var(--ink)' }}>
             Reason for closure
-          </label>
-          <div className="flex flex-col gap-2">
+          </p>
+          <div role="radiogroup" aria-labelledby="close-reason-label" className="flex flex-col gap-2">
             {STATUS_OPTIONS.map((opt) => (
               <label
                 key={opt.value}
@@ -137,10 +137,10 @@ export default function CloseCasePage({ params }: { params: Promise<{ id: string
 
         {/* Notes */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+          <label htmlFor="close-details" className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
             Details <span style={{ color: 'var(--danger)' }}>*</span>
           </label>
-          <textarea
+          <textarea id="close-details"
             rows={4}
             placeholder="Describe the circumstances, date of event, and any follow-up actions taken…"
             value={reason}

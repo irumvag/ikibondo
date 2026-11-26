@@ -157,8 +157,8 @@ function SessionFormModal({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Vaccine *</label>
-          <select
+          <label htmlFor="session-vaccine" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Vaccine *</label>
+          <select id="session-vaccine"
             value={vaccine}
             onChange={(e) => setVaccine(e.target.value)}
             disabled={isEdit && session?.status === 'OPEN'}
@@ -173,8 +173,8 @@ function SessionFormModal({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Session date *</label>
-          <input
+          <label htmlFor="session-session-date" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Session date *</label>
+          <input id="session-session-date"
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}

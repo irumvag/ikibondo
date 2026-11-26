@@ -139,8 +139,8 @@ export default function NurseReferralsPage() {
             <h2 className="text-lg font-semibold" style={{ color: 'var(--ink)' }}>New Referral</h2>
             <form onSubmit={handleSubmit((v) => createMut.mutate(v))} className="space-y-4">
               <div>
-                <label style={labelStyle}>Child *</label>
-                <select {...register('child')} style={inputStyle}>
+                <label htmlFor="referrals-child" style={labelStyle}>Child *</label>
+                <select id="referrals-child" {...register('child')} style={inputStyle}>
                   <option value="">Select child…</option>
                   {children.map((c) => (
                     <option key={c.id} value={c.id}>{c.full_name} ({c.registration_number})</option>
@@ -149,13 +149,13 @@ export default function NurseReferralsPage() {
                 {errors.child && <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.child.message}</p>}
               </div>
               <div>
-                <label style={labelStyle}>Target facility *</label>
-                <input {...register('target_facility')} placeholder="e.g. Kigali University Hospital" style={inputStyle} />
+                <label htmlFor="referrals-target-facility" style={labelStyle}>Target facility *</label>
+                <input id="referrals-target-facility" {...register('target_facility')} placeholder="e.g. Kigali University Hospital" style={inputStyle} />
                 {errors.target_facility && <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.target_facility.message}</p>}
               </div>
               <div>
-                <label style={labelStyle}>Reason *</label>
-                <textarea {...register('reason')} rows={3} placeholder="Clinical reason for referral…" style={{ ...inputStyle, resize: 'none' }} />
+                <label htmlFor="referrals-reason" style={labelStyle}>Reason *</label>
+                <textarea id="referrals-reason" {...register('reason')} rows={3} placeholder="Clinical reason for referral…" style={{ ...inputStyle, resize: 'none' }} />
                 {errors.reason && <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{errors.reason.message}</p>}
               </div>
               <div className="flex gap-2 pt-1">

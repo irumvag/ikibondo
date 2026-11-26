@@ -1143,8 +1143,8 @@ function VaccinationsTab({
             </p>
           )}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Administration date *</label>
-            <input
+            <label htmlFor="children-administration-date" className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Administration date *</label>
+            <input id="children-administration-date"
               type="date"
               value={adminDate}
               max={new Date().toISOString().split('T')[0]}
@@ -1154,8 +1154,8 @@ function VaccinationsTab({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Batch number (optional)</label>
-            <input
+            <label htmlFor="children-batch-number-optional" className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Batch number (optional)</label>
+            <input id="children-batch-number-optional"
               type="text"
               placeholder="e.g. BCG-2025-RW-001"
               value={adminBatch}

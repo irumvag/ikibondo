@@ -479,12 +479,13 @@ export default function NurseRegisterPage() {
             <>
               {/* Search existing */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
+                <label htmlFor="register-search-parent" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
                   Search existing parent
                 </label>
                 <div className="relative">
                   <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
                   <input
+                    id="register-search-parent"
                     type="text"
                     value={searchQuery}
                     onChange={(e) => { setSearchQuery(e.target.value); doSearch(e.target.value); }}
@@ -626,14 +627,15 @@ export default function NurseRegisterPage() {
             required
           />
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
+            <p id="register-sex-label" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
               Sex <span style={{ color: 'var(--danger)' }}>*</span>
-            </label>
-            <div className="flex gap-3">
+            </p>
+            <div role="group" aria-labelledby="register-sex-label" className="flex gap-3">
               {(['M', 'F'] as const).map((s) => (
                 <button
                   key={s}
                   type="button"
+                  aria-pressed={newbornForm.sex === s}
                   onClick={() => setN('sex', s)}
                   className="flex-1 py-2 rounded-lg border text-sm font-medium transition-colors"
                   style={{
@@ -671,8 +673,8 @@ export default function NurseRegisterPage() {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Feeding type</label>
-            <div className="flex gap-2">
+            <p id="register-feeding-label" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Feeding type</p>
+            <div role="group" aria-labelledby="register-feeding-label" className="flex gap-2">
               {([
                 { value: 'BREAST',  label: 'Breastfed'  },
                 { value: 'FORMULA', label: 'Formula'     },
@@ -681,6 +683,7 @@ export default function NurseRegisterPage() {
                 <button
                   key={value}
                   type="button"
+                  aria-pressed={newbornForm.feeding_type === value}
                   onClick={() => setN('feeding_type', newbornForm.feeding_type === value ? '' : value)}
                   className="flex-1 py-2 rounded-lg border text-sm font-medium transition-colors"
                   style={{
@@ -697,8 +700,8 @@ export default function NurseRegisterPage() {
 
           {zones.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Zone (optional)</label>
-              <select
+              <label htmlFor="register-zone-optional" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Zone (optional)</label>
+              <select id="register-zone-optional"
                 value={newbornForm.zone}
                 onChange={(e) => setN('zone', e.target.value)}
                 className="text-sm px-3 py-2 rounded-lg border outline-none"
@@ -797,10 +800,10 @@ export default function NurseRegisterPage() {
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
+            <label htmlFor="register-relationship" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
               Relationship <span style={{ color: 'var(--danger)' }}>*</span>
             </label>
-            <select
+            <select id="register-relationship"
               value={newbornForm.guardian_relationship}
               onChange={(e) => setN('guardian_relationship', e.target.value)}
               className="text-sm px-3 py-2 rounded-lg border outline-none"

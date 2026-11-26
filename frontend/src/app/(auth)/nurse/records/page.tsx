@@ -286,8 +286,8 @@ function AddHealthRecordModal({ open, onClose }: { open: boolean; onClose: () =>
           <span className="text-sm" style={{ color: 'var(--ink)' }}>Bilateral pitting oedema</span>
         </label>
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Notes</label>
-          <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={2} placeholder="Optional clinical notes…"
+          <label htmlFor="records-notes" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Notes</label>
+          <textarea id="records-notes" value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={2} placeholder="Optional clinical notes…"
             className="rounded-xl border px-3 py-2.5 text-sm outline-none resize-none focus:ring-2 focus:ring-[var(--ink)] focus:border-transparent"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }} />
         </div>
@@ -345,16 +345,16 @@ function AmendModal({ record, open, onDone, onCancel }: {
         </div>
         <Input label="MUAC (cm)" type="number" step="0.1" value={muacCm} onChange={e => setMuacCm(e.target.value)} placeholder="e.g. 12.5" />
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Notes</label>
-          <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Optional update…"
+          <label htmlFor="records-notes-2" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Notes</label>
+          <textarea id="records-notes-2" value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Optional update…"
             className="rounded-xl border px-3 py-2.5 text-sm outline-none resize-none"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
+          <label htmlFor="records-amendment-reason" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
             Amendment reason <span style={{ color: 'var(--danger)' }}>*</span>
           </label>
-          <textarea value={reason} onChange={e => setReason(e.target.value)} rows={2} placeholder="Why is this record being corrected?"
+          <textarea id="records-amendment-reason" value={reason} onChange={e => setReason(e.target.value)} rows={2} placeholder="Why is this record being corrected?"
             className="rounded-xl border px-3 py-2.5 text-sm outline-none resize-none"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }} />
         </div>

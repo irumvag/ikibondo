@@ -102,8 +102,8 @@ function EditVaxModal({ record, onClose, onSaved }: {
         </p>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Status</label>
-          <select value={status} onChange={(e) => setStatus(e.target.value as VaccinationRecord['status'])}
+          <label htmlFor="vaccines-status" className="text-sm font-medium">Status</label>
+          <select id="vaccines-status" value={status} onChange={(e) => setStatus(e.target.value as VaccinationRecord['status'])}
             className="rounded-lg border px-3 py-2 text-sm outline-none"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}>
             <option value="SCHEDULED">Scheduled</option>
@@ -115,16 +115,16 @@ function EditVaxModal({ record, onClose, onSaved }: {
 
         {status === 'DONE' && (
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Administered date</label>
-            <input type="date" value={adminDate} onChange={(e) => setAdminDate(e.target.value)}
+            <label htmlFor="vaccines-administered-date" className="text-sm font-medium">Administered date</label>
+            <input id="vaccines-administered-date" type="date" value={adminDate} onChange={(e) => setAdminDate(e.target.value)}
               className="rounded-lg border px-3 py-2 text-sm outline-none"
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }} />
           </div>
         )}
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Batch number</label>
-          <input type="text" value={batch} onChange={(e) => setBatch(e.target.value)}
+          <label htmlFor="vaccines-batch-number" className="text-sm font-medium">Batch number</label>
+          <input id="vaccines-batch-number" type="text" value={batch} onChange={(e) => setBatch(e.target.value)}
             placeholder="e.g. BN-2024-001"
             className="rounded-lg border px-3 py-2 text-sm outline-none"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }} />
