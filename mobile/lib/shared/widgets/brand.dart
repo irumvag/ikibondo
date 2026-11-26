@@ -160,3 +160,44 @@ class GlassBackground extends StatelessWidget {
     );
   }
 }
+
+
+/// Full-screen or in-page loading state: the logo mark with a spinner around it.
+class AppLoader extends StatelessWidget {
+  final String? message;
+  final bool onDark;
+  const AppLoader({super.key, this.message, this.onDark = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 72,
+            height: 72,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox.expand(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: onDark ? Colors.white : colorInk,
+                    backgroundColor: (onDark ? Colors.white : colorInk).withValues(alpha: 0.12),
+                  ),
+                ),
+                const IkibondoLogo(size: 40, showName: false),
+              ],
+            ),
+          ),
+          if (message != null) ...[
+            const SizedBox(height: 14),
+            Text(message!,
+                style: GoogleFonts.inter(fontSize: 13, color: onDark ? Colors.white70 : colorMuted)),
+          ],
+        ],
+      ),
+    );
+  }
+}

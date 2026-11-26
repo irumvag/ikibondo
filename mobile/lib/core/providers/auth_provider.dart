@@ -10,16 +10,19 @@ class AuthState {
   final AppUser? user;
   final bool isLoading;
   final String? error;
+  /// False only while the app checks for a saved sign-in at start (splash screen).
+  final bool initialized;
 
-  const AuthState({this.user, this.isLoading = false, this.error});
+  const AuthState({this.user, this.isLoading = false, this.error, this.initialized = true});
 
   bool get isAuthenticated => user != null;
 
   AuthState copyWith({AppUser? user, bool? isLoading, String? error}) =>
       AuthState(
-        user:      user      ?? this.user,
-        isLoading: isLoading ?? this.isLoading,
-        error:     error,
+        user:        user      ?? this.user,
+        isLoading:   isLoading ?? this.isLoading,
+        error:       error,
+        initialized: initialized,
       );
 }
 
@@ -28,7 +31,7 @@ class AuthNotifier extends Notifier<AuthState> {
   AuthState build() {
     _restoreSession();
     // State can't be written until build() returns, so start in "loading"
-    return const AuthState(isLoading: true);
+    return const AuthState(isLoading: true, initialized: false);
   }
 
   Future<void> _restoreSession() async {

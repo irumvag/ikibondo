@@ -63,24 +63,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // White ring so the blue mark stands out on the blue band
-                        Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: const IkibondoLogo(size: 52, showName: false),
-                        ),
-                        const SizedBox(height: 18),
-                        Text(
-                          'Ikibondo',
-                          style: GoogleFonts.inter(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                            color: Colors.white,
-                          ),
+                        // Logo and name on one line; white ring so the blue mark shows on the blue band
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const IkibondoLogo(size: 44, showName: false),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Ikibondo',
+                              style: GoogleFonts.inter(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 10),
                         Text(

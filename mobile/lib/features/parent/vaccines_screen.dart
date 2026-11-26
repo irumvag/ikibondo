@@ -64,7 +64,7 @@ class _ParentVaccinesScreenState extends ConsumerState<ParentVaccinesScreen> {
             ),
             Expanded(
               child: childrenAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const AppLoader(),
                 error: (_, __) => Center(
                   child: Text('Could not load. Pull down to try again.', style: GoogleFonts.inter(color: colorMuted)),
                 ),
@@ -133,7 +133,7 @@ class _ChildSection extends ConsumerWidget {
             ),
           ),
           if (async.isLoading && all.isEmpty)
-            const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()))
+            const Padding(padding: EdgeInsets.all(16), child: AppLoader())
           else if (async.hasError)
             GlassCard(child: Text('Could not load vaccinations.', style: GoogleFonts.inter(color: colorMuted)))
           else if (shown.isEmpty)

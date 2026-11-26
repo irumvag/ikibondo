@@ -1,13 +1,17 @@
 /// All API URL constants for Ikibondo backend.
-/// Base URL is set via --dart-define=API_BASE_URL or defaults to emulator address.
+/// Base URL is set via --dart-define=API_BASE_URL. Without it (e.g. Xcode's Run
+/// button) it points at a backend on the development machine, as each emulator sees it.
 library;
 
 import 'package:flutter/foundation.dart';
 
-const String kBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:8000/api/v1', // Android emulator → host localhost
-);
+const String _definedBaseUrl = String.fromEnvironment('API_BASE_URL');
+
+final String kBaseUrl = _definedBaseUrl.isNotEmpty
+    ? _definedBaseUrl
+    : defaultTargetPlatform == TargetPlatform.android
+        ? 'http://10.0.2.2:8000/api/v1' // Android emulator → the Mac's localhost
+        : 'http://127.0.0.1:8000/api/v1'; // iOS simulator shares the Mac's network
 
 /// Whether the configured base URL is safe to use. HTTPS is always allowed;
 /// plain HTTP is only tolerated for local/emulator hosts during development.
@@ -39,67 +43,67 @@ class Endpoints {
   Endpoints._();
 
   // ── Auth ───────────────────────────────────────────────────────────────
-  static const login            = '$kBaseUrl/auth/login/';
-  static const refresh          = '$kBaseUrl/auth/refresh/';
-  static const logout           = '$kBaseUrl/auth/logout/';
-  static const me               = '$kBaseUrl/auth/me/';
-  static const register         = '$kBaseUrl/auth/register/';
-  static const changePassword   = '$kBaseUrl/auth/change-password/';
-  static const switchRole       = '$kBaseUrl/auth/switch-role/';
-  static const pendingApprovals = '$kBaseUrl/auth/pending-approvals/';
+  static final login            = '$kBaseUrl/auth/login/';
+  static final refresh          = '$kBaseUrl/auth/refresh/';
+  static final logout           = '$kBaseUrl/auth/logout/';
+  static final me               = '$kBaseUrl/auth/me/';
+  static final register         = '$kBaseUrl/auth/register/';
+  static final changePassword   = '$kBaseUrl/auth/change-password/';
+  static final switchRole       = '$kBaseUrl/auth/switch-role/';
+  static final pendingApprovals = '$kBaseUrl/auth/pending-approvals/';
   static String approveUser(String id) => '$kBaseUrl/auth/approve/$id/';
-  static const passwordResetRequest = '$kBaseUrl/auth/password-reset/request/';
-  static const passwordResetConfirm = '$kBaseUrl/auth/password-reset/confirm/';
+  static final passwordResetRequest = '$kBaseUrl/auth/password-reset/request/';
+  static final passwordResetConfirm = '$kBaseUrl/auth/password-reset/confirm/';
 
   // ── App ────────────────────────────────────────────────────────────────
-  static const appConfig        = '$kBaseUrl/app/config/';
+  static final appConfig        = '$kBaseUrl/app/config/';
 
   // ── Children ───────────────────────────────────────────────────────────
-  static const children         = '$kBaseUrl/children/';
+  static final children         = '$kBaseUrl/children/';
   static String child(String id) => '$kBaseUrl/children/$id/';
   static String scanQr(String qr) => '$kBaseUrl/children/scan/$qr/';
-  static const guardians        = '$kBaseUrl/children/guardians/';
+  static final guardians        = '$kBaseUrl/children/guardians/';
   static String guardian(String id) => '$kBaseUrl/children/guardians/$id/';
   static String familyOverview(String id) => '$kBaseUrl/children/guardians/$id/family-overview/';
-  static const visitRequests    = '$kBaseUrl/children/visit-requests/';
+  static final visitRequests    = '$kBaseUrl/children/visit-requests/';
   static String visitRequest(String id) => '$kBaseUrl/children/visit-requests/$id/';
   static String childQr(String id) => '$kBaseUrl/children/$id/qr/';
 
   // ── Health Records ─────────────────────────────────────────────────────
-  static const healthRecords    = '$kBaseUrl/health-records/';
+  static final healthRecords    = '$kBaseUrl/health-records/';
   static String healthRecord(String id) => '$kBaseUrl/health-records/$id/';
   static String healthRecordNotes(String id) => '$kBaseUrl/health-records/$id/notes/';
   static String amendRecord(String id) => '$kBaseUrl/health-records/$id/amend/';
   static String growthData(String childId) => '$kBaseUrl/growth-data/$childId/';
 
   // ── Vaccinations ───────────────────────────────────────────────────────
-  static const vaccinations     = '$kBaseUrl/vaccinations/';
+  static final vaccinations     = '$kBaseUrl/vaccinations/';
   static String vaccination(String id) => '$kBaseUrl/vaccinations/$id/';
   static String administerVaccine(String id) => '$kBaseUrl/vaccinations/$id/administer/';
-  static const vaccines         = '$kBaseUrl/vaccinations/vaccines/';
-  static const clinicSessions   = '$kBaseUrl/vaccinations/clinic-sessions/';
+  static final vaccines         = '$kBaseUrl/vaccinations/vaccines/';
+  static final clinicSessions   = '$kBaseUrl/vaccinations/clinic-sessions/';
   static String sessionEligible(String id) => '$kBaseUrl/vaccinations/clinic-sessions/$id/eligible-children/';
   static String sessionAttendance(String id) => '$kBaseUrl/vaccinations/clinic-sessions/$id/record-attendance/';
 
   // ── Referrals ──────────────────────────────────────────────────────────
-  static const referrals        = '$kBaseUrl/referrals/';
+  static final referrals        = '$kBaseUrl/referrals/';
   static String completeReferral(String id) => '$kBaseUrl/referrals/$id/complete/';
 
   // ── CHW ────────────────────────────────────────────────────────────────
-  static const chwFamilies      = '$kBaseUrl/chw/families/';
-  static const chwDailyPlan     = '$kBaseUrl/chw/daily-plan/';
+  static final chwFamilies      = '$kBaseUrl/chw/families/';
+  static final chwDailyPlan     = '$kBaseUrl/chw/daily-plan/';
 
   // ── Notifications ──────────────────────────────────────────────────────
-  static const notifications    = '$kBaseUrl/notifications/';
+  static final notifications    = '$kBaseUrl/notifications/';
   static String markRead(String id) => '$kBaseUrl/notifications/$id/read/';
-  static const markAllRead      = '$kBaseUrl/notifications/read-all/';
+  static final markAllRead      = '$kBaseUrl/notifications/read-all/';
   static String dismissNotif(String id) => '$kBaseUrl/notifications/$id/dismiss/';
-  static const devices          = '$kBaseUrl/notifications/devices/';
+  static final devices          = '$kBaseUrl/notifications/devices/';
 
   // ── Sync ───────────────────────────────────────────────────────────────
-  static const batchSync        = '$kBaseUrl/sync/batch/';
+  static final batchSync        = '$kBaseUrl/sync/batch/';
 
   // ── Admin-edited content (Admin → Site content / Announcements on the website) ──
-  static const siteContent      = '$kBaseUrl/site-content/';
-  static const announcements    = '$kBaseUrl/announcements/active/?where=dashboard';
+  static final siteContent      = '$kBaseUrl/site-content/';
+  static final announcements    = '$kBaseUrl/announcements/active/?where=dashboard';
 }

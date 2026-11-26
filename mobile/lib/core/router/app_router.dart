@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../../features/auth/login_screen.dart';
+import '../../features/auth/splash_screen.dart';
 import '../../features/auth/change_password_screen.dart';
 import '../../features/auth/forgot_password_screen.dart';
 import '../../features/auth/web_only_screen.dart';
@@ -35,8 +36,14 @@ final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authProvider);
 
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/splash',
     redirect: (context, state) {
+      // Splash until the saved sign-in (if any) has been checked
+      if (!auth.initialized) return state.matchedLocation == '/splash' ? null : '/splash';
+      if (state.matchedLocation == '/splash') {
+        if (!auth.isAuthenticated) return '/login';
+        return auth.user!.mustChangePassword ? '/change-password' : _homeForRole(auth.user!.role);
+      }
       final loggedIn = auth.isAuthenticated;
       final onLogin  = state.matchedLocation == '/login';
       final public   = onLogin || state.matchedLocation == '/forgot-password';
@@ -57,6 +64,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (_, __) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/login',
         builder: (_, __) => const LoginScreen(),

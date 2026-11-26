@@ -9,6 +9,7 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/risk_badge.dart';
 import '../../core/api/response.dart';
+import '../../shared/widgets/brand.dart';
 
 final _nurseChildProvider = FutureProvider.family.autoDispose<Child, String>((ref, id) async {
   final resp = await ApiClient.dio.get(Endpoints.child(id));
@@ -152,7 +153,7 @@ class _NurseChildDetailScreenState extends ConsumerState<NurseChildDetailScreen>
         child: const Icon(Icons.note_add),
       ),
       body: childAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const AppLoader(),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (child) => TabBarView(
           controller: _tabs,
@@ -272,7 +273,7 @@ class _RecordsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ref.watch(_recordsProvider(childId)).when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const AppLoader(),
       error: (_, __) => Center(
         child: TextButton(
           onPressed: () => ref.invalidate(_recordsProvider(childId)),

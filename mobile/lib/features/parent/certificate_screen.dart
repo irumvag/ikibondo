@@ -83,7 +83,7 @@ class VaccinationCertificateScreen extends ConsumerWidget {
               child: Text('Could not load the record. Check your connection.',
                   style: GoogleFonts.inter(color: colorMuted)),
             ),
-          _ => const Center(child: CircularProgressIndicator()),
+          _ => const AppLoader(),
         },
       ),
     );

@@ -11,6 +11,7 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/risk_badge.dart';
 import '../../core/api/response.dart';
+import '../../shared/widgets/brand.dart';
 
 final _childDetailProvider = FutureProvider.family.autoDispose<Child, String>((ref, id) async {
   final resp = await ApiClient.dio.get(Endpoints.child(id));
@@ -49,7 +50,7 @@ class ChwChildDetailScreen extends ConsumerWidget {
         ],
       ),
       body: childAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const AppLoader(),
         error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: colorDanger))),
         data: (child) => ListView(
           padding: const EdgeInsets.all(16),

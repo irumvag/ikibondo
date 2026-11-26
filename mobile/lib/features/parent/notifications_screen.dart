@@ -8,6 +8,7 @@ import '../../core/api/endpoints.dart';
 import '../../core/models/notification.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/api/response.dart';
+import '../../shared/widgets/brand.dart';
 
 final _notifProvider = FutureProvider.autoDispose<List<AppNotification>>((ref) async {
   final resp = await ApiClient.dio.get(Endpoints.notifications);
@@ -37,7 +38,7 @@ class NotificationsScreen extends ConsumerWidget {
         ],
       ),
       body: notifAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const AppLoader(),
         error: (_, __) => const Center(child: Text('Failed to load notifications')),
         data: (notifications) {
           if (notifications.isEmpty) {

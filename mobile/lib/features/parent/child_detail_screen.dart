@@ -95,7 +95,7 @@ class _ParentChildDetailScreenState extends ConsumerState<ParentChildDetailScree
         ),
       ),
       body: childAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const AppLoader(),
         error: (e, _) => _Problem(
           'Could not load this child. Check your connection.',
           onRetry: () => ref.invalidate(parentChildProvider(widget.childId)),
@@ -353,7 +353,7 @@ class _GrowthTab extends ConsumerWidget {
     final summary = ref.watch(_growthSummaryProvider(childId)).value ?? const {};
 
     return recordsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const AppLoader(),
       error: (_, __) => _Problem('Could not load growth. Check your connection.',
           onRetry: () => ref.invalidate(childRecordsProvider(childId))),
       data: (records) {
@@ -538,7 +538,7 @@ class _VaccinesTab extends ConsumerWidget {
 
     return GlassBackground(
       child: vaccAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const AppLoader(),
         error: (_, __) => _Problem('Could not load vaccinations. Check your connection.',
             onRetry: () => ref.invalidate(childVaccinesProvider(child.id))),
         data: (items) {
