@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { useNavLabel } from '@/i18n/useNavLabel';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Menu, WifiOff, RefreshCw } from 'lucide-react';
@@ -98,7 +100,7 @@ function getPageTitle(pathname: string) {
   for (const [prefix, title] of sorted) {
     if (pathname.startsWith(prefix)) return title;
   }
-  return 'Dashboard';
+  return null;
 }
 
 interface TopbarProps {
@@ -108,7 +110,10 @@ interface TopbarProps {
 export function Topbar({ onMenuClick }: TopbarProps) {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
-  const title = getPageTitle(pathname);
+  const t = useTranslations('topbar');
+  const navLabel = useNavLabel();
+  const pageTitle = getPageTitle(pathname);
+  const title = pageTitle ? navLabel(pageTitle) : t('dashboard');
   const pendingCount = useSyncStore((s) => s.pending.length);
   const lastSyncAt = useSyncStore((s) => s.lastSyncAt);
   const [isOnline, setIsOnline] = useState(true);
@@ -145,7 +150,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         onClick={onMenuClick}
         className="lg:hidden flex items-center justify-center w-9 h-9 rounded-xl transition-colors hover:bg-[var(--bg-sand)]"
         style={{ color: 'var(--ink)' }}
-        aria-label="Toggle navigation"
+        aria-label={t('toggleNavigation')}
       >
         <Menu size={18} aria-hidden="true" />
       </button>
@@ -167,16 +172,16 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             style={{ backgroundColor: 'var(--high-bg)', color: 'var(--danger)', border: '1px solid color-mix(in srgb, var(--danger) 25%, transparent)' }}
           >
             <WifiOff size={11} aria-hidden="true" />
-            Offline
+            {t('offline')}
           </div>
         ) : pendingCount > 0 ? (
           <div
             className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-            title={`${pendingCount} pending · Last sync ${lastSyncAt ? new Date(lastSyncAt).toLocaleTimeString() : 'never'}`}
+            title={t('syncTitle', { count: pendingCount, time: lastSyncAt ? new Date(lastSyncAt).toLocaleTimeString() : t('never') })}
             style={{ backgroundColor: 'var(--med-bg)', color: 'var(--warn)', border: '1px solid color-mix(in srgb, var(--warn) 25%, transparent)' }}
           >
             <RefreshCw size={11} className="animate-spin" aria-hidden="true" />
-            {pendingCount} syncing
+            {t('syncing', { count: pendingCount })}
           </div>
         ) : (
           <div
@@ -184,7 +189,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             style={{ backgroundColor: 'var(--low-bg)', color: 'var(--success)', border: '1px solid color-mix(in srgb, var(--success) 25%, transparent)' }}
           >
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--success)' }} aria-hidden="true" />
-            Online
+            {t('online')}
           </div>
         )}
 
@@ -194,7 +199,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         <ThemeToggle />
 
         {/* User avatar — links to profile */}
-        <Link href="/profile" className="flex items-center gap-2 ml-1" aria-label="Go to profile">
+        <Link href="/profile" className="flex items-center gap-2 ml-1" aria-label={t('goToProfile')}>
           <span className="hidden md:block text-sm font-medium" style={{ color: 'var(--ink)' }}>
             {user?.full_name?.split(' ')[0]}
           </span>

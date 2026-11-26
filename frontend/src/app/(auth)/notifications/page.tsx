@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -68,9 +69,8 @@ const CATEGORY: Record<string, Exclude<Category, 'all'>> = {
   BROADCAST: 'messages', ROLE_GRANTED: 'messages',
   ZONE_SUMMARY: 'reports', CHW_INACTIVE: 'reports',
 };
-const CATEGORY_LABEL: Record<Category, string> = {
-  all: 'All types', health: 'Health alerts', vaccines: 'Vaccines', visits: 'Visits', messages: 'Messages', reports: 'Reports',
-};
+// Filter names: messages/en.json notifications.category.<category>
+const CATEGORIES: Category[] = ['all', 'health', 'vaccines', 'visits', 'messages', 'reports'];
 
 const LOOK: Record<string, { icon: typeof Bell; color: string }> = {
   SAM_ALERT: { icon: Siren, color: 'var(--danger)' },
@@ -90,22 +90,25 @@ const LOOK: Record<string, { icon: typeof Bell; color: string }> = {
   CHW_INACTIVE: { icon: UserRound, color: 'var(--warn)' },
 };
 
-function relativeTime(iso: string) {
+type TimeT = (key: 'time.justNow' | 'time.minutesAgo' | 'time.hoursAgo', values?: { count: number }) => string;
+
+function relativeTime(iso: string, t: TimeT) {
   const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 1) return t('time.justNow');
+  if (mins < 60) return t('time.minutesAgo', { count: mins });
   const h = Math.round(mins / 60);
-  if (h < 24) return `${h} h ago`;
+  if (h < 24) return t('time.hoursAgo', { count: h });
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
-function dayGroup(iso: string) {
+// Group code; its heading is in messages/en.json notifications.group.<code>
+function dayGroup(iso: string): 'today' | 'yesterday' | 'week' | 'older' {
   const d = new Date(iso); const now = new Date();
   const days = Math.floor((new Date(now.toDateString()).getTime() - new Date(d.toDateString()).getTime()) / 86400000);
-  if (days <= 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return 'This week';
-  return 'Older';
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return 'week';
+  return 'older';
 }
 
 // ── Row ────────────────────────────────────────────────────────────────────────
@@ -113,6 +116,7 @@ function dayGroup(iso: string) {
 function NotifRow({ n, role, onToggleRead, onDelete, busy }: {
   n: AppNotification; role: string; onToggleRead: () => void; onDelete: () => void; busy: boolean;
 }) {
+  const tt = useTranslations('notifications');
   const router = useRouter();
   const link = resolveLink(n, role);
   const look = LOOK[n.trigger_type] ?? { icon: Bell, color: 'var(--ink)' };
@@ -135,25 +139,25 @@ function NotifRow({ n, role, onToggleRead, onDelete, busy }: {
       <button type="button" onClick={open} className="flex-1 min-w-0 text-left" disabled={!link && n.is_read}>
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{n.title}</span>
-          {!n.is_read && <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--ink)', color: 'var(--bg-elev)' }}>New</span>}
+          {!n.is_read && <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--ink)', color: 'var(--bg-elev)' }}>{tt('new')}</span>}
         </div>
         <p className="text-sm mt-0.5 leading-relaxed" style={{ color: 'var(--text)', fontWeight: n.is_read ? 400 : 500 }}>{message}</p>
         <p className="text-xs mt-1 flex flex-wrap items-center gap-x-2" style={{ color: 'var(--text-muted)' }}>
-          <span>{relativeTime(n.created_at)}</span>
+          <span>{relativeTime(n.created_at, tt)}</span>
           {n.child_name && <span>· {n.child_name}</span>}
-          {link && <span style={{ color: 'var(--ink)' }}>· Open</span>}
+          {link && <span style={{ color: 'var(--ink)' }}>{tt('open')}</span>}
         </p>
       </button>
       <div className="flex items-center gap-1 shrink-0">
         <button type="button" onClick={onToggleRead} disabled={busy}
           className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--bg-elev)]"
-          title={n.is_read ? 'Mark as unread' : 'Mark as read'} aria-label={n.is_read ? 'Mark as unread' : 'Mark as read'}
+          title={n.is_read ? tt('markAsUnread') : tt('markAsRead')} aria-label={n.is_read ? tt('markAsUnread') : tt('markAsRead')}
           style={{ color: 'var(--text-muted)' }}>
           {n.is_read ? <Mail size={16} aria-hidden="true" /> : <Check size={16} aria-hidden="true" />}
         </button>
         <button type="button" onClick={onDelete} disabled={busy}
           className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--bg-elev)]"
-          title="Remove" aria-label="Remove" style={{ color: 'var(--text-muted)' }}>
+          title={tt('remove')} aria-label={tt('remove')} style={{ color: 'var(--text-muted)' }}>
           <Trash2 size={16} aria-hidden="true" />
         </button>
       </div>
@@ -164,6 +168,7 @@ function NotifRow({ n, role, onToggleRead, onDelete, busy }: {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function NotificationsPage() {
+  const tt = useTranslations('notifications');
   const qc = useQueryClient();
   const toast = useToast();
   const role = useAuthStore((s) => s.user?.role ?? '');
@@ -182,15 +187,15 @@ export default function NotificationsPage() {
     mutationFn: (n: AppNotification) => (n.is_read ? markNotificationUnread(n.id) : markNotificationRead(n.id)),
     onSuccess: refresh,
   });
-  const remove = useMutation({ mutationFn: (id: string) => deleteNotification(id), onSuccess: () => { refresh(); toast.success('Removed'); } });
-  const readAll = useMutation({ mutationFn: markAllNotificationsRead, onSuccess: () => { refresh(); toast.success('All marked as read'); } });
+  const remove = useMutation({ mutationFn: (id: string) => deleteNotification(id), onSuccess: () => { refresh(); toast.success(tt('removed')); } });
+  const readAll = useMutation({ mutationFn: markAllNotificationsRead, onSuccess: () => { refresh(); toast.success(tt('allMarkedAsRead')); } });
 
   const unread = all.filter((n) => !n.is_read).length;
   const present = useMemo(() => new Set(all.map((n) => CATEGORY[n.trigger_type] ?? 'messages')), [all]);
   const shown = all
     .filter((n) => !unreadOnly || !n.is_read)
     .filter((n) => category === 'all' || (CATEGORY[n.trigger_type] ?? 'messages') === category);
-  const groups = ['Today', 'Yesterday', 'This week', 'Older']
+  const groups = (['today', 'yesterday', 'week', 'older'] as const)
     .map((g) => ({ g, items: shown.filter((n) => dayGroup(n.created_at) === g) }))
     .filter((x) => x.items.length);
 
@@ -198,15 +203,14 @@ export default function NotificationsPage() {
     <div className="flex flex-col gap-5 max-w-3xl mx-auto w-full">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>Notifications</h2>
+          <h2 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>{tt('notifications')}</h2>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {unread ? `${unread} unread of ${all.length}` : all.length ? 'You are all caught up' : 'Alerts and reminders appear here'}
+            {unread ? tt('unreadOf', { unread, total: all.length }) : all.length ? tt('youAreAllCaught') : tt('alertsAndRemindersAppear')}
           </p>
         </div>
         {unread > 0 && (
           <Button variant="secondary" size="sm" loading={readAll.isPending} onClick={() => readAll.mutate()}>
-            <CheckCheck size={15} className="mr-1.5" aria-hidden="true" /> Mark all read
-          </Button>
+            <CheckCheck size={15} className="mr-1.5" aria-hidden="true" />{' '}{tt('markAllRead')}</Button>
         )}
       </div>
 
@@ -224,38 +228,37 @@ export default function NotificationsPage() {
           ))}
         </div>
         <button type="button" onClick={() => setHowOpen((o) => !o)} aria-expanded={howOpen}
-          className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-white">
-          How reminders work <ChevronDown size={16} className={`transition-transform ${howOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+          className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-white">{tt('howRemindersWork')}{' '}<ChevronDown size={16} className={`transition-transform ${howOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
         </button>
         {howOpen && (
           <ul className="mt-2 flex flex-col gap-1.5 text-sm" style={{ color: 'rgba(255,255,255,.92)' }}>
-            <li><b>Before a vaccine:</b> 7, 3 and 1 day before, and on the day, at 08:00.</li>
-            <li><b>After a missed dose:</b> an overdue alert on day 1, 7, 14 and 21.</li>
-            <li><b>Health alerts:</b> severe malnutrition and high-risk results reach the nurse and supervisor the same day.</li>
-            <li><b>How:</b> here, in the mobile app, by SMS and by email when one is on the account.</li>
+            <li>{tt.rich('beforeVaccine', { b: (chunks) => <b>{chunks}</b> })}</li>
+            <li>{tt.rich('afterMissedDose', { b: (chunks) => <b>{chunks}</b> })}</li>
+            <li>{tt.rich('healthAlertsRule', { b: (chunks) => <b>{chunks}</b> })}</li>
+            <li>{tt.rich('howDelivered', { b: (chunks) => <b>{chunks}</b> })}</li>
           </ul>
         )}
       </section>
 
       {/* Filters: scroll sideways on phones */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex rounded-full p-0.5 shrink-0" style={{ backgroundColor: 'var(--bg-sand)' }} role="group" aria-label="Show">
+        <div className="flex rounded-full p-0.5 shrink-0" style={{ backgroundColor: 'var(--bg-sand)' }} role="group" aria-label={tt('show')}>
           {([false, true] as const).map((u) => (
             <button key={String(u)} type="button" onClick={() => setUnreadOnly(u)} aria-pressed={unreadOnly === u}
               className="px-3.5 h-8 rounded-full text-sm font-semibold transition-colors"
               style={unreadOnly === u ? { backgroundColor: 'var(--ink)', color: 'var(--bg-elev)' } : { color: 'var(--ink)' }}>
-              {u ? `Unread${unread ? ` (${unread})` : ''}` : 'All'}
+              {u ? tt('unreadTab', { count: unread }) : tt('all')}
             </button>
           ))}
         </div>
         <div className="flex gap-1.5 overflow-x-auto max-w-full pb-1 -mb-1">
-          {(Object.keys(CATEGORY_LABEL) as Category[]).filter((c) => c === 'all' || present.has(c as never)).map((c) => (
+          {CATEGORIES.filter((c) => c === 'all' || present.has(c as never)).map((c) => (
             <button key={c} type="button" onClick={() => setCategory(c)} aria-pressed={category === c}
               className="px-3 h-8 rounded-full text-sm whitespace-nowrap border transition-colors"
               style={category === c
                 ? { borderColor: 'var(--ink)', color: 'var(--ink)', backgroundColor: 'var(--bg-sand)', fontWeight: 600 }
                 : { borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-              {CATEGORY_LABEL[c]}
+              {tt(`category.${c}`)}
             </button>
           ))}
         </div>
@@ -268,16 +271,16 @@ export default function NotificationsPage() {
           <span className="mx-auto mb-3 w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}>
             {unreadOnly ? <Check size={26} aria-hidden="true" /> : <BellOff size={26} aria-hidden="true" />}
           </span>
-          <p className="font-semibold" style={{ color: 'var(--ink)' }}>{unreadOnly ? 'Nothing unread' : 'No notifications here'}</p>
+          <p className="font-semibold" style={{ color: 'var(--ink)' }}>{unreadOnly ? tt('nothingUnread') : tt('noNotificationsHere')}</p>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {unreadOnly ? 'You have read everything.' : 'Reminders, alerts and visit updates will appear here.'}
+            {unreadOnly ? tt('youHaveReadEverything') : tt('remindersAlertsAndVisit')}
           </p>
         </div>
       ) : (
         groups.map(({ g, items }) => (
           <section key={g} aria-labelledby={`grp-${g}`}>
             <h3 id={`grp-${g}`} className="text-xs font-semibold uppercase tracking-wide mb-2 px-1 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
-              <MessageSquare size={12} aria-hidden="true" /> {g}
+              <MessageSquare size={12} aria-hidden="true" /> {tt(`group.${g}`)}
             </h3>
             <ul className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', boxShadow: 'var(--shadow-sm)' }}>
               {items.map((n) => (

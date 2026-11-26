@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import Link from 'next/link';
 import { Syringe, CheckCircle, Clock, XCircle, SkipForward, ChevronDown, ChevronRight, Printer } from 'lucide-react';
@@ -14,24 +15,26 @@ import { useToast } from '@/contexts/ToastContext';
 
 type StatusFilter = 'ALL' | 'DONE' | 'SCHEDULED' | 'MISSED' | 'SKIPPED';
 
-const TABS: { key: StatusFilter; label: string; icon: React.ReactNode; color: string }[] = [
-  { key: 'ALL',       label: 'All',      icon: <Syringe   size={13} />, color: 'var(--ink)'        },
-  { key: 'DONE',      label: 'Done',     icon: <CheckCircle size={13} />, color: 'var(--success)'  },
-  { key: 'SCHEDULED', label: 'Upcoming', icon: <Clock     size={13} />, color: 'var(--warn)'       },
-  { key: 'MISSED',    label: 'Missed',   icon: <XCircle   size={13} />, color: 'var(--danger)'     },
-  { key: 'SKIPPED',   label: 'Skipped',  icon: <SkipForward size={13} />, color: 'var(--text-muted)' },
+// Tab and status text: messages/en.json parent.vaccines.status.<key>
+const TABS: { key: StatusFilter; icon: React.ReactNode; color: string }[] = [
+  { key: 'ALL',       icon: <Syringe   size={13} />, color: 'var(--ink)'        },
+  { key: 'DONE',      icon: <CheckCircle size={13} />, color: 'var(--success)'  },
+  { key: 'SCHEDULED', icon: <Clock     size={13} />, color: 'var(--warn)'       },
+  { key: 'MISSED',    icon: <XCircle   size={13} />, color: 'var(--danger)'     },
+  { key: 'SKIPPED',   icon: <SkipForward size={13} />, color: 'var(--text-muted)' },
 ];
 
-const STATUS_META: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
-  DONE:      { label: 'Done',     icon: <CheckCircle size={12} />, color: 'var(--success)', bg: 'color-mix(in srgb, var(--success) 12%, transparent)' },
-  SCHEDULED: { label: 'Upcoming', icon: <Clock       size={12} />, color: 'var(--warn)',    bg: 'color-mix(in srgb, var(--warn) 12%, transparent)'    },
-  MISSED:    { label: 'Missed',   icon: <XCircle     size={12} />, color: 'var(--danger)',  bg: 'color-mix(in srgb, var(--danger) 12%, transparent)'  },
-  SKIPPED:   { label: 'Skipped',  icon: <SkipForward size={12} />, color: 'var(--text-muted)', bg: 'var(--bg-sand)' },
+const STATUS_META: Record<'DONE' | 'SCHEDULED' | 'MISSED' | 'SKIPPED', { icon: React.ReactNode; color: string; bg: string }> = {
+  DONE:      { icon: <CheckCircle size={12} />, color: 'var(--success)', bg: 'color-mix(in srgb, var(--success) 12%, transparent)' },
+  SCHEDULED: { icon: <Clock       size={12} />, color: 'var(--warn)',    bg: 'color-mix(in srgb, var(--warn) 12%, transparent)'    },
+  MISSED:    { icon: <XCircle     size={12} />, color: 'var(--danger)',  bg: 'color-mix(in srgb, var(--danger) 12%, transparent)'  },
+  SKIPPED:   { icon: <SkipForward size={12} />, color: 'var(--text-muted)', bg: 'var(--bg-sand)' },
 };
 
 // ── Child vaccine panel (collapsed by default) ─────────────────────────────────
 
 function ChildVaccinePanel({ child, filter }: { child: SupervisedChild; filter: StatusFilter }) {
+  const t = useTranslations('parent.vaccines');
   const [open, setOpen] = useState(false);
   const toast = useToast();
   const { data: vaccines, isLoading } = useChildVaccinations(child.id);
@@ -70,8 +73,8 @@ function ChildVaccinePanel({ child, filter }: { child: SupervisedChild; filter: 
             <p className="text-sm font-semibold truncate" style={{ color: 'var(--ink)' }}>{child.full_name}</p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
               {child.age_display}
-              {!isLoading && <> · <span style={{ color: overdue > 0 ? 'var(--danger)' : 'var(--success)', fontWeight: 600 }}>{done}/{all.length} done</span></>}
-              {overdue > 0 && <span className="ml-1 font-bold" style={{ color: 'var(--danger)' }}>· {overdue} overdue</span>}
+              {!isLoading && <> · <span style={{ color: overdue > 0 ? 'var(--danger)' : 'var(--success)', fontWeight: 600 }}>{t('done', { done: done, length: all.length })}</span></>}
+              {overdue > 0 && <span className="ml-1 font-bold" style={{ color: 'var(--danger)' }}>{t('overdue', { overdue: overdue })}</span>}
             </p>
           </div>
         </button>
@@ -81,20 +84,17 @@ function ChildVaccinePanel({ child, filter }: { child: SupervisedChild; filter: 
             type="button"
             onClick={handleCertificate}
             disabled={isLoading || all.length === 0}
-            title="Print vaccination certificate"
+            title={t('printVaccinationCertificate')}
             className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors hover:opacity-70 disabled:opacity-40"
             style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}
           >
-            <Printer size={12} aria-hidden="true" /> Certificate
-          </button>
+            <Printer size={12} aria-hidden="true" />{' '}{t('certificate')}</button>
           <Link
             href={`/parent/children/${child.id}`}
             onClick={(e) => e.stopPropagation()}
             className="text-xs px-2 py-1 rounded-lg transition-colors hover:opacity-70"
             style={{ color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-          >
-            Details
-          </Link>
+          >{t('details')}</Link>
           {open
             ? <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} />
             : <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />}
@@ -110,12 +110,13 @@ function ChildVaccinePanel({ child, filter }: { child: SupervisedChild; filter: 
             </div>
           ) : shown.length === 0 ? (
             <div className="px-4 py-6 text-sm text-center" style={{ color: 'var(--text-muted)' }}>
-              {filter === 'ALL' ? 'No vaccination records yet.' : `No ${filter.toLowerCase()} vaccinations.`}
+              {filter === 'ALL' ? t('noVaccinationRecordsYet') : t(`empty.${filter}`)}
             </div>
           ) : (
             <div>
               {shown.map((rec) => {
-                const meta = STATUS_META[rec.status] ?? STATUS_META.SCHEDULED;
+                const status = rec.status in STATUS_META ? (rec.status as keyof typeof STATUS_META) : 'SCHEDULED';
+                const meta = STATUS_META[status];
                 return (
                   <div
                     key={rec.id}
@@ -126,7 +127,7 @@ function ChildVaccinePanel({ child, filter }: { child: SupervisedChild; filter: 
                       <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>
                         {rec.vaccine_name}
                         {rec.is_overdue && (
-                          <span className="ml-2 text-xs font-bold" style={{ color: 'var(--danger)' }}>Overdue</span>
+                          <span className="ml-2 text-xs font-bold" style={{ color: 'var(--danger)' }}>{t('overdue2')}</span>
                         )}
                       </p>
                       <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
@@ -138,7 +139,7 @@ function ChildVaccinePanel({ child, filter }: { child: SupervisedChild; filter: 
                       style={{ backgroundColor: meta.bg, color: meta.color }}
                     >
                       {meta.icon}
-                      {meta.label}
+                      {t(`status.${status}`)}
                     </span>
                   </div>
                 );
@@ -154,6 +155,7 @@ function ChildVaccinePanel({ child, filter }: { child: SupervisedChild; filter: 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function VaccinationCardPage() {
+  const t = useTranslations('parent.vaccines');
   const [filter, setFilter] = useState<StatusFilter>('ALL');
   const { data, isLoading } = useMyChildren();
   const children = data?.items ?? [];
@@ -162,17 +164,13 @@ export default function VaccinationCardPage() {
     <div className="flex flex-col gap-5 max-w-xl mx-auto w-full">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-          Vaccination Card
-        </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Tap a child to expand their schedule.
-        </p>
+        <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{t('vaccinationCard')}</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('tapAChildTo')}</p>
       </div>
 
       {/* Filter tabs */}
       <div className="flex gap-1 p-1 rounded-xl overflow-x-auto" style={{ backgroundColor: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
-        {TABS.map(({ key, label, icon, color }) => (
+        {TABS.map(({ key, icon, color }) => (
           <button
             key={key}
             type="button"
@@ -185,7 +183,7 @@ export default function VaccinationCardPage() {
             }}
           >
             {icon}
-            {label}
+            {t(`status.${key}`)}
           </button>
         ))}
       </div>
@@ -198,9 +196,9 @@ export default function VaccinationCardPage() {
       ) : children.length === 0 ? (
         <EmptyState
           icon={<Syringe size={28} />}
-          title="No children linked"
-          description="Your children's vaccination records will appear here once linked to your account."
-          action={{ label: 'Go to My Children', href: '/parent' }}
+          title={t('noChildrenLinked')}
+          description={t('yourChildrenSVaccination')}
+          action={{ label: t('goToMyChildren'), href: '/parent' }}
         />
       ) : (
         <div className="flex flex-col gap-3">

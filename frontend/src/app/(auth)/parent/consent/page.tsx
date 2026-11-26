@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, Shield, XCircle } from 'lucide-react';
@@ -32,11 +33,12 @@ async function withdrawConsent(id: string): Promise<void> {
   await apiClient.post(`/auth/consent/${id}/withdraw/`);
 }
 
-const CONSENT_SCOPE_LABELS: Record<string, string> = {
-  data_collection: 'Data Collection & Use',
-};
+// Consent scopes the API returns; their names are in messages/en.json parent.consent.scope
+const CONSENT_SCOPES = ['data_collection'] as const;
+const isConsentScope = (v: string): v is (typeof CONSENT_SCOPES)[number] => (CONSENT_SCOPES as readonly string[]).includes(v);
 
 export default function ConsentPage() {
+  const t = useTranslations('parent.consent');
   const toast = useToast();
   const qc = useQueryClient();
   const [withdrawConfirm, setWithdrawConfirm] = useState<string | null>(null);
@@ -48,13 +50,13 @@ export default function ConsentPage() {
 
   const grantMutation = useMutation({
     mutationFn: () => grantConsent('data_collection', '1.0'),
-    onSuccess: () => { toast.success('Thank you — consent recorded'); qc.invalidateQueries({ queryKey: ['consent'] }); },
+    onSuccess: () => { toast.success(t('thankYouConsentRecorded')); qc.invalidateQueries({ queryKey: ['consent'] }); },
   });
 
   const withdrawMutation = useMutation({
     mutationFn: (id: string) => withdrawConsent(id),
     onSuccess: () => {
-      toast.success('Consent withdrawn');
+      toast.success(t('consentWithdrawn'));
       qc.invalidateQueries({ queryKey: ['consent'] });
       setWithdrawConfirm(null);
     },
@@ -70,12 +72,8 @@ export default function ConsentPage() {
         <h2
           className="text-2xl font-bold"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          Data Consent
-        </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          How your child&apos;s health data is collected and used
-        </p>
+        >{t('dataConsent')}</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{t('howYourChildS')}</p>
       </div>
 
       {/* Policy summary */}
@@ -85,24 +83,14 @@ export default function ConsentPage() {
       >
         <div className="flex items-center gap-2">
           <Shield size={16} style={{ color: 'var(--brand)' }} aria-hidden="true" />
-          <p className="font-semibold" style={{ color: 'var(--ink)' }}>UNHCR Data Use Policy — Version 1.0</p>
+          <p className="font-semibold" style={{ color: 'var(--ink)' }}>{t('unhcrDataUsePolicy')}</p>
         </div>
         <div className="text-sm flex flex-col gap-3" style={{ color: 'var(--text-muted)' }}>
+          <p>{t('byUsingIkibondoYour')}</p>
           <p>
-            By using Ikibondo, your child&apos;s health measurements, vaccination records,
-            and risk assessments are collected and stored securely.
-          </p>
+            <strong style={{ color: 'var(--ink)' }}>{t('howItIsUsed')}</strong>{' '}{t('dataIsUsedBy')}</p>
           <p>
-            <strong style={{ color: 'var(--ink)' }}>How it is used:</strong> Data is used by
-            Community Health Workers, nurses, and supervisors to provide better care for your child.
-            Aggregated, anonymous data may be shared with camp management (UNHCR, MINEMA) for
-            programme planning.
-          </p>
-          <p>
-            <strong style={{ color: 'var(--ink)' }}>Your rights:</strong> You may withdraw consent
-            at any time. Withdrawal will not delete existing records but will restrict future data
-            collection. Contact your camp nurse for assistance.
-          </p>
+            <strong style={{ color: 'var(--ink)' }}>{t('yourRights')}</strong>{' '}{t('youMayWithdrawConsent')}</p>
         </div>
       </div>
 
@@ -127,12 +115,10 @@ export default function ConsentPage() {
               : <XCircle size={20} style={{ color: 'var(--danger)' }} aria-hidden="true" />}
             <div>
               <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-                {hasConsented ? 'Consent granted' : 'Consent not granted'}
+                {hasConsented ? t('consentGranted') : t('consentNotGranted')}
               </p>
               {hasConsented && activeConsent && (
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  Granted on {new Date(activeConsent.granted_at).toLocaleDateString()} · v{activeConsent.version}
-                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('grantedOnV', { toLocaleDateString: new Date(activeConsent.granted_at).toLocaleDateString(), version: activeConsent.version })}</p>
               )}
             </div>
           </div>
@@ -142,33 +128,25 @@ export default function ConsentPage() {
               variant="primary"
               loading={grantMutation.isPending}
               onClick={() => grantMutation.mutate()}
-            >
-              Grant consent
-            </Button>
+            >{t('grantConsent')}</Button>
           ) : (
             withdrawConfirm === activeConsent?.id ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Confirm?</span>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('confirm')}</span>
                 <Button
                   size="sm"
                   variant="danger"
                   loading={withdrawMutation.isPending}
                   onClick={() => withdrawMutation.mutate(activeConsent!.id)}
-                >
-                  Withdraw
-                </Button>
-                <Button size="sm" variant="secondary" onClick={() => setWithdrawConfirm(null)}>
-                  Cancel
-                </Button>
+                >{t('withdraw')}</Button>
+                <Button size="sm" variant="secondary" onClick={() => setWithdrawConfirm(null)}>{t('cancel')}</Button>
               </div>
             ) : (
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => setWithdrawConfirm(activeConsent?.id ?? null)}
-              >
-                Withdraw consent
-              </Button>
+              >{t('withdrawConsent')}</Button>
             )
           )}
         </div>
@@ -177,9 +155,7 @@ export default function ConsentPage() {
       {/* Consent history */}
       {records.length > 0 && (
         <section aria-labelledby="history-heading">
-          <h3 id="history-heading" className="text-sm font-semibold mb-3" style={{ color: 'var(--ink)' }}>
-            Consent history
-          </h3>
+          <h3 id="history-heading" className="text-sm font-semibold mb-3" style={{ color: 'var(--ink)' }}>{t('consentHistory')}</h3>
           <div
             className="rounded-2xl border overflow-hidden"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
@@ -192,15 +168,13 @@ export default function ConsentPage() {
               >
                 <div className="flex-1 min-w-0">
                   <p className="font-medium" style={{ color: 'var(--ink)' }}>
-                    {CONSENT_SCOPE_LABELS[r.scope] ?? r.scope}
+                    {isConsentScope(r.scope) ? t(`scope.${r.scope}`) : r.scope}
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    Granted {new Date(r.granted_at).toLocaleString()}
-                    {r.withdrawn_at && ` · Withdrawn ${new Date(r.withdrawn_at).toLocaleString()}`}
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('granted', { date: new Date(r.granted_at).toLocaleString() })}{r.withdrawn_at && t('withdrawnOn', { date: new Date(r.withdrawn_at).toLocaleString() })}
                   </p>
                 </div>
                 <Badge variant={r.granted && !r.withdrawn_at ? 'success' : 'default'}>
-                  {r.granted && !r.withdrawn_at ? 'Active' : 'Withdrawn'}
+                  {r.granted && !r.withdrawn_at ? t('active') : t('withdrawn')}
                 </Badge>
               </div>
             ))}

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
+import { useNavLabel } from '@/i18n/useNavLabel';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -217,6 +219,8 @@ function groupContainsActive(items: NavLeaf[], pathname: string): boolean {
 function NavLeafItem({
   href, label, icon: Icon, collapsed, onClose,
 }: NavLeaf & { collapsed: boolean; onClose: () => void }) {
+  const navLabel = useNavLabel();
+  label = navLabel(label);
   const pathname = usePathname();
   const active = isActive(pathname, href);
 
@@ -259,6 +263,8 @@ function NavGroupItem({
   openGroups: Set<string>;
   toggleGroup: (id: string) => void;
 }) {
+  const navLabel = useNavLabel();
+  label = navLabel(label);
   const pathname = usePathname();
   const hasActive = groupContainsActive(items, pathname);
   const isOpen = openGroups.has(id) || hasActive;
@@ -339,6 +345,8 @@ function SidebarContent({
   const { user, clearAuth } = useAuthStore();
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const t = useTranslations('sidebar');
+  const navLabel = useNavLabel();
 
   // Load persisted open groups on mount
   useEffect(() => {
@@ -394,8 +402,8 @@ function SidebarContent({
           type="button"
           onClick={onToggleCollapse}
           className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-[var(--bg-sand)]"
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={collapsed ? 'Expand sidebar [' : 'Collapse sidebar ['}
+          aria-label={collapsed ? t('expand') : t('collapse')}
+          title={collapsed ? t('expandShortcut') : t('collapseShortcut')}
           style={{ color: 'var(--text-muted)' }}
         >
           {collapsed
@@ -409,7 +417,7 @@ function SidebarContent({
           type="button"
           className="lg:hidden flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-[var(--bg-sand)]"
           onClick={onClose}
-          aria-label="Close navigation"
+          aria-label={t('closeNavigation')}
           style={{ color: 'var(--text-muted)' }}
         >
           <X size={18} aria-hidden="true" />
@@ -419,7 +427,7 @@ function SidebarContent({
       {/* Nav */}
       <nav
         className="flex-1 overflow-y-auto py-4 px-2"
-        aria-label="Dashboard navigation"
+        aria-label={t('dashboardNavigation')}
       >
         <ul className="flex flex-col gap-0.5">
           {nav.map((entry) => {
@@ -467,7 +475,7 @@ function SidebarContent({
                 {user?.full_name ?? '—'}
               </p>
               <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                {user ? ROLE_LABEL[user.role] : '—'}
+                {user ? navLabel(ROLE_LABEL[user.role]) : '—'}
               </p>
             </div>
           </Link>
@@ -475,7 +483,7 @@ function SidebarContent({
           <Link
             href="/profile"
             onClick={onClose}
-            title="Profile"
+            title={t('profile')}
             className="flex items-center justify-center mb-2 w-full rounded-xl transition-colors hover:bg-[var(--bg-sand)]"
           >
             <div
@@ -491,12 +499,12 @@ function SidebarContent({
         <button
           type="button"
           onClick={() => setShowLogoutConfirm(true)}
-          title={collapsed ? 'Sign out' : undefined}
+          title={collapsed ? t('signOut') : undefined}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors hover:bg-[var(--high-bg)]"
           style={{ color: 'var(--text-muted)' }}
         >
           <LogOut size={16} aria-hidden="true" className="shrink-0" />
-          {!collapsed && <span>Sign out</span>}
+          {!collapsed && <span>{t('signOut')}</span>}
         </button>
       </div>
 
@@ -519,8 +527,8 @@ function SidebarContent({
                 <LogOut size={18} aria-hidden="true" />
               </div>
               <div>
-                <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Sign out</p>
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Are you sure you want to sign out?</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{t('signOut')}</p>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('signOutConfirm')}</p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -530,7 +538,7 @@ function SidebarContent({
                 className="flex-1 py-2 rounded-xl border text-sm font-medium transition-colors hover:bg-[var(--bg-sand)]"
                 style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 type="button"
@@ -538,7 +546,7 @@ function SidebarContent({
                 className="flex-1 py-2 rounded-xl text-sm font-medium transition-colors"
                 style={{ backgroundColor: 'var(--ink)', color: 'var(--bg)' }}
               >
-                Sign out
+                {t('signOut')}
               </button>
             </div>
           </div>
@@ -549,6 +557,7 @@ function SidebarContent({
 }
 
 export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: SidebarProps) {
+  const tt = useTranslations('sidebar');
   return (
     <>
       {/* Desktop — sticky sidebar, width controlled by collapsed state */}
@@ -558,7 +567,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
           width: collapsed ? '64px' : '240px',
           borderColor: 'var(--border)',
         }}
-        aria-label="Sidebar"
+        aria-label={tt('sidebar')}
       >
         <SidebarContent
           collapsed={collapsed}
@@ -579,7 +588,7 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }: Sideba
           <aside
             className="fixed inset-y-0 left-0 z-40 w-72 shadow-xl lg:hidden flex flex-col border-r"
             style={{ borderColor: 'var(--border)' }}
-            aria-label="Sidebar"
+            aria-label={tt('sidebar')}
           >
             <SidebarContent
               collapsed={false}

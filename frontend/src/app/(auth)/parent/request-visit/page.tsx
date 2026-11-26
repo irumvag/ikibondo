@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+import { useValidationMessage } from '@/i18n/useValidationMessage';
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,42 +24,45 @@ import { useToast } from '@/contexts/ToastContext';
 
 // ── constants ──────────────────────────────────────────────────────────────────
 
-const SYMPTOM_OPTIONS = [
-  'Fever', 'Diarrhoea', 'Vomiting', 'Cough', 'Difficulty breathing',
-  'Rash', 'Swollen limbs', 'Not eating', 'Lethargic / weak', 'Other',
-];
+// Symptoms are saved in English (the CHW reads them); messages/en.json parent.requestVisit.symptom
+// holds what the parent sees, keyed by a camelCase form of the English word.
+const SYMPTOM_OPTIONS = {
+  'Fever': 'fever', 'Diarrhoea': 'diarrhoea', 'Vomiting': 'vomiting', 'Cough': 'cough',
+  'Difficulty breathing': 'difficultyBreathing', 'Rash': 'rash', 'Swollen limbs': 'swollenLimbs',
+  'Not eating': 'notEating', 'Lethargic / weak': 'lethargicWeak', 'Other': 'other',
+} as const;
+type Symptom = keyof typeof SYMPTOM_OPTIONS;
+const isSymptom = (v: string): v is Symptom => v in SYMPTOM_OPTIONS;
 
+// Urgency and status text: messages/en.json parent.requestVisit.urgency.<U>.label/desc and .status.<S>
 const URGENCY_CONFIG: Record<VisitUrgency, {
-  label: string; desc: string; icon: string;
+  icon: string;
   border: string; bg: string; textColor: string;
 }> = {
   ROUTINE: {
-    label: 'Routine', icon: '📋',
-    desc: 'No immediate concern, general check-up.',
+    icon: '📋',
     border: 'var(--border)', bg: 'var(--bg-elev)', textColor: 'var(--ink)',
   },
   SOON: {
-    label: 'Soon', icon: '⏰',
-    desc: 'Within the next week — something needs checking.',
+    icon: '⏰',
     border: 'var(--warn)', bg: 'color-mix(in srgb, var(--warn) 8%, var(--bg-elev))', textColor: 'var(--ink)',
   },
   URGENT: {
-    label: 'Urgent', icon: '🚨',
-    desc: 'Within 24 hours — child needs immediate attention.',
+    icon: '🚨',
     border: 'var(--danger)', bg: 'color-mix(in srgb, var(--danger) 8%, var(--bg-elev))', textColor: 'var(--danger)',
   },
 };
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING:   { label: 'Pending',   color: '#d97706', bg: '#fefce8' },
-  ACCEPTED:  { label: 'Accepted',  color: '#2563eb', bg: '#eff6ff' },
-  DECLINED:  { label: 'Declined',  color: '#dc2626', bg: '#fef2f2' },
-  COMPLETED: { label: 'Completed', color: '#16a34a', bg: '#f0fdf4' },
-  WITHDRAWN: { label: 'Withdrawn', color: '#6b7280', bg: '#f9fafb' },
+const STATUS_CONFIG: Record<'PENDING' | 'ACCEPTED' | 'DECLINED' | 'COMPLETED' | 'WITHDRAWN', { color: string; bg: string }> = {
+  PENDING:   { color: '#d97706', bg: '#fefce8' },
+  ACCEPTED:  { color: '#2563eb', bg: '#eff6ff' },
+  DECLINED:  { color: '#dc2626', bg: '#fef2f2' },
+  COMPLETED: { color: '#16a34a', bg: '#f0fdf4' },
+  WITHDRAWN: { color: '#6b7280', bg: '#f9fafb' },
 };
 
 const schema = z.object({
-  child:         z.string().min(1, 'Please select a child'),
+  child:         z.string().min(1, 'selectChild'),
   urgency:       z.enum(['ROUTINE', 'SOON', 'URGENT'] as const),
   concern_text:  z.string().max(1000),
   symptom_flags: z.array(z.string()),
@@ -74,6 +79,7 @@ function VisitHistory({ requests, onWithdraw }: {
   requests: VisitRequest[];
   onWithdraw: (id: string, childName: string) => void;
 }) {
+  const tt = useTranslations('parent.requestVisit');
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
 
   if (requests.length === 0) return null;
@@ -82,14 +88,13 @@ function VisitHistory({ requests, onWithdraw }: {
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <History size={15} style={{ color: 'var(--text-muted)' }} />
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
-          Your visit requests
-        </h3>
+        <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>{tt('yourVisitRequests')}</h3>
       </div>
 
       <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
         {requests.map((vr) => {
-          const cfg = STATUS_CONFIG[vr.status] ?? STATUS_CONFIG.PENDING;
+          const status = vr.status in STATUS_CONFIG ? (vr.status as keyof typeof STATUS_CONFIG) : 'PENDING';
+          const cfg = STATUS_CONFIG[status];
           const urgCfg = URGENCY_CONFIG[vr.urgency];
           const canWithdraw = vr.status === 'PENDING' || vr.status === 'ACCEPTED';
 
@@ -112,13 +117,13 @@ function VisitHistory({ requests, onWithdraw }: {
                     className="text-xs font-semibold px-2 py-0.5 rounded-full"
                     style={{ color: cfg.color, backgroundColor: cfg.bg }}
                   >
-                    {cfg.label}
+                    {tt(`status.${status}`)}
                   </span>
                   <span
                     className="text-xs px-2 py-0.5 rounded-full"
                     style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' }}
                   >
-                    {urgCfg.label}
+                    {tt(`urgency.${vr.urgency}.label`)}
                   </span>
                 </div>
 
@@ -129,21 +134,20 @@ function VisitHistory({ requests, onWithdraw }: {
                 )}
 
                 {vr.symptom_flags?.length > 0 && (
-                  <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>
-                    Symptoms: {vr.symptom_flags.join(', ')}
+                  <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{tt('symptoms')}{' '}{vr.symptom_flags.map((f) => (isSymptom(f) ? tt(`symptom.${SYMPTOM_OPTIONS[f]}`) : f)).join(', ')}
                   </p>
                 )}
 
                 <div className="flex items-center gap-3 flex-wrap text-xs" style={{ color: 'var(--text-muted)' }}>
-                  <span>Submitted {fmtDate(vr.created_at)}</span>
+                  <span>{tt('submitted', { fmtDate: fmtDate(vr.created_at) })}</span>
                   {vr.assigned_chw_name && (
-                    <span>CHW: {vr.assigned_chw_name}</span>
+                    <span>{tt('chw', { assigned_chw_name: vr.assigned_chw_name })}</span>
                   )}
                   {vr.eta && (
-                    <span>ETA: {fmtDate(vr.eta)}</span>
+                    <span>{tt('eta', { fmtDate: fmtDate(vr.eta) })}</span>
                   )}
                   {vr.decline_reason && (
-                    <span style={{ color: 'var(--danger)' }}>Reason: {vr.decline_reason}</span>
+                    <span style={{ color: 'var(--danger)' }}>{tt('reason', { decline_reason: vr.decline_reason })}</span>
                   )}
                 </div>
               </div>
@@ -164,7 +168,7 @@ function VisitHistory({ requests, onWithdraw }: {
                   }}
                   className="shrink-0"
                   style={{ color: 'var(--danger)' }}
-                  title="Withdraw this request"
+                  title={tt('withdrawThisRequest')}
                 >
                   <XCircle size={15} />
                 </Button>
@@ -180,6 +184,8 @@ function VisitHistory({ requests, onWithdraw }: {
 // ── Inner form (needs useSearchParams so must be in Suspense) ──────────────────
 
 function RequestVisitForm() {
+  const tt = useTranslations('parent.requestVisit');
+  const tv = useValidationMessage();
   const toast = useToast();
   const router       = useRouter();
   const searchParams = useSearchParams();
@@ -219,7 +225,7 @@ function RequestVisitForm() {
   const createMut = useMutation({
     mutationFn: createVisitRequest,
     onSuccess: (result) => {
-      toast.success('Request sent to your health worker');
+      toast.success(tt('requestSentToYour'));
       qc.invalidateQueries({ queryKey: ['parent', 'visit-requests'] });
       addLocalNotif(
         'VISIT_REQUESTED',
@@ -234,7 +240,7 @@ function RequestVisitForm() {
   const withdrawMut = useMutation({
     mutationFn: ({ id }: { id: string; childName: string }) => withdrawVisitRequest(id),
     onSuccess: (_, vars) => {
-      toast.success('Request withdrawn');
+      toast.success(tt('requestWithdrawn'));
       qc.invalidateQueries({ queryKey: ['parent', 'visit-requests'] });
       addLocalNotif(
         'VISIT_WITHDRAWN',
@@ -271,8 +277,7 @@ function RequestVisitForm() {
     return (
       <div className="flex flex-col gap-6 max-w-xl mx-auto w-full">
         <Link href="/parent" className="inline-flex items-center gap-1.5 text-sm" style={{ color: 'var(--text-muted)' }}>
-          <ArrowLeft size={14} /> My children
-        </Link>
+          <ArrowLeft size={14} />{' '}{tt('myChildren')}</Link>
 
         <div
           className="rounded-2xl p-6 flex flex-col items-center gap-4 text-center border"
@@ -283,12 +288,8 @@ function RequestVisitForm() {
             <CheckCircle2 size={28} style={{ color: 'var(--success)' }} />
           </div>
           <div>
-            <h2 className="text-xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-              Request sent!
-            </h2>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-              Your community health worker has been notified and will be in touch.
-            </p>
+            <h2 className="text-xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{tt('requestSent')}</h2>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{tt('yourCommunityHealthWorker')}</p>
           </div>
         </div>
 
@@ -296,12 +297,12 @@ function RequestVisitForm() {
           className="rounded-2xl border p-5 flex flex-col gap-3"
           style={{ background: 'var(--bg-elev)', borderColor: 'var(--border)' }}
         >
-          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Request summary</p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{tt('requestSummary')}</p>
           {([
-            ['Child',   submitted.child_name],
-            ['Urgency', `${cfg.icon} ${cfg.label}`],
-            ['Status',  'Pending — awaiting CHW response'],
-            ['Submitted', fmtDate(submitted.created_at)],
+            [tt('summary.child'),     submitted.child_name],
+            [tt('summary.urgency'),   `${cfg.icon} ${tt(`urgency.${submitted.urgency}.label`)}`],
+            [tt('summary.status'),    tt('summary.statusPending')],
+            [tt('summary.submitted'), fmtDate(submitted.created_at)],
           ] as [string, string][]).map(([k, v]) => (
             <div key={k} className="flex justify-between text-sm border-b last:border-0 pb-2 last:pb-0"
               style={{ borderColor: 'var(--border)' }}>
@@ -319,16 +320,12 @@ function RequestVisitForm() {
             onClick={() => { setSubmitted(null); setView('history'); }}
             className="flex-1 py-3 rounded-2xl border text-sm font-medium transition-colors hover:bg-[var(--bg-sand)]"
             style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
-          >
-            View all requests
-          </button>
+          >{tt('viewAllRequests')}</button>
           <Link
             href="/parent"
             className="flex-1 flex items-center justify-center py-3 rounded-2xl text-sm font-semibold"
             style={{ background: 'var(--ink)', color: 'var(--bg)' }}
-          >
-            Done
-          </Link>
+          >{tt('done')}</Link>
         </div>
       </div>
     );
@@ -342,14 +339,9 @@ function RequestVisitForm() {
       <div>
         <Link href="/parent" className="inline-flex items-center gap-1.5 text-sm mb-4 transition-opacity hover:opacity-70"
           style={{ color: 'var(--text-muted)' }}>
-          <ArrowLeft size={14} /> My children
-        </Link>
-        <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-          Home visit requests
-        </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-          Request your assigned community health worker to visit you at home.
-        </p>
+          <ArrowLeft size={14} />{' '}{tt('myChildren')}</Link>
+        <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>{tt('homeVisitRequests')}</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{tt('requestYourAssignedCommunity')}</p>
       </div>
 
       {/* Tab bar */}
@@ -387,10 +379,8 @@ function RequestVisitForm() {
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}
             >
               <History size={32} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
-              <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>No requests yet</p>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                Switch to &ldquo;New request&rdquo; to submit your first visit request.
-              </p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{tt('noRequestsYet')}</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{tt('switchToNewRequest')}</p>
             </div>
           ) : (
             <VisitHistory requests={allRequests} onWithdraw={handleWithdraw} />
@@ -409,12 +399,8 @@ function RequestVisitForm() {
             >
               <Clock size={16} style={{ color: 'var(--warn)', flexShrink: 0, marginTop: 2 }} />
               <div>
-                <p className="font-semibold" style={{ color: 'var(--ink)' }}>
-                  {activeForSelected.length} active request{activeForSelected.length !== 1 ? 's' : ''} already open for this child
-                </p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  You can withdraw them in the History tab before submitting a new one.
-                </p>
+                <p className="font-semibold" style={{ color: 'var(--ink)' }}>{tt('activeRequests', { count: activeForSelected.length })}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{tt('youCanWithdrawThem')}</p>
               </div>
             </div>
           )}
@@ -426,7 +412,7 @@ function RequestVisitForm() {
               style={{ background: 'color-mix(in srgb, var(--danger) 8%, var(--bg-elev))', borderColor: 'var(--danger)' }}
             >
               <AlertTriangle size={16} style={{ color: 'var(--danger)', flexShrink: 0 }} />
-              <span style={{ color: 'var(--ink)' }}>Failed to submit. Please try again.</span>
+              <span style={{ color: 'var(--ink)' }}>{tt('failedToSubmitPlease')}</span>
             </div>
           )}
 
@@ -434,15 +420,11 @@ function RequestVisitForm() {
 
             {/* Step 1: child */}
             <section className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
-                1 · Which child?
-              </h3>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>{tt('n1WhichChild')}</h3>
               {childrenLoading ? (
                 <div className="flex flex-col gap-2">{[1, 2].map((i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
               ) : children.length === 0 ? (
-                <div className="rounded-2xl p-4 text-sm" style={{ background: 'var(--bg-elev)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
-                  No children linked to your account yet. Ask your health worker.
-                </div>
+                <div className="rounded-2xl p-4 text-sm" style={{ background: 'var(--bg-elev)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>{tt('noChildrenLinkedTo')}</div>
               ) : (
                 <Controller
                   control={control}
@@ -470,14 +452,12 @@ function RequestVisitForm() {
                             <div className="flex-1 min-w-0">
                               <p className="font-semibold text-sm" style={{ color: 'var(--ink)' }}>{c.full_name}</p>
                               <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                                {c.age_display} · {c.sex === 'M' ? 'Boy' : 'Girl'}
+                                {c.age_display} · {c.sex === 'M' ? tt('boy') : tt('girl')}
                               </p>
                             </div>
                             {c.risk_level === 'HIGH' && (
                               <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
-                                style={{ backgroundColor: '#fef2f2', color: 'var(--danger)' }}>
-                                ⚠ High risk
-                              </span>
+                                style={{ backgroundColor: '#fef2f2', color: 'var(--danger)' }}>{tt('highRisk')}</span>
                             )}
                             <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0"
                               style={{ borderColor: active ? 'var(--ink)' : 'var(--border)' }}>
@@ -490,14 +470,12 @@ function RequestVisitForm() {
                   )}
                 />
               )}
-              {errors.child && <p className="text-xs" style={{ color: 'var(--danger)' }}>{errors.child.message}</p>}
+              {errors.child && <p className="text-xs" style={{ color: 'var(--danger)' }}>{tv(errors.child.message)}</p>}
             </section>
 
             {/* Step 2: urgency */}
             <section className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
-                2 · How urgent?
-              </h3>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>{tt('n2HowUrgent')}</h3>
               <Controller
                 control={control}
                 name="urgency"
@@ -519,8 +497,8 @@ function RequestVisitForm() {
                         >
                           <span className="text-xl shrink-0 mt-0.5">{cfg.icon}</span>
                           <div className="flex-1">
-                            <p className="font-semibold text-sm" style={{ color: active ? cfg.textColor : 'var(--ink)' }}>{cfg.label}</p>
-                            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{cfg.desc}</p>
+                            <p className="font-semibold text-sm" style={{ color: active ? cfg.textColor : 'var(--ink)' }}>{tt(`urgency.${u}.label`)}</p>
+                            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{tt(`urgency.${u}.desc`)}</p>
                           </div>
                           <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5"
                             style={{ borderColor: active ? 'var(--ink)' : 'var(--border)' }}>
@@ -537,13 +515,11 @@ function RequestVisitForm() {
             {/* Step 3: symptoms */}
             <section className="flex flex-col gap-3">
               <div>
-                <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
-                  3 · Symptoms noticed
-                </h3>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Select all that apply (optional)</p>
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>{tt('n3SymptomsNoticed')}</h3>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{tt('selectAllThatApply')}</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {SYMPTOM_OPTIONS.map((sym) => {
+                {(Object.keys(SYMPTOM_OPTIONS) as Symptom[]).map((sym) => {
                   const on = selectedFlags.includes(sym);
                   return (
                     <button
@@ -558,7 +534,7 @@ function RequestVisitForm() {
                       }}
                     >
                       <span className="text-base leading-none shrink-0">{on ? '✓' : '·'}</span>
-                      {sym}
+                      {tt(`symptom.${SYMPTOM_OPTIONS[sym]}`)}
                     </button>
                   );
                 })}
@@ -567,14 +543,12 @@ function RequestVisitForm() {
 
             {/* Step 4: details */}
             <section className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
-                4 · Additional details
-                <span className="normal-case ml-1 font-normal" style={{ color: 'var(--text-muted)' }}>(optional)</span>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>{tt('n4AdditionalDetails')}<span className="normal-case ml-1 font-normal" style={{ color: 'var(--text-muted)' }}>{tt('optional')}</span>
               </h3>
               <textarea
                 {...register('concern_text')}
                 rows={4}
-                placeholder="Describe what you have noticed or any other concerns…"
+                placeholder={tt('describeWhatYouHave')}
                 className="w-full px-4 py-3 rounded-2xl border text-sm resize-none focus:outline-none"
                 style={{ borderColor: 'var(--border)', background: 'var(--bg-elev)', color: 'var(--ink)' }}
               />
@@ -588,10 +562,8 @@ function RequestVisitForm() {
               >
                 <AlertTriangle size={16} style={{ color: 'var(--danger)', flexShrink: 0, marginTop: 2 }} />
                 <div>
-                  <p className="font-semibold" style={{ color: 'var(--danger)' }}>Urgent request</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    If this is a life-threatening emergency, go directly to the nearest health facility — do not wait for a home visit.
-                  </p>
+                  <p className="font-semibold" style={{ color: 'var(--danger)' }}>{tt('urgentRequest')}</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{tt('ifThisIsA')}</p>
                 </div>
               </div>
             )}
@@ -602,18 +574,14 @@ function RequestVisitForm() {
                 onClick={() => router.back()}
                 className="flex-1 py-3 rounded-2xl border text-sm font-medium transition-colors hover:bg-[var(--bg-sand)]"
                 style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
-              >
-                Cancel
-              </button>
+              >{tt('cancel')}</button>
               <button
                 type="submit"
                 disabled={createMut.isPending || children.length === 0}
                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold disabled:opacity-50"
                 style={{ background: 'var(--ink)', color: 'var(--bg)' }}
               >
-                {createMut.isPending && <Loader2 size={16} className="animate-spin" />}
-                Submit request
-              </button>
+                {createMut.isPending && <Loader2 size={16} className="animate-spin" />}{tt('submitRequest')}</button>
             </div>
           </form>
         </>
