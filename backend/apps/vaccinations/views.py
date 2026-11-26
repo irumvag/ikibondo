@@ -4,7 +4,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets, filters
 
 logger = logging.getLogger(__name__)
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -450,3 +450,28 @@ class ClinicSessionViewSet(viewsets.ModelViewSet):
             for a in rows
         ]
         return success_response(data=data)
+
+
+@extend_schema(exclude=True)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def vaccine_guide_view(request):
+    """
+    GET /api/v1/vaccinations/guide/ — the Rwanda EPI schedule in order, with what
+    each vaccine protects against, for the parent and CHW guides in the app.
+    """
+    from .schedule import RWANDA_EPI_SCHEDULE
+    from .vaccine_info import info_for
+
+    def age_label(weeks):
+        if weeks == 0:
+            return 'At birth'
+        if weeks < 20:
+            return f'{weeks} weeks'
+        return f'{round(weeks / 4.345)} months'
+
+    rows = [
+        {'code': code, 'dose_number': dose, 'age_weeks': weeks, 'age_label': age_label(weeks), **info_for(code)}
+        for code, weeks, dose in RWANDA_EPI_SCHEDULE
+    ]
+    return success_response(data=rows)

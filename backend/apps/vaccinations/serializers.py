@@ -1,6 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
+from .vaccine_info import info_for
 from .models import Vaccine, VaccinationRecord, ClinicSession, ClinicSessionAttendance
 
 
@@ -46,6 +47,13 @@ class VaccinationRecordSerializer(serializers.ModelSerializer):
         except Exception:
             return None
 
+    vaccine_info = serializers.SerializerMethodField()
+
+    @extend_schema_field(serializers.DictField())
+    def get_vaccine_info(self, obj):
+        # Full name, what it protects against, how it is given, what is normal after
+        return info_for(obj.vaccine.short_code if obj.vaccine_id else '')
+
     class Meta:
         model = VaccinationRecord
         fields = [
@@ -54,7 +62,7 @@ class VaccinationRecordSerializer(serializers.ModelSerializer):
             'scheduled_date', 'administered_date', 'administered_by', 'administered_by_name',
             'status', 'batch_number',
             'dropout_probability', 'dropout_risk_tier',
-            'is_overdue', 'notes', 'created_at',
+            'is_overdue', 'notes', 'created_at', 'vaccine_info',
         ]
         read_only_fields = ['id', 'administered_by', 'dropout_probability', 'dropout_risk_tier', 'created_at']
         extra_kwargs = {

@@ -158,7 +158,7 @@ SITE_CONTENT_KEYS = (
     'home.hero', 'home.how_it_works', 'home.roles', 'home.muac',
     'about', 'footer', 'contact',
     # Shown in the mobile app
-    'app.parent_home', 'app.certificate',
+    'app.parent_home', 'app.certificate', 'app.feeding', 'app.baby_care',
 )
 
 

@@ -208,7 +208,9 @@ function Preview({ sectionKey, content }: { sectionKey: SectionKey; content: unk
       );
     }
     case 'app.parent_home':
-    case 'app.certificate': {
+    case 'app.certificate':
+    case 'app.feeding':
+    case 'app.baby_care': {
       const c = content as typeof DEFAULTS['app.certificate'];
       // Rough phone preview of how the app shows this card
       return (
