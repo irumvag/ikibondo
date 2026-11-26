@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ThemeToggle } from './ThemeToggle';
+import { Logo } from '@/components/ui/Logo';
 
 // Each link can target a hash anchor on a specific page
 interface NavLink {
@@ -50,11 +51,10 @@ export function PublicNav() {
           {/* Logo */}
           <Link
             href="/"
-            className="shrink-0 text-xl font-extrabold transition-opacity hover:opacity-75"
-            style={{ color: 'var(--ink)', letterSpacing: '-0.02em' }}
+            className="shrink-0 transition-opacity hover:opacity-75"
             onClick={closeMobile}
           >
-            Ikibondo
+            <Logo size={32} />
           </Link>
 
           {/* Desktop nav links */}

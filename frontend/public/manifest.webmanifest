@@ -4,8 +4,8 @@
   "description": "Child growth and health records for health workers and families in Rwanda's refugee camps",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F1F4F3",
-  "theme_color": "#16324F",
+  "background_color": "#F4F8FC",
+  "theme_color": "#0E4C92",
   "icons": [
     {
       "src": "/icons/icon-192.png",

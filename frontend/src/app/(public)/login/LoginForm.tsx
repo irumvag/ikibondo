@@ -14,6 +14,7 @@ import { useAuthStore, type UserRole } from '@/store/authStore';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
+import { Logo } from '@/components/ui/Logo';
 
 const ROLE_ROUTES: Record<UserRole, string> = {
   ADMIN:      '/admin',
@@ -82,6 +83,7 @@ export function LoginForm() {
     >
       {/* Header */}
       <div className="mb-8 text-center">
+        <div className="flex justify-center mb-4"><Logo size={52} name={false} /></div>
         <h1
           className="text-2xl font-bold mb-1"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuthStore, type UserRole } from '@/store/authStore';
+import { Logo } from '@/components/ui/Logo';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -383,14 +384,7 @@ function SidebarContent({
         className="flex items-center justify-between px-4 h-14 shrink-0 border-b"
         style={{ borderColor: 'var(--border)' }}
       >
-        {!collapsed && (
-          <span
-            className="text-xl font-bold tracking-tight"
-            style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            Ikibondo
-          </span>
-        )}
+        {!collapsed && <Logo size={30} />}
         {collapsed && <span className="flex-1" />}
 
         {/* Desktop collapse toggle */}
