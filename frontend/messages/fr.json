@@ -200,5 +200,9 @@
     "system": "Comme l'appareil",
     "systemHint": "Suit votre téléphone ou ordinateur",
     "current": "Apparence : {name}"
+  },
+  "language": {
+    "title": "Langue",
+    "change": "Langue : {name}. Changer de langue"
   }
 }

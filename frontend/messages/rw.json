@@ -200,5 +200,9 @@
     "system": "Nk'igikoresho",
     "systemHint": "Bikurikira telefoni cyangwa mudasobwa yawe",
     "current": "Imigaragarire: {name}"
+  },
+  "language": {
+    "title": "Ururimi",
+    "change": "Ururimi: {name}. Hindura ururimi"
   }
 }

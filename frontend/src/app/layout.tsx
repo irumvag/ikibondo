@@ -26,7 +26,10 @@ export const metadata: Metadata = {
   keywords: ["child health", "nutrition", "Rwanda", "refugee camps", "malnutrition"],
   robots: { index: false, follow: false },
   manifest: '/manifest.webmanifest',
-  icons: { apple: '/apple-touch-icon.png' },
+  icons: {
+    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }, { url: '/favicon.ico', sizes: '48x48' }],
+    apple: '/apple-touch-icon.png',
+  },
   // Lets "Add to Home Screen" on iPhone open as a standalone app
   appleWebApp: { capable: true, title: 'Ikibondo', statusBarStyle: 'default' },
 };

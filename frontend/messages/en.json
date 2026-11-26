@@ -200,5 +200,9 @@
     "system": "Same as device",
     "systemHint": "Follows your phone or computer",
     "current": "Appearance: {name}"
+  },
+  "language": {
+    "title": "Language",
+    "change": "Language: {name}. Change language"
   }
 }

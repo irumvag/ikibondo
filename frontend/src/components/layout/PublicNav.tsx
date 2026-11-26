@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ThemeToggle } from './ThemeToggle';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import { Logo } from '@/components/ui/Logo';
 
 // Each link can target a hash anchor on a specific page
@@ -84,6 +85,7 @@ export function PublicNav() {
 
           {/* Right side */}
           <div className="flex items-center gap-2">
+            <LanguageSwitcher />
             <ThemeToggle />
 
             <Link
