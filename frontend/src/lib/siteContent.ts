@@ -7,6 +7,8 @@
  * in the admin editor.
  */
 
+import { BUILTIN_TRANSLATIONS } from './siteContentTranslations';
+
 export type Lang = 'en' | 'fr' | 'rw';
 
 export interface Step { title: string; description: string }
@@ -319,11 +321,20 @@ function present(v: unknown) {
   return v != null;
 }
 
-/** Defaults, overridden by the admin's English text, overridden by the chosen language. */
+/**
+ * English defaults, then the admin's English text, then the built-in translation
+ * for the chosen language, then the admin's text in that language. So a French
+ * visitor sees French even after an admin edits only the English.
+ */
 export function resolveSection<K extends SectionKey>(stored: StoredContent, key: K, lang: Lang = 'en'): SiteContent[K] {
   const row = stored[key];
   const out: Record<string, unknown> = { ...DEFAULTS[key] };
-  for (const layer of [row?.content_en, lang !== 'en' ? row?.[`content_${lang}`] : undefined]) {
+  const builtin = lang !== 'en' ? BUILTIN_TRANSLATIONS[lang]?.[key] : undefined;
+  for (const layer of [
+    row?.content_en,
+    builtin as Record<string, unknown> | undefined,
+    lang !== 'en' ? row?.[`content_${lang}`] : undefined,
+  ]) {
     for (const [field, value] of Object.entries(layer ?? {})) {
       if (field in out && present(value)) out[field] = value;
     }

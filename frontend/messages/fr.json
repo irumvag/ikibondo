@@ -1,1 +1,204 @@
-{}
+{
+  "nav": {
+    "home": "Accueil",
+    "howItWorks": "Comment ça marche",
+    "faq": "FAQ",
+    "about": "À propos",
+    "register": "S'inscrire",
+    "signIn": "Se connecter",
+    "primary": "Navigation principale",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu"
+  },
+  "camps": {
+    "title": "Où Ikibondo est utilisé",
+    "subtitle": "Camps et sites au Rwanda qui enregistrent actuellement des visites.",
+    "unavailable": "La liste des camps n'est pas disponible pour le moment.",
+    "camp": "Camp",
+    "district": "District"
+  },
+  "roles": {
+    "featuresFor": "Fonctions pour {role}"
+  },
+  "muac": {
+    "band": {
+      "red": "Rouge",
+      "yellow": "Jaune",
+      "green": "Vert"
+    },
+    "red": {
+      "title": "Malnutrition aiguë sévère",
+      "action": "L'agent de santé oriente l'enfant vers un traitement le jour même. Ikibondo marque l'enfant à haut risque et alerte l'infirmier."
+    },
+    "yellow": {
+      "title": "Malnutrition aiguë modérée",
+      "action": "L'enfant reçoit une alimentation de complément et est mesuré de nouveau à la visite suivante. Ikibondo planifie le suivi."
+    },
+    "green": {
+      "title": "Pas de malnutrition aiguë",
+      "action": "La croissance est normale. L'agent de santé garde le calendrier de visites habituel."
+    },
+    "cm": "{value} cm",
+    "rangeLabel": "Périmètre brachial en centimètres",
+    "valueText": "{value} centimètres, bande {band}, {title}",
+    "bandLabel": "Bande {band}",
+    "note": "Seuils de l'OMS pour les enfants de 6 à 59 mois. Le PB est un élément parmi d'autres : les œdèmes et le poids pour la taille sont aussi vérifiés."
+  },
+  "faq": {
+    "title": "Questions fréquentes",
+    "subtitle": "Si votre question n'y est pas, demandez au superviseur de votre camp.",
+    "language": "Langue"
+  },
+  "growthChart": {
+    "notes": {
+      "0": "Poids de naissance noté à l'enregistrement.",
+      "1": "Bonne prise de poids, proche de la médiane.",
+      "2": "Toujours sur la bonne voie.",
+      "3": "La prise de poids ralentit.",
+      "4": "Le poids a baissé depuis la dernière visite. Ikibondo signale l'enfant et l'agent de santé l'oriente vers l'infirmier.",
+      "5": "Alimentation de complément après l'orientation. Reprend du poids.",
+      "6": "Revenue près de sa courbe d'avant.",
+      "7": "Rétablie. Les visites habituelles reprennent."
+    },
+    "band": {
+      "belowMinus3": "sous −3 ET",
+      "minus3to2": "entre −3 et −2 ET",
+      "minus2toMedian": "entre −2 ET et la médiane",
+      "atOrAbove": "à la médiane ou au-dessus"
+    },
+    "title": "Le poids d'un enfant sur les courbes de croissance de l'OMS",
+    "desc": "L'enfant suit la médiane jusqu'au 6e mois, descend vers moins deux écarts-types au 8e mois, est orientée, puis remonte vers la médiane au 15e mois.",
+    "median": "médiane",
+    "minus2": "−2 ET",
+    "ageInMonths": "Âge en mois",
+    "kg": "kg",
+    "visitLabel": "Visite au mois {month} : {kg} kilogrammes",
+    "flagged": "Mois 8 : signalée, orientée",
+    "hint": "Touchez une visite sur la courbe pour voir ce que l'agent de santé a noté.",
+    "selected": "Mois {month} : {kg} kg, {band}",
+    "caption": "Poids pour l'âge, filles de 0 à 24 mois. Enfant fictif ; les bandes reprennent approximativement les normes de croissance de l'OMS."
+  },
+  "meta": {
+    "homeTitle": "Ikibondo — Plateforme de santé de l'enfant",
+    "homeDescription": "Suivi de la nutrition et de la santé des enfants dans les camps de déplacés au Rwanda. Aide les agents de santé communautaires à repérer tôt le risque de malnutrition.",
+    "aboutTitle": "À propos — Ikibondo",
+    "aboutDescription": "Pourquoi Ikibondo existe et comment il aide les agents de santé des camps de réfugiés du Rwanda à repérer tôt les enfants malnutris.",
+    "signIn": "Se connecter",
+    "register": "Demander un accès",
+    "forgotPassword": "Réinitialiser le mot de passe",
+    "setPassword": "Choisir votre mot de passe"
+  },
+  "public": {
+    "registerAsParent": "S'inscrire comme parent"
+  },
+  "error": {
+    "title": "Un problème est survenu",
+    "body": "Une erreur inattendue s'est produite. Réessayez ou revenez à l'accueil.",
+    "retry": "Réessayer",
+    "home": "Accueil"
+  },
+  "footer": {
+    "copyright": "© {year} Ikibondo, Rwanda"
+  },
+  "validation": {
+    "identifierRequired": "L'e-mail ou le numéro de téléphone est obligatoire",
+    "passwordRequired": "Le mot de passe est obligatoire",
+    "fullNameMin": "Le nom complet doit compter au moins 2 caractères",
+    "emailInvalid": "Adresse e-mail invalide",
+    "phoneMin": "Le numéro doit compter au moins 10 chiffres",
+    "phoneFormat": "Format de numéro invalide",
+    "passwordMin": "Le mot de passe doit compter au moins 8 caractères",
+    "passwordConfirm": "Confirmez votre mot de passe",
+    "passwordsMatch": "Les mots de passe ne correspondent pas"
+  },
+  "login": {
+    "title": "Bon retour",
+    "subtitle": "Connectez-vous à votre compte Ikibondo",
+    "invalid": "Identifiants incorrects. Réessayez.",
+    "identifier": "E-mail ou numéro de téléphone",
+    "identifierPlaceholder": "vous@exemple.com ou +250 7XX XXX XXX",
+    "password": "Mot de passe",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
+    "forgot": "Mot de passe oublié ?",
+    "submit": "Se connecter",
+    "noAccount": "Pas encore de compte ?",
+    "requestAccess": "Demander un accès"
+  },
+  "register": {
+    "failed": "L'inscription a échoué. Réessayez.",
+    "successTitle": "Compte créé !",
+    "successBody": "Votre compte attend l'approbation du superviseur de votre camp ou d'un administrateur. Vous recevrez un e-mail dès qu'il sera activé.",
+    "backToSignIn": "Retour à la connexion",
+    "selectCamp": "Choisir un camp…",
+    "title": "Inscription parent / tuteur",
+    "subtitle": "Créez votre compte (en attente d'approbation).",
+    "staffNote": "Agent de santé, infirmier ou superviseur ? Demandez à votre superviseur ou à l'administrateur de créer votre compte.",
+    "fullName": "Nom complet",
+    "fullNamePlaceholder": "Gentille Tumukunde",
+    "phone": "Numéro de téléphone",
+    "phonePlaceholder": "+250 7XX XXX XXX",
+    "phoneHint": "Sert à vous connecter : gardez-le joignable",
+    "email": "Adresse e-mail",
+    "emailPlaceholder": "vous@exemple.com (facultatif)",
+    "language": "Langue préférée",
+    "camp": "Camp",
+    "campHint": "Là où votre enfant est enregistré",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Au moins 8 caractères",
+    "confirmPassword": "Confirmer le mot de passe",
+    "submit": "Créer le compte",
+    "haveAccount": "Vous avez déjà un compte ?",
+    "signIn": "Se connecter"
+  },
+  "forgotPassword": {
+    "enterIdentifier": "Saisissez l'e-mail ou le numéro avec lequel vous vous connectez.",
+    "sendFailed": "Impossible d'envoyer un code pour l'instant. Attendez quelques minutes et réessayez.",
+    "mismatch": "Les deux mots de passe ne correspondent pas.",
+    "resetFailed": "Impossible de réinitialiser votre mot de passe. Vérifiez le code et réessayez.",
+    "doneTitle": "Mot de passe modifié",
+    "title": "Réinitialiser votre mot de passe",
+    "requestIntro": "Nous enverrons un code à 6 chiffres au téléphone ou à l'e-mail de votre compte.",
+    "identifier": "E-mail ou numéro de téléphone",
+    "sendCode": "Envoyer le code",
+    "codeSent": "Si un compte correspond à <strong>{identifier}</strong>, un code est en route. Il expire dans 10 minutes.",
+    "code": "Code à 6 chiffres",
+    "newPassword": "Nouveau mot de passe",
+    "passwordHint": "Au moins 8 caractères. Évitez les mots courants et votre nom.",
+    "confirmNew": "Confirmer le nouveau mot de passe",
+    "setNew": "Enregistrer le mot de passe",
+    "resend": "Envoyer un nouveau code",
+    "doneBody": "Vous avez été déconnecté de tous vos appareils. Connectez-vous avec votre nouveau mot de passe.",
+    "signIn": "Se connecter",
+    "remembered": "Vous vous en souvenez ? <link>Se connecter</link>"
+  },
+  "setPassword": {
+    "mismatch": "Les deux mots de passe ne correspondent pas.",
+    "failed": "Impossible d'enregistrer votre mot de passe. Réessayez ou demandez un nouveau lien à l'infirmier.",
+    "doneTitle": "C'est prêt",
+    "title": "Choisissez votre mot de passe",
+    "broken": "Ce lien est incomplet. Ouvrez le lien complet reçu par SMS ou e-mail, ou demandez-en un nouveau à l'infirmier.",
+    "intro": "Un infirmier a créé votre compte Ikibondo. Choisissez un mot de passe que vous seul connaissez. Ce lien ne fonctionne qu'une fois.",
+    "password": "Mot de passe",
+    "passwordHint": "Au moins 8 caractères. Évitez les mots courants et votre nom.",
+    "confirm": "Confirmer le mot de passe",
+    "submit": "Enregistrer",
+    "doneBody": "Connectez-vous avec votre numéro de téléphone (ou e-mail) et le mot de passe choisi.",
+    "signIn": "Se connecter",
+    "alreadySet": "Déjà fait ? <link>Se connecter</link>"
+  },
+  "announcement": {
+    "learnMore": "En savoir plus",
+    "dismiss": "Fermer l'annonce"
+  },
+  "theme": {
+    "title": "Apparence",
+    "light": "Clair",
+    "lightHint": "Lumineux, pour la journée",
+    "dark": "Sombre",
+    "darkHint": "Plus doux pour les yeux la nuit",
+    "system": "Comme l'appareil",
+    "systemHint": "Suit votre téléphone ou ordinateur",
+    "current": "Apparence : {name}"
+  }
+}

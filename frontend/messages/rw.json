@@ -1,1 +1,204 @@
-{}
+{
+  "nav": {
+    "home": "Ahabanza",
+    "howItWorks": "Uko bikora",
+    "faq": "Ibibazo bikunze kubazwa",
+    "about": "Ibyerekeye",
+    "register": "Iyandikishe",
+    "signIn": "Injira",
+    "primary": "Ibice by'urubuga",
+    "openMenu": "Fungura urutonde",
+    "closeMenu": "Funga urutonde"
+  },
+  "camps": {
+    "title": "Aho Ikibondo gikoreshwa",
+    "subtitle": "Inkambi n'aho impunzi zituye mu Rwanda bandika gusura abana.",
+    "unavailable": "Urutonde rw'inkambi ntiruboneka ubu.",
+    "camp": "Inkambi",
+    "district": "Akarere"
+  },
+  "roles": {
+    "featuresFor": "Ibyo {role} bakora"
+  },
+  "muac": {
+    "band": {
+      "red": "Umutuku",
+      "yellow": "Umuhondo",
+      "green": "Icyatsi"
+    },
+    "red": {
+      "title": "Imirire mibi ikabije",
+      "action": "Umujyanama w'ubuzima yohereza umwana kuvurwa uwo munsi. Ikibondo gishyira umwana mu bafite ibyago byinshi kandi kikamenyesha umuforomo."
+    },
+    "yellow": {
+      "title": "Imirire mibi yoroheje",
+      "action": "Umwana ahabwa indyo y'inyongera kandi akongera gupimwa ku gusura gukurikira. Ikibondo giteganya gukurikirana."
+    },
+    "green": {
+      "title": "Nta mirire mibi",
+      "action": "Umwana arakura neza. Umujyanama w'ubuzima akomeza gusura nk'uko bisanzwe."
+    },
+    "cm": "{value} cm",
+    "rangeLabel": "Umuzenguruko w'ukuboko muri santimetero",
+    "valueText": "Santimetero {value}, ibara {band}, {title}",
+    "bandLabel": "Ibara {band}",
+    "note": "Ibipimo bya OMS ku bana bafite amezi 6 kugeza kuri 59. MUAC ni kimwe mu bipimo: kubyimba ibirenge n'ibiro ugereranyije n'uburebure nabyo birasuzumwa."
+  },
+  "faq": {
+    "title": "Ibibazo abantu bakunze kubaza",
+    "subtitle": "Niba ikibazo cyawe kitarimo, baza umugenzuzi w'inkambi yawe.",
+    "language": "Ururimi"
+  },
+  "growthChart": {
+    "notes": {
+      "0": "Ibiro by'ivuka byanditswe igihe yandikwaga.",
+      "1": "Yongera ibiro neza, hafi y'umurongo wo hagati.",
+      "2": "Aracyari ku murongo mwiza.",
+      "3": "Kwiyongera kw'ibiro byagabanutse.",
+      "4": "Ibiro byagabanutse kuva ku gusura guheruka. Ikibondo kimenyesha ko akeneye ubufasha, umujyanama w'ubuzima akamwohereza ku muforomo.",
+      "5": "Yahawe indyo y'inyongera nyuma yo koherezwa. Yongeye kwiyongera ibiro.",
+      "6": "Yagarutse hafi y'umurongo we wa mbere.",
+      "7": "Yakize. Gusurwa bisanzwe birakomeza."
+    },
+    "band": {
+      "belowMinus3": "munsi ya −3 SD",
+      "minus3to2": "hagati ya −3 na −2 SD",
+      "minus2toMedian": "hagati ya −2 SD n'umurongo wo hagati",
+      "atOrAbove": "ku murongo wo hagati cyangwa hejuru"
+    },
+    "title": "Ibiro by'umwana ku mbonerahamwe y'imikurire ya OMS",
+    "desc": "Umwana akurikira umurongo wo hagati kugeza ku kwezi kwa 6, akamanuka agana kuri −2 SD ku kwezi kwa 8, akoherezwa kwa muganga, maze akagaruka hafi y'umurongo wo hagati ku kwezi kwa 15.",
+    "median": "hagati",
+    "minus2": "−2 SD",
+    "ageInMonths": "Imyaka mu mezi",
+    "kg": "kg",
+    "visitLabel": "Gusura ku kwezi kwa {month}: ibiro {kg}",
+    "flagged": "Ukwezi kwa 8: yamenyekanye, yoherejwe",
+    "hint": "Kanda ku gusura kuri iyi mbonerahamwe urebe ibyo umujyanama w'ubuzima yanditse.",
+    "selected": "Ukwezi kwa {month}: {kg} kg, {band}",
+    "caption": "Ibiro ugereranyije n'imyaka, abakobwa bafite amezi 0 kugeza kuri 24. Ni urugero; amabara akurikira hafi ibipimo by'imikurire bya OMS."
+  },
+  "meta": {
+    "homeTitle": "Ikibondo — Urubuga rw'ubuzima bw'umwana",
+    "homeDescription": "Gukurikirana imirire n'ubuzima bw'abana mu nkambi z'impunzi mu Rwanda. Bifasha abajyanama b'ubuzima kumenya kare abana bafite ibyago by'imirire mibi.",
+    "aboutTitle": "Ibyerekeye — Ikibondo",
+    "aboutDescription": "Impamvu Ikibondo cyabayeho n'uko gifasha abakozi b'ubuzima mu nkambi z'impunzi mu Rwanda kumenya kare abana bafite imirire mibi.",
+    "signIn": "Injira",
+    "register": "Saba kwinjira",
+    "forgotPassword": "Hindura ijambo ry'ibanga",
+    "setPassword": "Hitamo ijambo ry'ibanga"
+  },
+  "public": {
+    "registerAsParent": "Iyandikishe nk'umubyeyi"
+  },
+  "error": {
+    "title": "Hari ikitagenze neza",
+    "body": "Habaye ikosa ritunguranye. Ongera ugerageze cyangwa usubire ahabanza.",
+    "retry": "Ongera ugerageze",
+    "home": "Ahabanza"
+  },
+  "footer": {
+    "copyright": "© {year} Ikibondo, Rwanda"
+  },
+  "validation": {
+    "identifierRequired": "Imeyili cyangwa nimero ya telefoni birakenewe",
+    "passwordRequired": "Ijambo ry'ibanga rirakenewe",
+    "fullNameMin": "Amazina agomba kugira nibura inyuguti 2",
+    "emailInvalid": "Imeyili ntiyanditse neza",
+    "phoneMin": "Nimero ya telefoni igomba kugira nibura imibare 10",
+    "phoneFormat": "Nimero ya telefoni ntiyanditse neza",
+    "passwordMin": "Ijambo ry'ibanga rigomba kugira nibura inyuguti 8",
+    "passwordConfirm": "Emeza ijambo ry'ibanga",
+    "passwordsMatch": "Amagambo y'ibanga ntahura"
+  },
+  "login": {
+    "title": "Murakaza neza",
+    "subtitle": "Injira kuri konti yawe ya Ikibondo",
+    "invalid": "Ibyo winjije si byo. Ongera ugerageze.",
+    "identifier": "Imeyili cyangwa nimero ya telefoni",
+    "identifierPlaceholder": "wowe@urugero.com cyangwa +250 7XX XXX XXX",
+    "password": "Ijambo ry'ibanga",
+    "showPassword": "Erekana ijambo ry'ibanga",
+    "hidePassword": "Hisha ijambo ry'ibanga",
+    "forgot": "Wibagiwe ijambo ry'ibanga?",
+    "submit": "Injira",
+    "noAccount": "Nta konti ufite?",
+    "requestAccess": "Saba kwinjira"
+  },
+  "register": {
+    "failed": "Kwiyandikisha ntibyakunze. Ongera ugerageze.",
+    "successTitle": "Konti yafunguwe!",
+    "successBody": "Konti yawe itegereje kwemezwa n'umugenzuzi w'inkambi cyangwa umuyobozi. Uzabona imeyili konti yawe imaze gukora.",
+    "backToSignIn": "Subira ku kwinjira",
+    "selectCamp": "Hitamo inkambi…",
+    "title": "Kwiyandikisha kw'umubyeyi / urera umwana",
+    "subtitle": "Fungura konti yawe (itegereje kwemezwa).",
+    "staffNote": "Uri umujyanama w'ubuzima, umuforomo cyangwa umugenzuzi? Saba umugenzuzi wawe cyangwa umuyobozi kugufungurira konti.",
+    "fullName": "Amazina yose",
+    "fullNamePlaceholder": "Gentille Tumukunde",
+    "phone": "Nimero ya telefoni",
+    "phonePlaceholder": "+250 7XX XXX XXX",
+    "phoneHint": "Uyikoresha winjira: ihore iboneka",
+    "email": "Imeyili",
+    "emailPlaceholder": "wowe@urugero.com (si ngombwa)",
+    "language": "Ururimi wifuza",
+    "camp": "Inkambi",
+    "campHint": "Aho umwana wawe yanditswe",
+    "password": "Ijambo ry'ibanga",
+    "passwordPlaceholder": "Nibura inyuguti 8",
+    "confirmPassword": "Emeza ijambo ry'ibanga",
+    "submit": "Fungura konti",
+    "haveAccount": "Usanzwe ufite konti?",
+    "signIn": "Injira"
+  },
+  "forgotPassword": {
+    "enterIdentifier": "Andika imeyili cyangwa nimero ukoresha winjira.",
+    "sendFailed": "Ntitwabashije kohereza kode ubu. Tegereza iminota mike wongere ugerageze.",
+    "mismatch": "Amagambo abiri y'ibanga ntahura.",
+    "resetFailed": "Ntitwabashije guhindura ijambo ry'ibanga. Reba kode wongere ugerageze.",
+    "doneTitle": "Ijambo ry'ibanga ryahinduwe",
+    "title": "Hindura ijambo ry'ibanga",
+    "requestIntro": "Turohereza kode y'imibare 6 kuri telefoni cyangwa imeyili ya konti yawe.",
+    "identifier": "Imeyili cyangwa nimero ya telefoni",
+    "sendCode": "Ohereza kode",
+    "codeSent": "Niba hari konti ihuye na <strong>{identifier}</strong>, kode iri mu nzira. Irarangira mu minota 10.",
+    "code": "Kode y'imibare 6",
+    "newPassword": "Ijambo ry'ibanga rishya",
+    "passwordHint": "Nibura inyuguti 8. Irinde amagambo asanzwe n'izina ryawe.",
+    "confirmNew": "Emeza ijambo ry'ibanga rishya",
+    "setNew": "Bika ijambo ry'ibanga rishya",
+    "resend": "Ohereza kode nshya",
+    "doneBody": "Wasohowe kuri telefoni na mudasobwa zose. Injira ukoresheje ijambo ry'ibanga rishya.",
+    "signIn": "Injira",
+    "remembered": "Wibutse? <link>Injira</link>"
+  },
+  "setPassword": {
+    "mismatch": "Amagambo abiri y'ibanga ntahura.",
+    "failed": "Ntitwabashije kubika ijambo ry'ibanga. Ongera ugerageze cyangwa usabe umuforomo ihuza rishya.",
+    "doneTitle": "Byose biteguye",
+    "title": "Hitamo ijambo ry'ibanga",
+    "broken": "Iri huza ntiryuzuye. Fungura ihuza ryose wabonye kuri SMS cyangwa imeyili, cyangwa usabe umuforomo irindi.",
+    "intro": "Umuforomo yagufunguriye konti ya Ikibondo. Hitamo ijambo ry'ibanga uzi wenyine. Iri huza rikora rimwe gusa.",
+    "password": "Ijambo ry'ibanga",
+    "passwordHint": "Nibura inyuguti 8. Irinde amagambo asanzwe n'izina ryawe.",
+    "confirm": "Emeza ijambo ry'ibanga",
+    "submit": "Bika ijambo ry'ibanga",
+    "doneBody": "Injira ukoresheje nimero ya telefoni (cyangwa imeyili) n'ijambo ry'ibanga umaze guhitamo.",
+    "signIn": "Injira",
+    "alreadySet": "Wamaze kurihitamo? <link>Injira</link>"
+  },
+  "announcement": {
+    "learnMore": "Menya byinshi",
+    "dismiss": "Funga iri tangazo"
+  },
+  "theme": {
+    "title": "Imigaragarire",
+    "light": "Urumuri",
+    "lightHint": "Bigaragara neza ku manywa",
+    "dark": "Umwijima",
+    "darkHint": "Byoroheye amaso nijoro",
+    "system": "Nk'igikoresho",
+    "systemHint": "Bikurikira telefoni cyangwa mudasobwa yawe",
+    "current": "Imigaragarire: {name}"
+  }
+}

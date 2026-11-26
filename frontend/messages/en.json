@@ -190,5 +190,15 @@
   "announcement": {
     "learnMore": "Learn more",
     "dismiss": "Dismiss announcement"
+  },
+  "theme": {
+    "title": "Appearance",
+    "light": "Light",
+    "lightHint": "Bright, for daytime",
+    "dark": "Dark",
+    "darkHint": "Easier on the eyes at night",
+    "system": "Same as device",
+    "systemHint": "Follows your phone or computer",
+    "current": "Appearance: {name}"
   }
 }
