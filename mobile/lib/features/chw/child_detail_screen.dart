@@ -60,7 +60,7 @@ class ChwChildDetailScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: colorBgElev,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: colorBorder),
+                boxShadow: softShadow,
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,7 +103,7 @@ class ChwChildDetailScreen extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: colorBgElev,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: colorBorder),
+                  boxShadow: softShadow,
                 ),
                 child: Row(
                   children: [
@@ -148,7 +148,7 @@ class ChwChildDetailScreen extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: colorBgElev,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: colorBorder),
+                    boxShadow: softShadow,
                   ),
                   child: Column(
                     children: [

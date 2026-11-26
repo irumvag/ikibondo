@@ -12,6 +12,7 @@ import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/risk_badge.dart';
 import '../../shared/widgets/sign_out_button.dart';
 import '../../shared/widgets/switch_role_button.dart';
+import '../../shared/widgets/announcement_banner.dart';
 
 // ── Families provider ──────────────────────────────────────────────────────
 final chwFamiliesProvider = FutureProvider.autoDispose<List<Child>>((ref) async {
@@ -77,7 +78,8 @@ class ChwDashboardScreen extends ConsumerWidget {
               'Here\'s your caseload overview',
               style: GoogleFonts.inter(fontSize: 14, color: colorMuted),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            const AnnouncementBanner(),
 
             // ── KPI row ───────────────────────────────────────────────────
             families.when(
@@ -194,7 +196,7 @@ class _KpiCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: colorBgElev,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: colorBorder),
+          boxShadow: softShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,7 +230,7 @@ class _ActionBtn extends StatelessWidget {
           decoration: BoxDecoration(
             color: colorBgElev,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colorBorder),
+            boxShadow: softShadow,
           ),
           child: Column(
             children: [
@@ -257,8 +259,7 @@ class _ChildTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: colorBgElev,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: colorBorder),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 2))],
+          boxShadow: softShadow,
         ),
         child: Row(
           children: [

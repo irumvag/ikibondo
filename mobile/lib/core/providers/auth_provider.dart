@@ -27,11 +27,11 @@ class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
     _restoreSession();
-    return const AuthState();
+    // State can't be written until build() returns, so start in "loading"
+    return const AuthState(isLoading: true);
   }
 
   Future<void> _restoreSession() async {
-    state = state.copyWith(isLoading: true);
     try {
       final user = await AuthService.restoreSession();
       state = AuthState(user: user);

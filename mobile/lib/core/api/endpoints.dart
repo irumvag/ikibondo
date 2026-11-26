@@ -98,4 +98,8 @@ class Endpoints {
 
   // ── Sync ───────────────────────────────────────────────────────────────
   static const batchSync        = '$kBaseUrl/sync/batch/';
+
+  // ── Admin-edited content (Admin → Site content / Announcements on the website) ──
+  static const siteContent      = '$kBaseUrl/site-content/';
+  static const announcements    = '$kBaseUrl/announcements/active/?where=dashboard';
 }

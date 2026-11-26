@@ -16,7 +16,9 @@ class RiskBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = nutritionStatus?.toUpperCase() ?? riskLevel?.toUpperCase() ?? '—';
+    // Nothing measured yet: show no badge rather than an empty "—" box
+    if (nutritionStatus == null && riskLevel == null) return const SizedBox.shrink();
+    final label = (nutritionStatus ?? riskLevel)!.toUpperCase();
     final color = nutritionStatus != null
         ? nutritionColor(nutritionStatus)
         : riskColor(riskLevel);

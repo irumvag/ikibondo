@@ -34,7 +34,7 @@ class _ChwScanScreenState extends ConsumerState<ChwScanScreen> {
     setState(() { _scanned = true; _loading = true; _error = null; });
 
     try {
-      final resp = await ApiClient.dio.post(Endpoints.scanQr(code));
+      final resp = await ApiClient.dio.get(Endpoints.scanQr(code.trim()));
       final data = resp.data['data'] ?? resp.data;
       final childId = data['id'] as String;
       if (mounted) context.go('/chw/children/$childId');

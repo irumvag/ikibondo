@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// ── Design tokens — matches web CSS vars exactly ──────────────────────────
-const Color colorInk     = Color(0xFF085041); // primary teal (--ink)
-const Color colorCream   = Color(0xFFFFFDF7); // background   (--bg)
-const Color colorGold    = Color(0xFFFBC800); // accent       (--accent)
-const Color colorDanger  = Color(0xFFB91C1C); // danger       (--danger)
-const Color colorSuccess = Color(0xFF16A34A); // success      (--success)
-const Color colorWarn    = Color(0xFFD97706); // warning      (--warn)
-const Color colorMuted   = Color(0xFF4B5563); // text muted   (--text-muted)
-const Color colorBgElev  = Color(0xFFFFFFFF); // elevated bg  (--bg-elev)
-const Color colorBgSand  = Color(0xFFF5F0E8); // sand bg      (--bg-sand)
-const Color colorBorder  = Color(0xFFE5DDD0); // border       (--border)
-const Color colorLowBg   = Color(0xFFDCFCE7); // low risk bg  (--low-bg)
-const Color colorMedBg   = Color(0xFFFEF9C3); // medium risk  (--med-bg)
-const Color colorHighBg  = Color(0xFFFEE2E2); // high risk    (--high-bg)
+// ── Design tokens — clinical palette: white surfaces, medical blue, teal accent ──
+const Color colorInk     = Color(0xFF0E4C92); // primary medical blue (bars, headings, buttons)
+const Color colorCream   = Color(0xFFF4F8FC); // page background; also text on blue
+const Color colorGold    = Color(0xFF0EA5A4); // accent teal (scan, add, highlights)
+const Color colorDanger  = Color(0xFFC62828); // danger
+const Color colorSuccess = Color(0xFF15803D); // success
+const Color colorWarn    = Color(0xFFB45309); // warning
+const Color colorMuted   = Color(0xFF5B6B7F); // secondary text
+const Color colorBgElev  = Color(0xFFFFFFFF); // cards
+const Color colorBgSand  = Color(0xFFEAF1F8); // tinted panels, chips
+const Color colorBorder  = Color(0xFFDCE6F1); // hairlines
+const Color colorLowBg   = Color(0xFFDCFCE7); // low risk bg
+const Color colorMedBg   = Color(0xFFFEF3C7); // medium risk bg
+const Color colorHighBg  = Color(0xFFFEE2E2); // high risk bg
+const Color colorSky     = Color(0xFF3B82F6); // lighter blue for gradients
+
+/// Soft shadow for cards: separates them from the page without a hard outline.
+const List<BoxShadow> softShadow = [
+  BoxShadow(color: Color(0x140E4C92), blurRadius: 18, offset: Offset(0, 6)),
+];
 
 class AppTheme {
   static ThemeData get lightTheme {
@@ -71,11 +77,9 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: colorBgElev,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: colorBorder),
-        ),
+        elevation: 2,
+        shadowColor: const Color(0x220E4C92),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         margin: EdgeInsets.zero,
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -123,7 +127,9 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: colorBgSand,
         selectedColor: colorInk,
-        labelStyle: GoogleFonts.inter(fontSize: 13),
+        // Explicit colour: chips otherwise inherit labelLarge, which is white (for buttons)
+        labelStyle: GoogleFonts.inter(fontSize: 13, color: colorInk),
+        side: const BorderSide(color: colorBorder),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(

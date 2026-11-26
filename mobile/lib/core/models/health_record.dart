@@ -56,26 +56,26 @@ class HealthRecord {
     childId:               json['child'] as String,
     childName:             json['child_name'] as String?,
     measurementDate:       json['measurement_date'] as String,
-    weightKg:              (json['weight_kg'] as num?)?.toDouble(),
-    heightCm:              (json['height_cm'] as num?)?.toDouble(),
-    muacCm:                (json['muac_cm'] as num?)?.toDouble(),
+    weightKg:              _toDouble(json['weight_kg']),
+    heightCm:              _toDouble(json['height_cm']),
+    muacCm:                _toDouble(json['muac_cm']),
     oedema:                json['oedema'] as bool?,
-    temperatureC:          (json['temperature_c'] as num?)?.toDouble(),
-    respiratoryRate:       json['respiratory_rate'] as int?,
-    heartRate:             json['heart_rate'] as int?,
-    spo2:                  json['spo2'] as int?,
+    temperatureC:          _toDouble(json['temperature_c']),
+    respiratoryRate:       _toDouble(json['respiratory_rate'])?.round(),
+    heartRate:             _toDouble(json['heart_rate'])?.round(),
+    spo2:                  _toDouble(json['spo2'])?.round(),
     symptomFlags:          (json['symptom_flags'] as List?)?.cast<String>(),
-    weightForHeightZ:      (json['weight_for_height_z'] as num?)?.toDouble(),
-    heightForAgeZ:         (json['height_for_age_z'] as num?)?.toDouble(),
-    weightForAgeZ:         (json['weight_for_age_z'] as num?)?.toDouble(),
+    weightForHeightZ:      _toDouble(json['weight_for_height_z']),
+    heightForAgeZ:         _toDouble(json['height_for_age_z']),
+    weightForAgeZ:         _toDouble(json['weight_for_age_z']),
     nutritionStatus:       json['nutrition_status'] as String?,
     nutritionStatusDisplay: json['nutrition_status_display'] as String?,
     riskLevel:             json['risk_level'] as String?,
     riskFactors:           json['risk_factors'],
-    mlConfidence:          (json['ml_confidence'] as num?)?.toDouble(),
+    mlConfidence:          _toDouble(json['ml_confidence']),
     notes:                 json['notes'] as String?,
     recordedByName:        json['recorded_by_name'] as String?,
-    createdAt:             json['created_at'] as String,
+    createdAt:             json['created_at'] as String? ?? '',
   );
 
   Map<String, dynamic> toJson() => {
@@ -115,11 +115,14 @@ class GrowthPoint {
 
   factory GrowthPoint.fromJson(Map<String, dynamic> json) => GrowthPoint(
     date:   json['date'] as String,
-    waz:    (json['weight_for_age_z'] as num?)?.toDouble(),
-    haz:    (json['height_for_age_z'] as num?)?.toDouble(),
-    whz:    (json['weight_for_height_z'] as num?)?.toDouble(),
-    weight: (json['weight_kg'] as num?)?.toDouble(),
-    height: (json['height_cm'] as num?)?.toDouble(),
-    muac:   (json['muac_cm'] as num?)?.toDouble(),
+    waz:    _toDouble(json['weight_for_age_z']),
+    haz:    _toDouble(json['height_for_age_z']),
+    whz:    _toDouble(json['weight_for_height_z']),
+    weight: _toDouble(json['weight_kg']),
+    height: _toDouble(json['height_cm']),
+    muac:   _toDouble(json['muac_cm']),
   );
 }
+
+/// DRF sends decimals as strings ("8.50"); accept numbers and numeric strings.
+double? _toDouble(dynamic v) => v is num ? v.toDouble() : (v is String ? double.tryParse(v) : null);

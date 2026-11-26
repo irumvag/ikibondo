@@ -382,7 +382,7 @@ class _SuccessScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: colorBgElev,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: colorBorder),
+                  boxShadow: softShadow,
                 ),
                 child: Column(
                   children: [

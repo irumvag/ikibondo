@@ -27,9 +27,9 @@ void main() {
       expect(find.text('LOW'), findsNothing);
     });
 
-    testWidgets('renders a placeholder when nothing is known', (tester) async {
+    testWidgets('shows no badge when nothing is known (no empty "—" box)', (tester) async {
       await tester.pumpWidget(host(const RiskBadge()));
-      expect(find.text('—'), findsOneWidget);
+      expect(find.byType(Text), findsNothing);
     });
   });
 

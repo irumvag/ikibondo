@@ -184,7 +184,7 @@ class _LogVisitScreenState extends ConsumerState<LogVisitScreen> {
                 decoration: BoxDecoration(
                   color: colorBgElev,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: colorBorder),
+                  boxShadow: softShadow,
                 ),
                 child: Row(
                   children: [

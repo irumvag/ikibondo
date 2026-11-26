@@ -127,7 +127,8 @@ class _RequestVisitScreenState extends ConsumerState<RequestVisitScreen> {
             children: _symptoms.map((s) {
               final selected = _selectedSymptoms.contains(s);
               return FilterChip(
-                label: Text(s.replaceAll('_', ' '), style: GoogleFonts.inter(fontSize: 12)),
+                label: Text(s.replaceAll('_', ' '),
+                    style: GoogleFonts.inter(fontSize: 13, color: selected ? colorDanger : colorInk)),
                 selected: selected,
                 onSelected: (v) => setState(() => v ? _selectedSymptoms.add(s) : _selectedSymptoms.remove(s)),
                 selectedColor: colorHighBg,

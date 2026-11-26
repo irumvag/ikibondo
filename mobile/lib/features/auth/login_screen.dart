@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../shared/widgets/brand.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -62,25 +63,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 10,
-                              height: 10,
-                              decoration: const BoxDecoration(
-                                  color: colorGold, shape: BoxShape.circle),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Ikibondo',
-                              style: GoogleFonts.inter(
-                                fontSize: 30,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.5,
-                                color: colorCream,
-                              ),
-                            ),
-                          ],
+                        // White ring so the blue mark stands out on the blue band
+                        Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: const IkibondoLogo(size: 52, showName: false),
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          'Ikibondo',
+                          style: GoogleFonts.inter(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(height: 10),
                         Text(

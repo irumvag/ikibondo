@@ -45,7 +45,7 @@ class VaccinationRecord {
         isOverdue:           (json['is_overdue'] as bool?) ?? false,
         batchNumber:         json['batch_number'] as String?,
         notes:               json['notes'] as String?,
-        dropoutProbability:  (json['dropout_probability'] as num?)?.toDouble(),
+        dropoutProbability:  double.tryParse('${json['dropout_probability'] ?? ''}'),
         dropoutRiskTier:     json['dropout_risk_tier'] as String?,
       );
 

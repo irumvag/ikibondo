@@ -11,6 +11,7 @@ import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/sign_out_button.dart';
 import '../../shared/widgets/switch_role_button.dart';
 import '../../core/api/response.dart';
+import '../../shared/widgets/announcement_banner.dart';
 
 final nurseCampChildrenProvider = FutureProvider.autoDispose<List<Child>>((ref) async {
   final resp = await ApiClient.dio.get(Endpoints.children, queryParameters: {'page_size': 200});
@@ -51,7 +52,8 @@ class NurseDashboardScreen extends ConsumerWidget {
                 style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700, color: colorInk)),
             const SizedBox(height: 4),
             Text(user?.campName ?? '', style: GoogleFonts.inter(fontSize: 13, color: colorMuted)),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            const AnnouncementBanner(),
 
             // Pending approvals alert
             approvals.maybeWhen(
@@ -174,7 +176,7 @@ class _KpiCard extends StatelessWidget {
   Widget build(BuildContext context) => Expanded(
     child: Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: colorBgElev, borderRadius: BorderRadius.circular(14), border: Border.all(color: colorBorder)),
+      decoration: BoxDecoration(color: colorBgElev, borderRadius: BorderRadius.circular(14), boxShadow: softShadow),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Icon(icon, color: color, size: 20),
         const SizedBox(height: 8),
@@ -197,7 +199,7 @@ class _ActionBtn extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(color: colorBgElev, borderRadius: BorderRadius.circular(12), border: Border.all(color: colorBorder)),
+        decoration: BoxDecoration(color: colorBgElev, borderRadius: BorderRadius.circular(12), boxShadow: softShadow),
         child: Column(children: [
           Icon(icon, color: colorInk, size: 22),
           const SizedBox(height: 6),
@@ -226,7 +228,7 @@ class _QuickAction extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colorBorder),
+            boxShadow: softShadow,
           ),
           child: Row(children: [
             Icon(icon, color: colorInk),

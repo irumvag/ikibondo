@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/endpoints.dart';
 import '../../core/models/child.dart';
+import '../../core/models/health_record.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/risk_badge.dart';
@@ -162,7 +163,7 @@ class _NurseChildDetailScreenState extends ConsumerState<NurseChildDetailScreen>
               children: [
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: colorBgElev, borderRadius: BorderRadius.circular(14), border: Border.all(color: colorBorder)),
+                  decoration: BoxDecoration(color: colorBgElev, borderRadius: BorderRadius.circular(14), boxShadow: softShadow),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -191,7 +192,7 @@ class _NurseChildDetailScreenState extends ConsumerState<NurseChildDetailScreen>
             ),
 
             // Health records
-            const Center(child: Text('Records tab — see nurse children screen for full records list')),
+            _RecordsTab(childId: widget.childId),
 
             // Notes
             notesAsync.when(
@@ -251,6 +252,82 @@ class _NurseChildDetailScreenState extends ConsumerState<NurseChildDetailScreen>
           ],
         ),
       ),
+    );
+  }
+}
+
+final _recordsProvider = FutureProvider.family.autoDispose<List<HealthRecord>, String>((ref, childId) async {
+  final resp = await ApiClient.dio.get(
+    Endpoints.healthRecords,
+    queryParameters: {'child': childId, 'ordering': '-measurement_date'},
+  );
+  return unwrapList(resp.data).map(HealthRecord.fromJson).toList();
+});
+
+/// Every measurement for the child, newest first, with WHO z-scores.
+class _RecordsTab extends ConsumerWidget {
+  final String childId;
+  const _RecordsTab({required this.childId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(_recordsProvider(childId)).when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => Center(
+        child: TextButton(
+          onPressed: () => ref.invalidate(_recordsProvider(childId)),
+          child: const Text('Could not load records. Tap to retry.'),
+        ),
+      ),
+      data: (records) {
+        if (records.isEmpty) {
+          return Center(child: Text('No measurements yet', style: GoogleFonts.inter(color: colorMuted)));
+        }
+        String z(double? v) => v == null ? '—' : v.toStringAsFixed(1);
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(_recordsProvider(childId)),
+          child: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: records.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (_, i) {
+              final r = records[i];
+              return Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: colorBgElev, borderRadius: BorderRadius.circular(16), boxShadow: softShadow),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(r.measurementDate,
+                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: colorInk)),
+                        ),
+                        RiskBadge(nutritionStatus: r.nutritionStatus, compact: true),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      [
+                        if (r.weightKg != null) '${r.weightKg} kg',
+                        if (r.heightCm != null) '${r.heightCm} cm',
+                        if (r.muacCm != null) 'MUAC ${r.muacCm} cm',
+                        if (r.oedema == true) 'oedema',
+                      ].join(' · '),
+                      style: GoogleFonts.inter(fontSize: 13, color: colorInk),
+                    ),
+                    const SizedBox(height: 4),
+                    Text('WAZ ${z(r.weightForAgeZ)} · HAZ ${z(r.heightForAgeZ)} · WHZ ${z(r.weightForHeightZ)}'
+                        '${r.recordedByName != null ? ' · ${r.recordedByName}' : ''}',
+                        style: GoogleFonts.inter(fontSize: 12, color: colorMuted)),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

@@ -15,6 +15,7 @@ import '../../features/chw/child_detail_screen.dart';
 import '../../features/chw/daily_plan_screen.dart';
 import '../../features/parent/dashboard_screen.dart';
 import '../../features/parent/child_detail_screen.dart';
+import '../../features/parent/certificate_screen.dart';
 import '../../features/parent/vaccines_screen.dart';
 import '../../features/parent/request_visit_screen.dart';
 import '../../features/parent/notifications_screen.dart';
@@ -107,6 +108,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/parent/children/:id',
             builder: (_, state) => ParentChildDetailScreen(childId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/parent/children/:id/certificate',
+            builder: (_, state) => VaccinationCertificateScreen(childId: state.pathParameters['id']!),
           ),
         ],
       ),

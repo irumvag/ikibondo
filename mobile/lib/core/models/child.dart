@@ -59,7 +59,7 @@ class Child {
     nutritionStatus:        json['nutrition_status'] as String?,
     nutritionStatusDisplay: json['nutrition_status_display'] as String?,
     photo:                  json['photo'] as String?,
-    birthWeight:            (json['birth_weight'] as num?)?.toDouble(),
+    birthWeight:            double.tryParse('${json['birth_weight'] ?? ''}'),
     feedingType:            json['feeding_type'] as String?,
   );
 

@@ -108,7 +108,7 @@ class _ChildRow extends StatelessWidget {
         decoration: BoxDecoration(
           color: colorBgElev,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: colorBorder),
+          boxShadow: softShadow,
         ),
         child: Row(
           children: [
