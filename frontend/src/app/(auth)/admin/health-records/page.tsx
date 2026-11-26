@@ -73,8 +73,9 @@ function AmendModal({ target, onDone, onCancel }: {
           ['MUAC (cm)', muacCm, setMuacCm],
         ].map(([label, val, setter]) => (
           <div key={label as string} style={{ marginBottom: 10 }}>
-            <label style={lbl}>{label as string}</label>
+            <label htmlFor={`edit-record-${(label as string).split(' ')[0].toLowerCase()}`} style={lbl}>{label as string}</label>
             <input
+              id={`edit-record-${(label as string).split(' ')[0].toLowerCase()}`}
               type="number" step="0.1" value={val as string}
               onChange={e => (setter as (v: string) => void)(e.target.value)}
               style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
@@ -82,15 +83,15 @@ function AmendModal({ target, onDone, onCancel }: {
           </div>
         ))}
         <div style={{ marginBottom: 10 }}>
-          <label style={lbl}>Notes</label>
-          <textarea
+          <label htmlFor="health-records-notes" style={lbl}>Notes</label>
+          <textarea id="health-records-notes"
             value={notes} onChange={e => setNotes(e.target.value)}
             rows={2} style={{ ...inputStyle, resize: 'vertical', width: '100%', boxSizing: 'border-box' }}
           />
         </div>
         <div style={{ marginBottom: 14 }}>
-          <label style={lbl}>Amendment reason <span style={{ color: 'var(--danger)' }}>*</span></label>
-          <textarea
+          <label htmlFor="health-records-amendment-reason" style={lbl}>Amendment reason <span style={{ color: 'var(--danger)' }}>*</span></label>
+          <textarea id="health-records-amendment-reason"
             value={reason} onChange={e => setReason(e.target.value)}
             rows={2} style={{ ...inputStyle, resize: 'vertical', width: '100%', boxSizing: 'border-box' }}
             placeholder="Why is this record being amended?"

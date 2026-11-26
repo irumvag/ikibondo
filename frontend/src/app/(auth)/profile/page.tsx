@@ -315,12 +315,13 @@ export default function ProfilePage() {
 
             {/* Language */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Language</label>
-              <div className="flex gap-2">
+              <p id="profile-language-label" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Language</p>
+              <div role="group" aria-labelledby="profile-language-label" className="flex gap-2">
                 {LANGUAGES.map(({ value, label }) => (
                   <button
                     key={value}
                     type="button"
+                    aria-pressed={lang === value}
                     onClick={() => setLang(value)}
                     className="flex-1 py-2 rounded-xl border text-sm font-medium transition-colors"
                     style={{
@@ -337,12 +338,13 @@ export default function ProfilePage() {
 
             {/* Theme */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Appearance</label>
-              <div className="flex gap-2">
+              <p id="profile-theme-label" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Appearance</p>
+              <div role="group" aria-labelledby="profile-theme-label" className="flex gap-2">
                 {THEMES.map(({ value, label }) => (
                   <button
                     key={value}
                     type="button"
+                    aria-pressed={theme === value}
                     onClick={() => setTheme(value)}
                     className="flex-1 py-2 rounded-xl border text-sm font-medium transition-colors"
                     style={{

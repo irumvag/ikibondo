@@ -120,8 +120,8 @@ function CampFormFields({ form, onChange }: {
         <Input label="Province" value={form.province} onChange={(e) => set('province', e.target.value)} />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Status</label>
-        <select
+        <label htmlFor="camps-status" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Status</label>
+        <select id="camps-status"
           value={form.status}
           onChange={(e) => set('status', e.target.value)}
           className="text-sm px-3 py-2 rounded-lg border outline-none"
@@ -168,8 +168,8 @@ function ZoneFormFields({ form, onChange }: {
         <Input label="Code" value={form.code} onChange={(e) => set('code', e.target.value)} required />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Status</label>
-        <select
+        <label htmlFor="camps-status-2" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Status</label>
+        <select id="camps-status-2"
           value={form.status}
           onChange={(e) => set('status', e.target.value)}
           className="text-sm px-3 py-2 rounded-lg border outline-none"

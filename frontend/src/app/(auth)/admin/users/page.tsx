@@ -655,8 +655,8 @@ export default function UsersPage() {
               <Input label="Phone number (optional)" type="tel" value={createForm.phone_number}
                 onChange={(e) => setCreateForm({ ...createForm, phone_number: e.target.value })} />
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Role</label>
-                <select value={createForm.role}
+                <label htmlFor="users-role" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Role</label>
+                <select id="users-role" value={createForm.role}
                   onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
                   className="text-sm px-3 py-2 rounded-lg border outline-none"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
@@ -733,8 +733,8 @@ export default function UsersPage() {
               <Input label="Phone number" type="tel" value={editForm.phone_number}
                 onChange={(e) => setEditForm({ ...editForm, phone_number: e.target.value })} />
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Main role</label>
-                <select value={editForm.role}
+                <label htmlFor="users-main-role" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Main role</label>
+                <select id="users-main-role" value={editForm.role}
                   onChange={(e) => setEditForm({ ...editForm, role: e.target.value, extra_roles: editForm.extra_roles.filter((r) => r !== e.target.value) })}
                   className="text-sm px-3 py-2 rounded-lg border outline-none"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}
@@ -778,8 +778,8 @@ export default function UsersPage() {
                 </label>
               )}
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Camp</label>
-                <select value={editForm.camp}
+                <label htmlFor="users-camp" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Camp</label>
+                <select id="users-camp" value={editForm.camp}
                   onChange={(e) => setEditForm({ ...editForm, camp: e.target.value })}
                   className="text-sm px-3 py-2 rounded-lg border outline-none"
                   style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg)', color: 'var(--ink)' }}

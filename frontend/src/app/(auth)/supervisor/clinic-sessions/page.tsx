@@ -105,13 +105,13 @@ function CreateModal({ onDone, onCancel }: { onDone: () => void; onCancel: () =>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>New Clinic Session</h3>
           <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
         </div>
-        <label style={lbl}>Vaccine</label>
-        <select value={vaccineId} onChange={e => setVaccineId(e.target.value)} style={inputSt}>
+        <label htmlFor="clinic-sessions-vaccine" style={lbl}>Vaccine</label>
+        <select id="clinic-sessions-vaccine" value={vaccineId} onChange={e => setVaccineId(e.target.value)} style={inputSt}>
           <option value="" disabled>Select vaccine…</option>
           {vaccines.map(v => <option key={v.id} value={v.id}>{v.name} (dose {v.dose_number})</option>)}
         </select>
-        <label style={{ ...lbl, marginTop: 12 }}>Session date</label>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputSt} />
+        <label htmlFor="clinic-sessions-session-date" style={{ ...lbl, marginTop: 12 }}>Session date</label>
+        <input id="clinic-sessions-session-date" type="date" value={date} onChange={e => setDate(e.target.value)} style={inputSt} />
         {mut.isError && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '8px 0 0' }}>Failed to create session.</p>}
         <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
           <button onClick={onCancel} style={btnSec}>Cancel</button>

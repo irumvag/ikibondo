@@ -167,10 +167,10 @@ function ManualSyncPanel({ configured }: { configured: boolean }) {
 
       <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+          <label htmlFor="dhis2-since-date-optional" className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
             Since date (optional)
           </label>
-          <input
+          <input id="dhis2-since-date-optional"
             type="date"
             value={since}
             onChange={(e) => setSince(e.target.value)}

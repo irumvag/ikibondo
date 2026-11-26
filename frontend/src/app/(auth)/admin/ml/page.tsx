@@ -147,8 +147,8 @@ function PredictPanel() {
 
         <div className="flex gap-4 mb-4 flex-wrap">
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Sex</label>
-            <select
+            <label htmlFor="ml-sex" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Sex</label>
+            <select id="ml-sex"
               value={form.sex}
               onChange={(e) => set('sex', e.target.value)}
               className="text-sm px-3 py-2 rounded-lg border outline-none"
@@ -476,8 +476,8 @@ function ModelRegistry() {
         >
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Model</label>
-              <select
+              <label htmlFor="ml-model" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Model</label>
+              <select id="ml-model"
                 value={form.model_name}
                 onChange={(e) => setForm({ ...form, model_name: e.target.value })}
                 className="text-sm px-3 py-2 rounded-lg border outline-none"
@@ -504,8 +504,8 @@ function ModelRegistry() {
             <Input label="Precision" type="number" step="0.0001" min="0" max="1" value={form.precision} onChange={(e) => setForm({ ...form, precision: e.target.value })} />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Notes</label>
-            <textarea
+            <label htmlFor="ml-notes" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Notes</label>
+            <textarea id="ml-notes"
               rows={2}
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}

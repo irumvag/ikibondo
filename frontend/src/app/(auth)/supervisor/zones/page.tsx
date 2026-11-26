@@ -245,12 +245,13 @@ export default function SupervisorZonesPage() {
                 placeholder="e.g. NBA-01"
               />
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Status</label>
-                <div className="flex gap-2">
+                <p id="zones-status-label" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Status</p>
+                <div role="group" aria-labelledby="zones-status-label" className="flex gap-2">
                   {STATUS_OPTIONS.map((s) => (
                     <button
                       key={s}
                       type="button"
+                      aria-pressed={form.status === s}
                       onClick={() => setForm({ ...form, status: s })}
                       className="flex-1 py-2 rounded-xl border text-xs font-medium transition-colors"
                       style={{
@@ -281,8 +282,8 @@ export default function SupervisorZonesPage() {
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Description (optional)</label>
-                <textarea
+                <label htmlFor="zones-description-optional" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Description (optional)</label>
+                <textarea id="zones-description-optional"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   rows={2}

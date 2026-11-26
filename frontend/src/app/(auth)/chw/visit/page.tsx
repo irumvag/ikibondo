@@ -645,10 +645,10 @@ function VisitModal({
 
               {/* Notes */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
+                <label htmlFor="visit-notes-optional" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
                   Notes <span className="font-normal" style={{ color: 'var(--text-muted)' }}>(optional)</span>
                 </label>
-                <textarea
+                <textarea id="visit-notes-optional"
                   value={form.notes}
                   onChange={(e) => setF('notes', e.target.value)}
                   rows={3}

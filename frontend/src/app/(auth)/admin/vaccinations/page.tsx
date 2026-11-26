@@ -92,8 +92,8 @@ function EditModal({
 
         <div className="flex flex-col gap-3">
           <div>
-            <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--ink)' }}>Status</label>
-            <select
+            <label htmlFor="vaccinations-status" className="text-sm font-medium mb-1 block" style={{ color: 'var(--ink)' }}>Status</label>
+            <select id="vaccinations-status"
               value={form.status}
               onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as 'SCHEDULED' | 'DONE' | 'MISSED' | 'SKIPPED' }))}
               className="w-full text-sm px-3 py-2 rounded-lg border outline-none"
@@ -188,8 +188,8 @@ function CreateModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
             placeholder="e.g. a1b2c3d4-..."
           />
           <div>
-            <label className="text-sm font-medium mb-1 block" style={{ color: 'var(--ink)' }}>Vaccine</label>
-            <select
+            <label htmlFor="vaccinations-vaccine" className="text-sm font-medium mb-1 block" style={{ color: 'var(--ink)' }}>Vaccine</label>
+            <select id="vaccinations-vaccine"
               value={form.vaccine}
               onChange={(e) => setForm((p) => ({ ...p, vaccine: e.target.value }))}
               className="w-full text-sm px-3 py-2 rounded-lg border outline-none"

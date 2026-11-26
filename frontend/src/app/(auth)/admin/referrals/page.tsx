@@ -44,8 +44,8 @@ function CompleteModal({
         <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text-muted)' }}>
           Facility: <strong style={{ color: 'var(--ink)' }}>{referral.target_facility}</strong>
         </p>
-        <label style={lbl}>Outcome notes (required)</label>
-        <textarea
+        <label htmlFor="referrals-outcome-notes-required" style={lbl}>Outcome notes (required)</label>
+        <textarea id="referrals-outcome-notes-required"
           value={outcome}
           onChange={e => setOutcome(e.target.value)}
           rows={3}

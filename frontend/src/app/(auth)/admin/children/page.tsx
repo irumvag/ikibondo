@@ -67,14 +67,14 @@ function CloseModal({
     <div style={overlay}>
       <div style={modal}>
         <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>Close record — {child.full_name}</h3>
-        <label style={lbl}>Closure reason</label>
-        <select value={status} onChange={e => setStatus(e.target.value as never)} style={input}>
+        <label htmlFor="children-closure-reason" style={lbl}>Closure reason</label>
+        <select id="children-closure-reason" value={status} onChange={e => setStatus(e.target.value as never)} style={input}>
           <option value="DECEASED">Deceased</option>
           <option value="TRANSFERRED">Transferred</option>
           <option value="DEPARTED">Departed</option>
         </select>
-        <label style={{ ...lbl, marginTop: 10 }}>Details (required)</label>
-        <textarea
+        <label htmlFor="children-details-required" style={{ ...lbl, marginTop: 10 }}>Details (required)</label>
+        <textarea id="children-details-required"
           value={reason} onChange={e => setReason(e.target.value)}
           rows={3} style={{ ...input, resize: 'vertical' }}
           placeholder="Provide additional context…"
@@ -124,15 +124,15 @@ function TransferModal({
     <div style={overlay}>
       <div style={modal}>
         <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>Transfer Zone — {child.full_name}</h3>
-        <label style={lbl}>Camp</label>
-        <select style={input} onChange={e => loadZones(e.target.value)} defaultValue="">
+        <label htmlFor="children-camp" style={lbl}>Camp</label>
+        <select id="children-camp" style={input} onChange={e => loadZones(e.target.value)} defaultValue="">
           <option value="" disabled>Select camp…</option>
           {camps?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         {zones.length > 0 && (
           <>
-            <label style={{ ...lbl, marginTop: 10 }}>Zone</label>
-            <select value={zoneId} onChange={e => setZoneId(e.target.value)} style={input}>
+            <label htmlFor="children-zone" style={{ ...lbl, marginTop: 10 }}>Zone</label>
+            <select id="children-zone" value={zoneId} onChange={e => setZoneId(e.target.value)} style={input}>
               <option value="" disabled>Select zone…</option>
               {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
             </select>

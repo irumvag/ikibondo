@@ -225,12 +225,13 @@ export default function SupervisorStaffPage() {
               <Input label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
               <Input label="Phone (optional)" type="tel" value={form.phone_number} onChange={(e) => setForm({ ...form, phone_number: e.target.value })} />
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Role</label>
-                <div className="flex gap-2">
+                <p id="staff-role-label" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Role</p>
+                <div role="group" aria-labelledby="staff-role-label" className="flex gap-2">
                   {STAFF_ROLES.map((r) => (
                     <button
                       key={r}
                       type="button"
+                      aria-pressed={form.role === r}
                       onClick={() => setForm({ ...form, role: r })}
                       className="flex-1 py-2 rounded-xl border text-sm font-medium transition-colors"
                       style={{

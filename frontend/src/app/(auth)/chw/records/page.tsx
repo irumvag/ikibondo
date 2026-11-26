@@ -497,10 +497,10 @@ function AmendModal({ rec, onClose, onSaved }: {
         <div className="overflow-y-auto flex-1 px-5 py-5 flex flex-col gap-4">
           {/* Reason (required) */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
+            <label htmlFor="records-reason-for-amendment" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>
               Reason for amendment <span style={{ color: 'var(--danger)' }}>*</span>
             </label>
-            <input
+            <input id="records-reason-for-amendment"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g. Scale was miscalibrated, re-weighed child"
@@ -560,8 +560,8 @@ function AmendModal({ rec, onClose, onSaved }: {
 
           {/* Notes */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Field notes</label>
-            <textarea
+            <label htmlFor="records-field-notes" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Field notes</label>
+            <textarea id="records-field-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}

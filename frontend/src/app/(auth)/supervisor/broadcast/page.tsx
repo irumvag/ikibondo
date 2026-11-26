@@ -114,16 +114,16 @@ export default function SupervisorBroadcastPage() {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Audience</label>
-            <select value={scopeType} onChange={(e) => handleScopeType(e.target.value)} style={inputStyle}>
+            <label htmlFor="broadcast-audience" className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Audience</label>
+            <select id="broadcast-audience" value={scopeType} onChange={(e) => handleScopeType(e.target.value)} style={inputStyle}>
               {Object.entries(SCOPE_LABELS).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
               ))}
             </select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Channel</label>
-            <select value={channel} onChange={(e) => setChannel(e.target.value as 'SMS' | 'PUSH')} style={inputStyle}>
+            <label htmlFor="broadcast-channel" className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Channel</label>
+            <select id="broadcast-channel" value={channel} onChange={(e) => setChannel(e.target.value as 'SMS' | 'PUSH')} style={inputStyle}>
               <option value="PUSH">Push notification</option>
               <option value="SMS">SMS</option>
             </select>
@@ -132,8 +132,8 @@ export default function SupervisorBroadcastPage() {
 
         {scopeType === 'ROLE' && (
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Role</label>
-            <select value={scopeId} onChange={(e) => setScopeId(e.target.value)} style={inputStyle}>
+            <label htmlFor="broadcast-role" className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Role</label>
+            <select id="broadcast-role" value={scopeId} onChange={(e) => setScopeId(e.target.value)} style={inputStyle}>
               <option value="">Select role…</option>
               {['CHW', 'NURSE', 'PARENT'].map((r) => (
                 <option key={r} value={r}>{r}</option>
@@ -144,8 +144,8 @@ export default function SupervisorBroadcastPage() {
 
         {scopeType === 'ZONE' && (
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Zone ID</label>
-            <input
+            <label htmlFor="broadcast-zone-id" className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Zone ID</label>
+            <input id="broadcast-zone-id"
               type="text"
               value={scopeId}
               onChange={(e) => setScopeId(e.target.value)}
@@ -162,10 +162,10 @@ export default function SupervisorBroadcastPage() {
         )}
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+          <label htmlFor="broadcast-message-500" className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
             Message <span style={{ fontWeight: 400 }}>({body.length}/500)</span>
           </label>
-          <textarea
+          <textarea id="broadcast-message-500"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={4}

@@ -81,8 +81,8 @@ export default function AdminBroadcastsPage() {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Audience</label>
-            <select
+            <label htmlFor="broadcasts-audience" className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Audience</label>
+            <select id="broadcasts-audience"
               value={scopeType}
               onChange={(e) => handleScopeType(e.target.value)}
               style={inputStyle}
@@ -93,8 +93,8 @@ export default function AdminBroadcastsPage() {
             </select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Channel</label>
-            <select
+            <label htmlFor="broadcasts-channel" className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Channel</label>
+            <select id="broadcasts-channel"
               value={channel}
               onChange={(e) => setChannel(e.target.value as 'SMS' | 'PUSH')}
               style={inputStyle}
@@ -107,8 +107,8 @@ export default function AdminBroadcastsPage() {
 
         {scopeType === 'ROLE' && (
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Role</label>
-            <select value={scopeId} onChange={(e) => setScopeId(e.target.value)} style={inputStyle}>
+            <label htmlFor="broadcasts-role" className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Role</label>
+            <select id="broadcasts-role" value={scopeId} onChange={(e) => setScopeId(e.target.value)} style={inputStyle}>
               <option value="">Select role…</option>
               {['CHW', 'NURSE', 'SUPERVISOR', 'PARENT'].map((r) => (
                 <option key={r} value={r}>{r}</option>
@@ -119,10 +119,10 @@ export default function AdminBroadcastsPage() {
 
         {(scopeType === 'CAMP' || scopeType === 'ZONE') && (
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+            <label htmlFor="broadcasts-field" className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
               {scopeType === 'CAMP' ? 'Camp ID' : 'Zone ID'}
             </label>
-            <input
+            <input id="broadcasts-field"
               type="text"
               value={scopeId}
               onChange={(e) => setScopeId(e.target.value)}
@@ -133,10 +133,10 @@ export default function AdminBroadcastsPage() {
         )}
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+          <label htmlFor="broadcasts-message-500" className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
             Message <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({body.length}/500)</span>
           </label>
-          <textarea
+          <textarea id="broadcasts-message-500"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={4}

@@ -48,14 +48,14 @@ function CloseModal({ child, onDone, onCancel }: {
     <div style={overlay}>
       <div style={modal}>
         <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 700 }}>Close record — {child.full_name}</h3>
-        <label style={lbl}>Closure reason</label>
-        <select value={status} onChange={e => setStatus(e.target.value as never)} style={inputSt}>
+        <label htmlFor="children-closure-reason" style={lbl}>Closure reason</label>
+        <select id="children-closure-reason" value={status} onChange={e => setStatus(e.target.value as never)} style={inputSt}>
           <option value="DECEASED">Deceased</option>
           <option value="TRANSFERRED">Transferred</option>
           <option value="DEPARTED">Departed</option>
         </select>
-        <label style={{ ...lbl, marginTop: 10 }}>Details (required)</label>
-        <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3}
+        <label htmlFor="children-details-required" style={{ ...lbl, marginTop: 10 }}>Details (required)</label>
+        <textarea id="children-details-required" value={reason} onChange={e => setReason(e.target.value)} rows={3}
           style={{ ...inputSt, resize: 'vertical' }} placeholder="Provide additional context…" />
         {mut.isError && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '6px 0 0' }}>Failed to close record.</p>}
         <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
@@ -85,8 +85,8 @@ function TransferModal({ child, campId, onDone, onCancel }: {
     <div style={overlay}>
       <div style={modal}>
         <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 700 }}>Transfer Zone — {child.full_name}</h3>
-        <label style={lbl}>New zone</label>
-        <select value={zoneId} onChange={e => setZoneId(e.target.value)} style={inputSt}>
+        <label htmlFor="children-new-zone" style={lbl}>New zone</label>
+        <select id="children-new-zone" value={zoneId} onChange={e => setZoneId(e.target.value)} style={inputSt}>
           <option value="" disabled>Select zone…</option>
           {(zones ?? []).map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
         </select>

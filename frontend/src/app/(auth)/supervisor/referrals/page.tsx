@@ -27,8 +27,8 @@ function CompleteModal({ referral, onDone, onCancel }: { referral: AdminReferral
         <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text-muted)' }}>
           Facility: <strong style={{ color: 'var(--ink)' }}>{referral.target_facility}</strong>
         </p>
-        <label style={lbl}>Outcome notes (required)</label>
-        <textarea value={outcome} onChange={e => setOutcome(e.target.value)} rows={3}
+        <label htmlFor="referrals-outcome-notes-required" style={lbl}>Outcome notes (required)</label>
+        <textarea id="referrals-outcome-notes-required" value={outcome} onChange={e => setOutcome(e.target.value)} rows={3}
           style={{ ...inputSt, resize: 'vertical' }} placeholder="Describe the referral outcome…" />
         {mut.isError && <p style={{ color: 'var(--danger)', fontSize: 13, margin: '6px 0 0' }}>Failed to complete referral.</p>}
         <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>

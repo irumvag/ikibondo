@@ -216,8 +216,8 @@ export default function GuardiansPage() {
               member that role in Users first.
             </p>
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Account</label>
-              <select
+              <label htmlFor="guardians-account" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Account</label>
+              <select id="guardians-account"
                 value={selectedUser}
                 onChange={(e) => setSelectedUser(e.target.value)}
                 className="text-sm px-3 py-2 rounded-lg border outline-none"
@@ -267,8 +267,8 @@ export default function GuardiansPage() {
             </p>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>CHW</label>
-              <select
+              <label htmlFor="guardians-chw" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>CHW</label>
+              <select id="guardians-chw"
                 value={selectedChw}
                 onChange={(e) => setSelectedChw(e.target.value)}
                 className="text-sm px-3 py-2 rounded-lg border outline-none"

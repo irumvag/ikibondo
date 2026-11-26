@@ -129,7 +129,7 @@ export default function CHWReferralsPage() {
 
           {/* Child search */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Child</label>
+            <label htmlFor={selectedChild ? undefined : 'referrals-child-search'} className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Child</label>
             {selectedChild ? (
               <div className="flex items-center gap-2">
                 <span className="text-sm px-3 py-2 rounded-lg" style={{ background: 'var(--bg)', color: 'var(--ink)' }}>
@@ -146,6 +146,7 @@ export default function CHWReferralsPage() {
             ) : (
               <div className="relative">
                 <Input
+                  id="referrals-child-search"
                   placeholder="Search by name or registration number…"
                   value={childSearch}
                   onChange={(e) => setChildSearch(e.target.value)}
@@ -172,8 +173,9 @@ export default function CHWReferralsPage() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Target Facility</label>
+            <label htmlFor="referrals-target-facility" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Target Facility</label>
             <Input
+              id="referrals-target-facility"
               placeholder="e.g. Kiziba Health Centre"
               value={facility}
               onChange={(e) => setFacility(e.target.value)}
@@ -181,8 +183,8 @@ export default function CHWReferralsPage() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Reason for Referral</label>
-            <textarea
+            <label htmlFor="referrals-reason-for-referral" className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Reason for Referral</label>
+            <textarea id="referrals-reason-for-referral"
               rows={3}
               placeholder="Describe clinical reason…"
               value={reason}

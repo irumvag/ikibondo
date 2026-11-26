@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Plus, Pencil, Trash2, Eye, EyeOff, GripVertical, Check, X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAdminFaq, QK } from '@/lib/api/queries';
@@ -30,6 +30,7 @@ interface EditorProps {
 }
 
 function FAQEditor({ initial, onSave, onCancel }: EditorProps) {
+  const uid = useId();
   const [lang, setLang] = useState<Lang>('en');
 
   const [question,    setQuestion]    = useState(initial?.question    ?? '');
@@ -119,11 +120,11 @@ function FAQEditor({ initial, onSave, onCancel }: EditorProps) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+        <label htmlFor={`${uid}-question`} className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
           Question {lang !== 'en' && <span className="font-normal opacity-70">({LANG_LABELS[lang]})</span>}
           {lang !== 'en' && <span className="ml-1 font-normal opacity-50">optional</span>}
         </label>
-        <input
+        <input id={`${uid}-question`}
           value={currentQuestion}
           onChange={(e) => setCurrentQ(e.target.value)}
           placeholder={lang === 'en' ? 'Enter question…' : `${LANG_LABELS[lang]} translation…`}
@@ -131,10 +132,10 @@ function FAQEditor({ initial, onSave, onCancel }: EditorProps) {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+        <label htmlFor={`${uid}-answer`} className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
           Answer {lang !== 'en' && <span className="font-normal opacity-70">({LANG_LABELS[lang]})</span>}
         </label>
-        <textarea
+        <textarea id={`${uid}-answer`}
           value={currentAnswer}
           onChange={(e) => setCurrentA(e.target.value)}
           placeholder={lang === 'en' ? 'Enter answer…' : `${LANG_LABELS[lang]} translation…`}
@@ -144,8 +145,8 @@ function FAQEditor({ initial, onSave, onCancel }: EditorProps) {
       </div>
       <div className="flex items-center gap-4">
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Order</label>
-          <input
+          <label htmlFor={`${uid}-order`} className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Order</label>
+          <input id={`${uid}-order`}
             type="number"
             min={0}
             value={order}
