@@ -1,20 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BellOff, CheckCheck, Check, Trash2 } from 'lucide-react';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { useAllNotifications, QK } from '@/lib/api/queries';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  markNotificationRead, markAllNotificationsRead, deleteNotification,
-} from '@/lib/api/queries';
-import { EmptyState } from '@/components/ui/EmptyState';
+  AlertTriangle, Bell, BellOff, CalendarClock, Check, CheckCheck, ChevronDown, FileBarChart, HeartPulse, Home,
+  Mail, Megaphone, MessageSquare, Siren, Syringe, Trash2, UserRound,
+} from 'lucide-react';
+import { QK, useAllNotifications } from '@/lib/api/queries';
+import {
+  deleteNotification, getNotificationSummary, markAllNotificationsRead, markNotificationRead, markNotificationUnread,
+  type AppNotification,
+} from '@/lib/api/notifications';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/contexts/ToastContext';
 import { useAuthStore } from '@/store/authStore';
-import type { AppNotification } from '@/lib/api/notifications';
 
-// ── Navigation map ─────────────────────────────────────────────────────────────
+// ── Where a notification leads ─────────────────────────────────────────────────
 
 function resolveLink(n: AppNotification, role: string): string | null {
   const t = n.trigger_type;
@@ -53,259 +56,239 @@ function resolveLink(n: AppNotification, role: string): string | null {
   return null;
 }
 
-const NOTIF_ICON: Record<string, string> = {
-  SAM_ALERT:            '🚨',
-  HIGH_RISK_ALERT:      '⚠️',
-  VACCINATION_REMINDER: '💉',
-  VACCINATION_OVERDUE:  '📅',
-  GROWTH_RISK:          '📊',
-  MISSED_VISIT:         '🏠',
-  ZONE_SUMMARY:         '📋',
-  CHW_INACTIVE:         '👤',
-  VISIT_REQUESTED:      '🏠',
-  VISIT_ACCEPTED:       '✅',
-  VISIT_DECLINED:       '❌',
-  VISIT_COMPLETED:      '🎉',
-  BROADCAST:            '📢',
+// ── Look and grouping ─────────────────────────────────────────────────────────
+
+type Category = 'all' | 'health' | 'vaccines' | 'visits' | 'messages' | 'reports';
+
+const CATEGORY: Record<string, Exclude<Category, 'all'>> = {
+  SAM_ALERT: 'health', HIGH_RISK_ALERT: 'health', GROWTH_RISK: 'health', CASE_CLOSED: 'health',
+  VACCINATION_REMINDER: 'vaccines', VACCINATION_OVERDUE: 'vaccines', VACCINATION_DONE: 'vaccines',
+  VISIT_REQUEST_CREATED: 'visits', VISIT_REQUEST_ACCEPTED: 'visits', VISIT_REQUEST_DECLINED: 'visits',
+  VISIT_REQUEST_COMPLETED: 'visits', MISSED_VISIT: 'visits',
+  BROADCAST: 'messages', ROLE_GRANTED: 'messages',
+  ZONE_SUMMARY: 'reports', CHW_INACTIVE: 'reports',
+};
+const CATEGORY_LABEL: Record<Category, string> = {
+  all: 'All types', health: 'Health alerts', vaccines: 'Vaccines', visits: 'Visits', messages: 'Messages', reports: 'Reports',
 };
 
-const TYPE_FILTER_OPTIONS = [
-  { value: '', label: 'All types' },
-  { value: 'SAM_ALERT', label: 'SAM Alert' },
-  { value: 'HIGH_RISK_ALERT', label: 'High Risk' },
-  { value: 'VACCINATION_REMINDER', label: 'Vaccination' },
-  { value: 'VACCINATION_OVERDUE', label: 'Overdue' },
-  { value: 'GROWTH_RISK', label: 'Growth Risk' },
-  { value: 'MISSED_VISIT', label: 'Missed Visit' },
-  { value: 'ZONE_SUMMARY', label: 'Zone Summary' },
-  { value: 'CHW_INACTIVE', label: 'CHW Inactive' },
-  { value: 'VISIT_REQUESTED', label: 'Visit Request' },
-];
+const LOOK: Record<string, { icon: typeof Bell; color: string }> = {
+  SAM_ALERT: { icon: Siren, color: 'var(--danger)' },
+  HIGH_RISK_ALERT: { icon: AlertTriangle, color: 'var(--danger)' },
+  GROWTH_RISK: { icon: HeartPulse, color: 'var(--warn)' },
+  VACCINATION_REMINDER: { icon: CalendarClock, color: 'var(--ink)' },
+  VACCINATION_OVERDUE: { icon: Syringe, color: 'var(--danger)' },
+  VACCINATION_DONE: { icon: Syringe, color: 'var(--success)' },
+  VISIT_REQUEST_CREATED: { icon: Home, color: 'var(--ink)' },
+  VISIT_REQUEST_ACCEPTED: { icon: Home, color: 'var(--success)' },
+  VISIT_REQUEST_DECLINED: { icon: Home, color: 'var(--danger)' },
+  VISIT_REQUEST_COMPLETED: { icon: Home, color: 'var(--success)' },
+  MISSED_VISIT: { icon: Home, color: 'var(--warn)' },
+  BROADCAST: { icon: Megaphone, color: 'var(--accent)' },
+  ROLE_GRANTED: { icon: UserRound, color: 'var(--ink)' },
+  ZONE_SUMMARY: { icon: FileBarChart, color: 'var(--ink)' },
+  CHW_INACTIVE: { icon: UserRound, color: 'var(--warn)' },
+};
 
-function fmtDate(iso: string | null | undefined) {
-  if (!iso) return '—';
-  try { return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }); }
-  catch { return iso; }
+function relativeTime(iso: string) {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const h = Math.round(mins / 60);
+  if (h < 24) return `${h} h ago`;
+  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+function dayGroup(iso: string) {
+  const d = new Date(iso); const now = new Date();
+  const days = Math.floor((new Date(now.toDateString()).getTime() - new Date(d.toDateString()).getTime()) / 86400000);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return 'This week';
+  return 'Older';
 }
 
 // ── Row ────────────────────────────────────────────────────────────────────────
 
-function NotifRow({
-  n, role,
-  onRead, onDelete,
-  isMarkingRead, isDeleting,
-}: {
-  n: AppNotification;
-  role: string;
-  onRead: () => void;
-  onDelete: () => void;
-  isMarkingRead: boolean;
-  isDeleting: boolean;
+function NotifRow({ n, role, onToggleRead, onDelete, busy }: {
+  n: AppNotification; role: string; onToggleRead: () => void; onDelete: () => void; busy: boolean;
 }) {
   const router = useRouter();
   const link = resolveLink(n, role);
+  const look = LOOK[n.trigger_type] ?? { icon: Bell, color: 'var(--ink)' };
+  const Icon = look.icon;
+  const message = n.body.replace(/^\[Ikibondo\]\s*/, '');
 
-  function handleRowClick() {
-    if (!n.is_read) onRead();
+  const open = () => {
+    if (!n.is_read) onToggleRead();
     if (link) router.push(link);
-  }
+  };
 
   return (
-    <div
-      className="flex items-start gap-3 px-4 py-3.5 border-b last:border-b-0 transition-colors group"
-      style={{
-        borderColor:     'var(--border)',
-        backgroundColor: n.is_read ? 'var(--bg-elev)' : 'color-mix(in srgb, var(--warn) 6%, var(--bg-elev))',
-        cursor:          link ? 'pointer' : 'default',
-      }}
-      onClick={link ? handleRowClick : undefined}
-    >
-      {/* Unread dot */}
-      <div className="mt-2 shrink-0 w-2">
-        {!n.is_read && (
-          <span className="block w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--warn)' }} />
-        )}
-      </div>
-
-      {/* Emoji icon */}
-      <span className="text-lg shrink-0 mt-0.5" aria-hidden="true">
-        {NOTIF_ICON[n.trigger_type] ?? '📢'}
+    <li className="relative flex items-start gap-3 px-4 sm:px-5 py-3.5 border-b last:border-b-0 transition-colors hover:bg-[var(--bg-sand)]"
+      style={{ borderColor: 'var(--border)', backgroundColor: n.is_read ? undefined : 'color-mix(in srgb, var(--ink) 4%, var(--bg-elev))' }}>
+      {!n.is_read && <span className="absolute left-0 top-3 bottom-3 w-1 rounded-r" style={{ backgroundColor: 'var(--ink)' }} aria-hidden="true" />}
+      <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+        style={{ color: look.color, backgroundColor: `color-mix(in srgb, ${look.color} 12%, transparent)` }}>
+        <Icon size={18} aria-hidden="true" />
       </span>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
+      <button type="button" onClick={open} className="flex-1 min-w-0 text-left" disabled={!link && n.is_read}>
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{n.title}</p>
-          {link && (
-            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>→ tap to view</span>
-          )}
+          <span className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{n.title}</span>
+          {!n.is_read && <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--ink)', color: 'var(--bg-elev)' }}>New</span>}
         </div>
-        {n.child_name && (
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Child: {n.child_name}
-          </p>
-        )}
-        <p className="text-xs mt-0.5 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-          {n.body}
+        <p className="text-sm mt-0.5 leading-relaxed" style={{ color: 'var(--text)', fontWeight: n.is_read ? 400 : 500 }}>{message}</p>
+        <p className="text-xs mt-1 flex flex-wrap items-center gap-x-2" style={{ color: 'var(--text-muted)' }}>
+          <span>{relativeTime(n.created_at)}</span>
+          {n.child_name && <span>· {n.child_name}</span>}
+          {link && <span style={{ color: 'var(--ink)' }}>· Open</span>}
         </p>
-        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>
-          {fmtDate(n.created_at)}
-        </p>
-      </div>
-
-      {/* Actions — stop propagation so clicks on buttons don't nav */}
-      <div
-        className="flex items-center gap-1 shrink-0 ml-1"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Mark read */}
-        {!n.is_read && (
-          <button
-            title="Mark as read"
-            disabled={isMarkingRead}
-            onClick={onRead}
-            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors hover:bg-[color-mix(in_srgb,var(--success)_12%,transparent)] disabled:opacity-40"
-            style={{ color: 'var(--success)' }}
-          >
-            {isMarkingRead
-              ? <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
-              : <Check size={14} />}
-          </button>
-        )}
-
-        {/* Delete */}
-        <button
-          title="Delete notification"
-          disabled={isDeleting}
-          onClick={onDelete}
-          className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] disabled:opacity-40"
-          style={{ color: 'var(--danger)' }}
-        >
-          {isDeleting
-            ? <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
-            : <Trash2 size={13} />}
+      </button>
+      <div className="flex items-center gap-1 shrink-0">
+        <button type="button" onClick={onToggleRead} disabled={busy}
+          className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--bg-elev)]"
+          title={n.is_read ? 'Mark as unread' : 'Mark as read'} aria-label={n.is_read ? 'Mark as unread' : 'Mark as read'}
+          style={{ color: 'var(--text-muted)' }}>
+          {n.is_read ? <Mail size={16} aria-hidden="true" /> : <Check size={16} aria-hidden="true" />}
+        </button>
+        <button type="button" onClick={onDelete} disabled={busy}
+          className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--bg-elev)]"
+          title="Remove" aria-label="Remove" style={{ color: 'var(--text-muted)' }}>
+          <Trash2 size={16} aria-hidden="true" />
         </button>
       </div>
-    </div>
+    </li>
   );
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function AllNotificationsPage() {
-  const qc   = useQueryClient();
-  const user = useAuthStore((s) => s.user);
-  const role = user?.role ?? 'PARENT';
+export default function NotificationsPage() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const role = useAuthStore((s) => s.user?.role ?? '');
+  const { data: all = [], isLoading } = useAllNotifications();
+  const { data: summary } = useQuery({ queryKey: ['notification-summary'], queryFn: getNotificationSummary, staleTime: 15_000 });
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [category, setCategory] = useState<Category>('all');
+  const [howOpen, setHowOpen] = useState(false);
 
-  const { data: notifications, isLoading } = useAllNotifications();
-  const [typeFilter, setTypeFilter]         = useState('');
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
-  const [markingAll, setMarkingAll]         = useState(false);
-
-  const all         = notifications ?? [];
-  const unreadCount = all.filter((n) => !n.is_read).length;
-
-  const filtered = all.filter((n) => {
-    if (typeFilter && n.trigger_type !== typeFilter) return false;
-    if (showUnreadOnly && n.is_read) return false;
-    return true;
-  });
-
-  const readMut = useMutation({
-    mutationFn: (id: string) => markNotificationRead(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QK.allNotifications });
-      qc.invalidateQueries({ queryKey: QK.notifications });
-    },
-  });
-
-  const deleteMut = useMutation({
-    mutationFn: (id: string) => deleteNotification(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QK.allNotifications });
-      qc.invalidateQueries({ queryKey: QK.notifications });
-    },
-  });
-
-  const handleMarkAll = async () => {
-    setMarkingAll(true);
-    try {
-      await markAllNotificationsRead();
-      qc.invalidateQueries({ queryKey: QK.allNotifications });
-      qc.invalidateQueries({ queryKey: QK.notifications });
-    } finally { setMarkingAll(false); }
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: QK.allNotifications });
+    qc.invalidateQueries({ queryKey: ['notification-summary'] });
+    qc.invalidateQueries({ queryKey: ['notifications'] });
   };
+  const toggleRead = useMutation({
+    mutationFn: (n: AppNotification) => (n.is_read ? markNotificationUnread(n.id) : markNotificationRead(n.id)),
+    onSuccess: refresh,
+  });
+  const remove = useMutation({ mutationFn: (id: string) => deleteNotification(id), onSuccess: () => { refresh(); toast.success('Removed'); } });
+  const readAll = useMutation({ mutationFn: markAllNotificationsRead, onSuccess: () => { refresh(); toast.success('All marked as read'); } });
+
+  const unread = all.filter((n) => !n.is_read).length;
+  const present = useMemo(() => new Set(all.map((n) => CATEGORY[n.trigger_type] ?? 'messages')), [all]);
+  const shown = all
+    .filter((n) => !unreadOnly || !n.is_read)
+    .filter((n) => category === 'all' || (CATEGORY[n.trigger_type] ?? 'messages') === category);
+  const groups = ['Today', 'Yesterday', 'This week', 'Older']
+    .map((g) => ({ g, items: shown.filter((n) => dayGroup(n.created_at) === g) }))
+    .filter((x) => x.items.length);
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl mx-auto w-full">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+    <div className="flex flex-col gap-5 max-w-3xl mx-auto w-full">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}>
-            Notifications
-          </h2>
+          <h2 className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>Notifications</h2>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {isLoading ? '—' : unreadCount > 0 ? `${unreadCount} unread of ${all.length}` : `${all.length} total — all read`}
+            {unread ? `${unread} unread of ${all.length}` : all.length ? 'You are all caught up' : 'Alerts and reminders appear here'}
           </p>
         </div>
-        {unreadCount > 0 && (
-          <Button variant="secondary" size="sm" loading={markingAll} onClick={handleMarkAll}>
-            <CheckCheck size={14} className="mr-1.5" />
-            Mark all read
+        {unread > 0 && (
+          <Button variant="secondary" size="sm" loading={readAll.isPending} onClick={() => readAll.mutate()}>
+            <CheckCheck size={15} className="mr-1.5" aria-hidden="true" /> Mark all read
           </Button>
         )}
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="text-sm px-3 py-1.5 rounded-lg border outline-none"
-          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', color: 'var(--ink)' }}
-          aria-label="Filter by type"
-        >
-          {TYPE_FILTER_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
+      {/* What the reminder system has sent */}
+      <section className="rounded-2xl p-4 sm:p-5" style={{ background: 'linear-gradient(120deg, var(--ink), var(--sky))', boxShadow: 'var(--shadow-md)' }}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {([
+            ['Unread', summary?.unread], ['Reminders', summary?.reminders],
+            ['Overdue alerts', summary?.overdue_alerts], ['SMS sent', summary?.sms_sent],
+          ] as const).map(([label, v]) => (
+            <div key={label} className="rounded-xl px-3 py-2.5" style={{ backgroundColor: 'rgba(255,255,255,.12)' }}>
+              <p className="text-2xl font-extrabold text-white tabular-nums">{v ?? '—'}</p>
+              <p className="text-xs" style={{ color: 'rgba(255,255,255,.85)' }}>{label}</p>
+            </div>
           ))}
-        </select>
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={showUnreadOnly}
-            onChange={(e) => setShowUnreadOnly(e.target.checked)}
-            className="w-4 h-4 rounded"
-          />
-          <span className="text-sm" style={{ color: 'var(--ink)' }}>Unread only</span>
-        </label>
-        <span className="text-xs ml-auto" style={{ color: 'var(--text-muted)' }}>{filtered.length} shown</span>
+        </div>
+        <button type="button" onClick={() => setHowOpen((o) => !o)} aria-expanded={howOpen}
+          className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-white">
+          How reminders work <ChevronDown size={16} className={`transition-transform ${howOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+        </button>
+        {howOpen && (
+          <ul className="mt-2 flex flex-col gap-1.5 text-sm" style={{ color: 'rgba(255,255,255,.92)' }}>
+            <li><b>Before a vaccine:</b> 7, 3 and 1 day before, and on the day, at 08:00.</li>
+            <li><b>After a missed dose:</b> an overdue alert on day 1, 7, 14 and 21.</li>
+            <li><b>Health alerts:</b> severe malnutrition and high-risk results reach the nurse and supervisor the same day.</li>
+            <li><b>How:</b> here, in the mobile app, by SMS and by email when one is on the account.</li>
+          </ul>
+        )}
+      </section>
+
+      {/* Filters: scroll sideways on phones */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex rounded-full p-0.5 shrink-0" style={{ backgroundColor: 'var(--bg-sand)' }} role="group" aria-label="Show">
+          {([false, true] as const).map((u) => (
+            <button key={String(u)} type="button" onClick={() => setUnreadOnly(u)} aria-pressed={unreadOnly === u}
+              className="px-3.5 h-8 rounded-full text-sm font-semibold transition-colors"
+              style={unreadOnly === u ? { backgroundColor: 'var(--ink)', color: 'var(--bg-elev)' } : { color: 'var(--ink)' }}>
+              {u ? `Unread${unread ? ` (${unread})` : ''}` : 'All'}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto max-w-full pb-1 -mb-1">
+          {(Object.keys(CATEGORY_LABEL) as Category[]).filter((c) => c === 'all' || present.has(c as never)).map((c) => (
+            <button key={c} type="button" onClick={() => setCategory(c)} aria-pressed={category === c}
+              className="px-3 h-8 rounded-full text-sm whitespace-nowrap border transition-colors"
+              style={category === c
+                ? { borderColor: 'var(--ink)', color: 'var(--ink)', backgroundColor: 'var(--bg-sand)', fontWeight: 600 }
+                : { borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+              {CATEGORY_LABEL[c]}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* List */}
       {isLoading ? (
-        <div className="flex flex-col gap-2">
-          {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
+        <div className="flex flex-col gap-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20" />)}</div>
+      ) : groups.length === 0 ? (
+        <div className="rounded-2xl border p-10 text-center" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)' }}>
+          <span className="mx-auto mb-3 w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--ink)' }}>
+            {unreadOnly ? <Check size={26} aria-hidden="true" /> : <BellOff size={26} aria-hidden="true" />}
+          </span>
+          <p className="font-semibold" style={{ color: 'var(--ink)' }}>{unreadOnly ? 'Nothing unread' : 'No notifications here'}</p>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+            {unreadOnly ? 'You have read everything.' : 'Reminders, alerts and visit updates will appear here.'}
+          </p>
         </div>
-      ) : filtered.length === 0 ? (
-        <EmptyState
-          icon={<BellOff size={28} />}
-          title="No notifications"
-          description="System alerts, health warnings, and vaccination reminders appear here."
-        />
       ) : (
-        <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-          {filtered.map((n) => (
-            <NotifRow
-              key={n.id}
-              n={n}
-              role={role}
-              onRead={() => readMut.mutate(n.id)}
-              onDelete={() => deleteMut.mutate(n.id)}
-              isMarkingRead={readMut.isPending && readMut.variables === n.id}
-              isDeleting={deleteMut.isPending && deleteMut.variables === n.id}
-            />
-          ))}
-        </div>
+        groups.map(({ g, items }) => (
+          <section key={g} aria-labelledby={`grp-${g}`}>
+            <h3 id={`grp-${g}`} className="text-xs font-semibold uppercase tracking-wide mb-2 px-1 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
+              <MessageSquare size={12} aria-hidden="true" /> {g}
+            </h3>
+            <ul className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', boxShadow: 'var(--shadow-sm)' }}>
+              {items.map((n) => (
+                <NotifRow key={n.id} n={n} role={role}
+                  busy={toggleRead.isPending || remove.isPending}
+                  onToggleRead={() => toggleRead.mutate(n)}
+                  onDelete={() => remove.mutate(n.id)} />
+              ))}
+            </ul>
+          </section>
+        ))
       )}
     </div>
   );

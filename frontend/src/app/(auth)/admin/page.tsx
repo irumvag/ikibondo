@@ -6,7 +6,7 @@ import {
   Users, MapPin, ScrollText, Cpu, Baby,
   AlertTriangle, Shield, Activity, Syringe, UserCheck,
   TrendingUp, MessageSquare, GitMerge, ClipboardList,
-  Building2, Home, Globe, Megaphone, HelpCircle, BarChart3,
+  Building2, Home, Globe, Megaphone, HelpCircle, BarChart3, Target,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { useAuthStore } from '@/store/authStore';
@@ -40,6 +40,7 @@ const SECTIONS: { title: string; links: { href: string; icon: typeof Users; labe
   ] },
   { title: 'Oversight & system', links: [
     { href: '/insights',      icon: BarChart3,  label: 'Statistics',     desc: 'The view government and partners see, with CSV reports.' },
+    { href: '/admin/indicators', icon: Target,  label: 'Indicators',     desc: 'Names, targets and explanations of the statistics indicators.' },
     { href: '/admin/ml',      icon: Cpu,        label: 'Risk model',     desc: 'Model versions, accuracy and status.' },
     { href: '/admin/audit',   icon: ScrollText, label: 'Audit log',      desc: 'Who did what, and model predictions.' },
   ] },

@@ -15,6 +15,7 @@ const pct = (v: number | null) => (v == null ? '—' : `${v}%`);
 // Hidden counts become gaps in the chart, not zeros (a zero would claim nobody was seen)
 const num = (c: Cell | undefined) => (c && !c.suppressed ? c.value ?? 0 : null);
 
+// Fallback names while loading; the server sends the admin-edited names
 const IND_LABEL: Record<IndicatorKey, string> = {
   gam_rate: 'Wasting (GAM)',
   sam_rate: 'Severe wasting (SAM)',
@@ -140,7 +141,7 @@ export default function InsightsPage() {
               <div key={g.title}>
                 <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>{g.title}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                  {g.keys.map((k) => <IndicatorCard key={k} name={IND_LABEL[k]} ind={total?.indicators?.[k]} min={min} />)}
+                  {g.keys.map((k) => <IndicatorCard key={k} name={total?.indicators?.[k]?.label || IND_LABEL[k]} ind={total?.indicators?.[k]} min={min} />)}
                 </div>
               </div>
             ))}
@@ -155,7 +156,7 @@ export default function InsightsPage() {
                   <tr className="text-left text-xs border-b" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
                     <th scope="col" className="px-5 py-2 font-semibold">Camp</th>
                     {(['gam_rate', 'stunting_rate', 'measles_coverage', 'penta3_coverage', 'penta_dropout', 'screening_coverage'] as IndicatorKey[]).map((k) => (
-                      <th key={k} scope="col" className="px-3 py-2 font-semibold text-right whitespace-nowrap">{IND_LABEL[k]}</th>
+                      <th key={k} scope="col" className="px-3 py-2 font-semibold text-right whitespace-nowrap">{total?.indicators?.[k]?.label || IND_LABEL[k]}</th>
                     ))}
                   </tr>
                 </thead>

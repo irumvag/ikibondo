@@ -8,7 +8,10 @@ export interface Indicator {
   value: number | null;
   band: string | null;
   level: 'good' | 'watch' | 'alert' | null;
+  /** Name and explanation, editable by an admin (Admin → Indicators) */
+  label: string;
   benchmark: string;
+  target: number | null;
 }
 
 export const INDICATOR_KEYS = [
@@ -52,4 +55,27 @@ export async function downloadInsightsCsv(camp?: string): Promise<void> {
 export function cellText(c: Cell | undefined, min = 5): string {
   if (!c) return '—';
   return c.suppressed ? `<${min}` : (c.value ?? 0).toLocaleString();
+}
+
+/** Admin: indicator settings (name, target, benchmark text). */
+export interface IndicatorSetting {
+  key: IndicatorKey;
+  kind: 'wasting' | 'stunting' | 'target' | 'info';
+  higher_is_better: boolean;
+  default: { label: string; target: number | null; benchmark: string };
+  current: { label: string; target: number | null; benchmark: string };
+  edited: boolean;
+}
+
+export async function listIndicatorSettings(): Promise<IndicatorSetting[]> {
+  const { data } = await apiClient.get('/insights/indicators/');
+  return data.data;
+}
+
+export async function saveIndicatorSetting(key: string, body: { label: string; target: number | null; benchmark: string }) {
+  await apiClient.put(`/insights/indicators/${key}/`, body);
+}
+
+export async function resetIndicatorSetting(key: string) {
+  await apiClient.delete(`/insights/indicators/${key}/`);
 }

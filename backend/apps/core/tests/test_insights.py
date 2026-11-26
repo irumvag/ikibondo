@@ -133,3 +133,33 @@ class TestInstitutionalIndicators:
         assert _indicator(80, target=95)['level'] == 'alert'
         assert _indicator(12, target=10, higher_is_better=False)['level'] == 'watch'
         assert _indicator(None, target=95)['level'] is None  # too few children: no verdict
+
+
+class TestIndicatorSettings:
+    def test_admin_changes_target_and_text_and_partners_see_it(self, db, camps):
+        from apps.accounts.tests.factories import AdminUserFactory
+        from rest_framework.test import APIClient
+        admin = APIClient()
+        admin.force_authenticate(AdminUserFactory())
+        res = admin.put('/api/v1/insights/indicators/measles_coverage/',
+                        {'label': 'Measles coverage (MR1)', 'target': 90, 'benchmark': 'Rwanda EPI target 90%'}, format='json')
+        assert res.status_code == 200
+        from apps.core.insights import indicator_config
+        c = indicator_config()['measles_coverage']
+        assert (c['label'], c['target'], c['benchmark']) == ('Measles coverage (MR1)', 90.0, 'Rwanda EPI target 90%')
+        assert admin.delete('/api/v1/insights/indicators/measles_coverage/').status_code == 200
+        assert indicator_config()['measles_coverage']['target'] == 95
+
+    def test_band_indicators_refuse_a_target(self, db):
+        from apps.accounts.tests.factories import AdminUserFactory
+        from rest_framework.test import APIClient
+        admin = APIClient()
+        admin.force_authenticate(AdminUserFactory())
+        assert admin.put('/api/v1/insights/indicators/gam_rate/', {'target': 5}, format='json').status_code == 400
+
+    def test_only_admins_edit(self, db):
+        from apps.accounts.models import Organization, UserRole
+        from rest_framework.test import APIClient
+        c = APIClient()
+        c.force_authenticate(_user(UserRole.GOVERNMENT, Organization.objects.create(name='Ministry', kind='GOVERNMENT')))
+        assert c.put('/api/v1/insights/indicators/sam_rate/', {'target': 3}, format='json').status_code == 403

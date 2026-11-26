@@ -66,6 +66,59 @@ STUNTING_BANDS = [(2.5, 'Very low', 'good'), (10, 'Low', 'good'), (20, 'Medium',
                   (30, 'High', 'alert'), (None, 'Very high', 'alert')]
 
 
+# Built-in indicator settings. `kind` decides how a rate is judged: WHO/UNICEF bands,
+# or a target (`higher_is_better` says which side is good). Admins may change label,
+# target and benchmark text (core.models.IndicatorSetting); the kind never changes.
+INDICATOR_DEFAULTS = {
+    'gam_rate': {'label': 'Wasting (GAM)', 'kind': 'wasting', 'target': None, 'higher_is_better': False,
+                 'benchmark': 'WHO/UNICEF wasting thresholds; UNHCR target below 10%'},
+    'sam_rate': {'label': 'Severe wasting (SAM)', 'kind': 'target', 'target': 2, 'higher_is_better': False,
+                 'benchmark': 'MUAC below 11.5 cm, WHZ below -3 or oedema'},
+    'stunting_rate': {'label': 'Stunting', 'kind': 'stunting', 'target': None, 'higher_is_better': False,
+                      'benchmark': 'Height-for-age below -2; WHO/UNICEF thresholds'},
+    'underweight_rate': {'label': 'Underweight', 'kind': 'info', 'target': None, 'higher_is_better': False,
+                         'benchmark': 'Weight-for-age below -2'},
+    'screening_coverage': {'label': 'Screening coverage', 'kind': 'target', 'target': 90, 'higher_is_better': True,
+                           'benchmark': 'Children 6-59 months measured in the last 90 days'},
+    'measles_coverage': {'label': 'Measles (MR1) coverage', 'kind': 'target', 'target': 95, 'higher_is_better': True,
+                         'benchmark': 'MR1 among children 10 months and older; Sphere 95% in camps'},
+    'penta3_coverage': {'label': 'Penta3 coverage', 'kind': 'target', 'target': 90, 'higher_is_better': True,
+                        'benchmark': 'Third pentavalent dose among children 18 weeks and older'},
+    'penta_dropout': {'label': 'Penta1 to Penta3 dropout', 'kind': 'target', 'target': 10, 'higher_is_better': False,
+                      'benchmark': 'Children who started but did not finish the series; above 10% means children are lost'},
+    'referral_completion': {'label': 'Referrals completed', 'kind': 'target', 'target': 80, 'higher_is_better': True,
+                            'benchmark': 'Referrals made in the last 12 months that were completed'},
+}
+
+
+def indicator_config():
+    """Built-in settings with the admin's changes applied."""
+    from .models import IndicatorSetting
+    cfg = {k: dict(v) for k, v in INDICATOR_DEFAULTS.items()}
+    for row in IndicatorSetting.objects.filter(key__in=cfg):
+        c = cfg[row.key]
+        if row.label.strip():
+            c['label'] = row.label.strip()
+        if row.benchmark.strip():
+            c['benchmark'] = row.benchmark.strip()
+        if row.target is not None and c['kind'] == 'target':
+            c['target'] = row.target
+        c['edited'] = True
+    return cfg
+
+
+def _judge(rate, c):
+    """value + band + level for one indicator, per its settings."""
+    if c['kind'] == 'wasting':
+        return _indicator(rate, bands=WASTING_BANDS, benchmark=c['benchmark'], label=c['label'])
+    if c['kind'] == 'stunting':
+        return _indicator(rate, bands=STUNTING_BANDS, benchmark=c['benchmark'], label=c['label'])
+    if c['kind'] == 'target':
+        return _indicator(rate, target=c['target'], higher_is_better=c['higher_is_better'],
+                          benchmark=c['benchmark'], label=c['label'])
+    return _indicator(rate, benchmark=c['benchmark'], label=c['label'])
+
+
 def _band(rate, bands):
     if rate is None:
         return None, None
@@ -75,25 +128,26 @@ def _band(rate, bands):
     return None, None
 
 
-def _indicator(rate, *, bands=None, target=None, higher_is_better=True, benchmark=''):
+def _indicator(rate, *, bands=None, target=None, higher_is_better=True, benchmark='', label=''):
     """A rate with the level partners judge it by: good / watch / alert."""
     if bands:
-        label, level = _band(rate, bands)
+        band, level = _band(rate, bands)
     elif rate is None or target is None:
-        label, level = None, None
+        band, level = None, None
     else:
         ok = rate >= target if higher_is_better else rate <= target
         near = rate >= target - 10 if higher_is_better else rate <= target + 5
         level = 'good' if ok else ('watch' if near else 'alert')
-        label = 'Meets target' if ok else 'Below target' if higher_is_better else 'Above limit'
-    return {'value': rate, 'band': label, 'level': level, 'benchmark': benchmark}
+        band = 'Meets target' if ok else 'Below target' if higher_is_better else 'Above limit'
+    return {'value': rate, 'band': band, 'level': level, 'benchmark': benchmark, 'label': label,
+            'target': target}
 
 
 def _months_ago(today, weeks):
     return today - timedelta(weeks=weeks)
 
 
-def _indicators(camp_ids, today):
+def _indicators(camp_ids, today, config=None):
     """Institutional indicators for children aged 6-59 months (see benchmarks above)."""
     from apps.children.models import Child
     from apps.health_records.models import HealthRecord
@@ -146,31 +200,26 @@ def _indicators(camp_ids, today):
     ref_total = year.exclude(status='CANCELLED').count()
     ref_done = year.filter(status='COMPLETED').count()
 
+    rates = {
+        'gam_rate': _rate(m['gam'], m['n']),
+        'sam_rate': _rate(m['sam'], m['n']),
+        'stunting_rate': _rate(m['stunted'], m['haz_n']),
+        'underweight_rate': _rate(m['underweight'], m['waz_n']),
+        'screening_coverage': _rate(m['n'], under5.count()),
+        'measles_coverage': _rate(mr1, mr1_n),
+        'penta3_coverage': _rate(p3, p3_n),
+        'penta_dropout': _rate(p1 - p1_then_p3, p1),
+        'referral_completion': _rate(ref_done, ref_total),
+    }
+    cfg = config or indicator_config()
     return {
-        'gam_rate': _indicator(_rate(m['gam'], m['n']), bands=WASTING_BANDS,
-                               benchmark='WHO/UNICEF wasting thresholds; UNHCR target below 10%'),
-        'sam_rate': _indicator(_rate(m['sam'], m['n']), target=2, higher_is_better=False,
-                               benchmark='Severe acute malnutrition, MUAC below 11.5 cm or WHZ below -3'),
-        'stunting_rate': _indicator(_rate(m['stunted'], m['haz_n']), bands=STUNTING_BANDS,
-                                    benchmark='Height-for-age below -2; WHO/UNICEF thresholds'),
-        'underweight_rate': _indicator(_rate(m['underweight'], m['waz_n']),
-                                       benchmark='Weight-for-age below -2'),
-        'screening_coverage': _indicator(_rate(m['n'], under5.count()), target=90,
-                                         benchmark='Children 6-59 months measured in the last 90 days'),
-        'measles_coverage': _indicator(_rate(mr1, mr1_n), target=95,
-                                       benchmark='MR1 among children 10 months and older; Sphere 95% in camps'),
-        'penta3_coverage': _indicator(_rate(p3, p3_n), target=90,
-                                      benchmark='Third pentavalent dose among children 18 weeks and older'),
-        'penta_dropout': _indicator(_rate(p1 - p1_then_p3, p1), target=10, higher_is_better=False,
-                                    benchmark='Penta1 to Penta3 dropout; above 10% means children are being lost'),
-        'referral_completion': _indicator(_rate(ref_done, ref_total), target=80,
-                                          benchmark='Referrals completed in the last 12 months'),
+        **{k: _judge(v, cfg[k]) for k, v in rates.items()},
         'children_6_59m': _cell(under5.count()),
         'measured_6_59m': _cell(m['n']),
     }
 
 
-def _camp_stats(camp_ids, today):
+def _camp_stats(camp_ids, today, config=None):
     from apps.children.models import Child
     from apps.health_records.models import HealthRecord
     from apps.referrals.models import Referral
@@ -213,7 +262,7 @@ def _camp_stats(camp_ids, today):
         'vaccination_coverage': _rate(doses_done, doses_due),
         'visits_30d': _cell(visits_30d),
         'referrals_open': _cell(referrals_open),
-        'indicators': _indicators(camp_ids, today),
+        'indicators': _indicators(camp_ids, today, config),
     }
 
 
@@ -250,12 +299,13 @@ def build_overview(user, camp_id=None, today=None):
         camps = camps.filter(id=camp_id)
     camps = list(camps.order_by('name'))
     ids = [c.id for c in camps]
+    config = indicator_config()
     return {
         'generated_on': today.isoformat(),
         'min_cell': MIN_CELL,
-        'camps': [{'id': str(c.id), 'name': c.name, 'district': c.district, **_camp_stats([c.id], today)}
+        'camps': [{'id': str(c.id), 'name': c.name, 'district': c.district, **_camp_stats([c.id], today, config)}
                   for c in camps],
-        'total': _camp_stats(ids, today) if ids else None,
+        'total': _camp_stats(ids, today, config) if ids else None,
         'trend': _trend(ids, today) if ids else [],
     }
 

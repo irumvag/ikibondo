@@ -20,6 +20,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/ml':                'ML Model',
   '/admin/faq':               'FAQ Management',
   '/admin/organizations':     'Organisations',
+  '/admin/indicators':        'Indicators',
   '/insights':                'Overview',
   '/insights/reports':        'Reports',
   '/admin/site-content':      'Site Content',

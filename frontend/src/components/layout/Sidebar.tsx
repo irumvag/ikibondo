@@ -10,7 +10,7 @@ import {
   X, LogOut, Settings, MessageCircleQuestion, FileText, ChevronDown, Building2,
   ChevronRight, PanelLeftClose, PanelLeftOpen, BarChart2,
   Inbox, GitBranch, Calendar, Bluetooth, ShieldCheck,
-  Globe, ClipboardCheck, Megaphone, FlaskConical, QrCode,
+  Globe, ClipboardCheck, Megaphone, FlaskConical, QrCode, BarChart3, Target
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuthStore, type UserRole } from '@/store/authStore';
@@ -60,6 +60,8 @@ const ROLE_NAV: Record<UserRole, NavEntry[]> = {
     {
       kind: 'group', id: 'admin-intel', label: 'Intelligence', icon: Cpu,
       items: [
+        { href: '/insights',            label: 'Statistics',  icon: BarChart3 },
+        { href: '/admin/indicators',    label: 'Indicators',  icon: Target },
         { href: '/admin/ml',            label: 'ML Models',   icon: Cpu },
         { href: '/admin/audit',         label: 'Audit Log',   icon: ScrollText },
         { href: '/admin/logs',          label: 'System Logs', icon: ClipboardList },

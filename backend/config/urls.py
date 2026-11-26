@@ -2,7 +2,9 @@
 from django.contrib import admin
 from django.urls import path, include
 from apps.core.content_views import site_content_list_view, site_content_detail_view
-from apps.core.insights_views import insights_overview_view, insights_export_view
+from apps.core.insights_views import (
+    indicator_setting_detail_view, indicator_settings_view, insights_export_view, insights_overview_view,
+)
 from apps.health_records.views import growth_data_view
 from apps.children.views import daily_plan_view, chw_families_view
 from apps.core.views import health_check, landing_stats_view, stats_trend_view, audit_log_view, app_config_view
@@ -51,6 +53,8 @@ urlpatterns = [
     # Aggregated statistics for government and partner organisations (no child records)
     path('api/v1/insights/overview/', insights_overview_view, name='insights-overview'),
     path('api/v1/insights/export/', insights_export_view, name='insights-export'),
+    path('api/v1/insights/indicators/', indicator_settings_view, name='insights-indicators'),
+    path('api/v1/insights/indicators/<str:key>/', indicator_setting_detail_view, name='insights-indicator'),
 
     # Public stats for landing page
     path('api/v1/stats/landing/', landing_stats_view, name='landing-stats'),

@@ -60,21 +60,26 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={toggleCollapse}
-      />
+    // print: only the page content (reports print as documents)
+    <div className="flex h-screen overflow-hidden print:block print:h-auto print:overflow-visible" style={{ backgroundColor: 'var(--bg)' }}>
+      <div className="contents print:hidden">
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={toggleCollapse}
+        />
+      </div>
 
       {/* Main column */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Topbar onMenuClick={() => setSidebarOpen((v) => !v)} />
-        <AnnouncementBanner where="dashboard" />
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:block print:overflow-visible">
+        <div className="contents print:hidden">
+          <Topbar onMenuClick={() => setSidebarOpen((v) => !v)} />
+          <AnnouncementBanner where="dashboard" />
+        </div>
         <main
           id="main-content"
-          className="flex-1 overflow-y-auto p-5 sm:p-6 lg:p-8"
+          className="flex-1 overflow-y-auto p-5 sm:p-6 lg:p-8 print:overflow-visible print:p-0"
           tabIndex={-1}
         >
           {children}

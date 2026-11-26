@@ -208,3 +208,26 @@ class Announcement(BaseModel):
 
     def __str__(self):
         return self.message_en[:60]
+
+
+class IndicatorSetting(models.Model):
+    """
+    An admin's change to one statistics indicator (Admin -> Indicators): its name,
+    target and the benchmark text partners read. Built-in values live in
+    core/insights.py (INDICATOR_DEFAULTS); a row stores only what was changed.
+    """
+
+    key = models.CharField(max_length=40, unique=True)
+    label = models.CharField(max_length=80, blank=True)
+    target = models.FloatField(null=True, blank=True, help_text='Percent; empty keeps the built-in target')
+    benchmark = models.CharField(max_length=300, blank=True)
+    updated_by = models.ForeignKey('accounts.CustomUser', on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='+')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['key']
+
+    def __str__(self):
+        return self.key
+
