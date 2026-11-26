@@ -8,6 +8,7 @@ import '../../core/api/endpoints.dart';
 import '../../core/models/child.dart';
 import '../../core/models/health_record.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/growth_chart.dart';
 import '../../shared/widgets/loading_skeleton.dart';
 import '../../shared/widgets/risk_badge.dart';
 import '../../core/api/response.dart';
@@ -26,6 +27,15 @@ final _latestRecordProvider = FutureProvider.family.autoDispose<HealthRecord?, S
   final items = unwrapList(resp.data);
   if (items.isEmpty) return null;
   return HealthRecord.fromJson(items.first);
+});
+
+/// All measurements, oldest first, for the growth chart.
+final _recordsProvider = FutureProvider.family.autoDispose<List<HealthRecord>, String>((ref, childId) async {
+  final resp = await ApiClient.dio.get(
+    Endpoints.healthRecords,
+    queryParameters: {'child': childId, 'ordering': 'measurement_date'},
+  );
+  return unwrapList(resp.data).map(HealthRecord.fromJson).toList();
 });
 
 class ChwChildDetailScreen extends ConsumerWidget {
@@ -179,6 +189,16 @@ class ChwChildDetailScreen extends ConsumerWidget {
                 );
               },
             ),
+
+            const SizedBox(height: 16),
+
+            // ── Growth ────────────────────────────────────────────────────
+            ref.watch(_recordsProvider(childId)).maybeWhen(
+                  data: (records) => GrowthChart(entries: [
+                    for (final r in records) (date: r.measurementDate, weightKg: r.weightKg, heightCm: r.heightCm),
+                  ]),
+                  orElse: () => const SizedBox.shrink(),
+                ),
 
             const SizedBox(height: 16),
 

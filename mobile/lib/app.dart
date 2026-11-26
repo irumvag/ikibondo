@@ -1,3 +1,4 @@
+import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -29,6 +30,9 @@ class IkibondoApp extends ConsumerWidget {
         textTheme: GoogleFonts.interTextTheme(AppTheme.lightTheme.textTheme),
       ),
       routerConfig: router,
+      // Also scroll with a mouse or trackpad drag (simulator, tablets with a mouse)
+      scrollBehavior: const MaterialScrollBehavior()
+          .copyWith(dragDevices: PointerDeviceKind.values.toSet()),
       builder: (context, child) => VersionGate(
         child: AppLock(child: child ?? const SizedBox.shrink()),
       ),

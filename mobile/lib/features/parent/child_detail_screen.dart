@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +11,7 @@ import '../../core/content/app_content.dart';
 import '../../core/models/child.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/brand.dart';
+import '../../shared/widgets/growth_chart.dart';
 import '../../shared/widgets/risk_badge.dart';
 
 final parentChildProvider = FutureProvider.family.autoDispose<Child, String>((ref, id) async {
@@ -357,14 +357,6 @@ class _GrowthTab extends ConsumerWidget {
       error: (_, __) => _Problem('Could not load growth. Check your connection.',
           onRetry: () => ref.invalidate(childRecordsProvider(childId))),
       data: (records) {
-        final weights = <FlSpot>[];
-        final dates = <String>[];
-        for (final r in records) {
-          final w = _num(r['weight_kg']);
-          if (w == null) continue;
-          weights.add(FlSpot(weights.length.toDouble(), w));
-          dates.add('${r['measurement_date'] ?? ''}');
-        }
         final onTrack = summary['status'] == 'on_track';
 
         return RefreshIndicator(
@@ -406,69 +398,15 @@ class _GrowthTab extends ConsumerWidget {
                   ),
                 ),
               const SizedBox(height: 14),
-              const _SectionTitle('Weight over time'),
-              _Card(
-                child: weights.length < 2
-                    ? Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Text(
-                          weights.isEmpty
-                              ? 'No measurements yet. They appear after your child\'s first check-up.'
-                              : 'The chart appears after the second check-up.',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(color: colorMuted),
-                        ),
-                      )
-                    : SizedBox(
-                        height: 200,
-                        child: LineChart(
-                          LineChartData(
-                            minY: (weights.map((p) => p.y).reduce((a, b) => a < b ? a : b) - 0.5).floorToDouble(),
-                            maxY: (weights.map((p) => p.y).reduce((a, b) => a > b ? a : b) + 0.5).ceilToDouble(),
-                            gridData: FlGridData(
-                              drawVerticalLine: false,
-                              getDrawingHorizontalLine: (_) => const FlLine(color: colorBorder, strokeWidth: 1),
-                            ),
-                            borderData: FlBorderData(show: false),
-                            titlesData: FlTitlesData(
-                              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 40,
-                                  interval: 0.5,
-                                  getTitlesWidget: (v, _) => Text('${v.toStringAsFixed(1)} kg',
-                                      style: GoogleFonts.inter(fontSize: 10, color: colorMuted)),
-                                ),
-                              ),
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  interval: 1,
-                                  getTitlesWidget: (v, _) {
-                                    final i = v.toInt();
-                                    if (i < 0 || i >= dates.length || v != i) return const SizedBox.shrink();
-                                    final d = dates[i];
-                                    return Text(d.length >= 10 ? d.substring(5) : d,
-                                        style: GoogleFonts.inter(fontSize: 10, color: colorMuted));
-                                  },
-                                ),
-                              ),
-                            ),
-                            lineBarsData: [
-                              LineChartBarData(
-                                spots: weights,
-                                isCurved: true,
-                                color: colorInk,
-                                barWidth: 3,
-                                belowBarData: BarAreaData(show: true, color: colorSky.withValues(alpha: 0.12)),
-                                dotData: const FlDotData(show: true),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+              GrowthChart(
+                entries: [
+                  for (final r in records)
+                    (
+                      date: '${r['measurement_date'] ?? ''}',
+                      weightKg: _num(r['weight_kg']),
+                      heightCm: _num(r['height_cm']),
+                    ),
+                ],
               ),
               if (records.isNotEmpty) ...[
                 const SizedBox(height: 14),

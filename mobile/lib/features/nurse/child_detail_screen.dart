@@ -7,6 +7,7 @@ import '../../core/models/child.dart';
 import '../../core/models/health_record.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/loading_skeleton.dart';
+import '../../shared/widgets/growth_chart.dart';
 import '../../shared/widgets/risk_badge.dart';
 import '../../core/api/response.dart';
 import '../../shared/widgets/brand.dart';
@@ -289,10 +290,16 @@ class _RecordsTab extends ConsumerWidget {
           onRefresh: () async => ref.invalidate(_recordsProvider(childId)),
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: records.length,
+            itemCount: records.length + 1,
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (_, i) {
-              final r = records[i];
+              if (i == 0) {
+                return GrowthChart(entries: [
+                  for (final r in records.reversed)
+                    (date: r.measurementDate, weightKg: r.weightKg, heightCm: r.heightCm),
+                ]);
+              }
+              final r = records[i - 1];
               return Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(color: colorBgElev, borderRadius: BorderRadius.circular(16), boxShadow: softShadow),
