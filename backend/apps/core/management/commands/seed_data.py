@@ -403,6 +403,29 @@ class Command(BaseCommand):
             guardian.save(update_fields=['user'])
         self.stdout.write(f'  Parent: {parent.full_name} linked to {guardian.full_name}')
 
+        # Sample alerts as the daily reminder tasks send them (they do not run in a test setup):
+        # a reminder before a dose, an overdue alert, and a visit update. One read, two unread.
+        from apps.notifications.models import Notification, NotificationChannel, NotificationType
+        if not Notification.objects.filter(recipient=parent).exists():
+            kid = children[0]
+            nxt = kid.vaccinations.filter(status='SCHEDULED').order_by('scheduled_date').first()
+            missed = kid.vaccinations.filter(status='MISSED').order_by('-scheduled_date').first()
+            samples = [
+                (NotificationType.VISIT_REQUEST_ACCEPTED, True,
+                 f'[Ikibondo] Your visit request for {kid.full_name} was accepted. Your community health worker will come soon.'),
+            ]
+            if missed:
+                samples.append((NotificationType.VACCINATION_OVERDUE, False,
+                                f"[Ikibondo] OVERDUE: {kid.full_name}'s {missed.vaccine.name} was due on "
+                                f'{missed.scheduled_date}. Please visit your health facility.'))
+            if nxt:
+                samples.append((NotificationType.VACCINATION_REMINDER, False,
+                                f"[Ikibondo] Reminder: {kid.full_name}'s {nxt.vaccine.name} is due on "
+                                f'{nxt.scheduled_date}. Bring the child to the health centre.'))
+            for ntype, read, message in samples:
+                Notification.objects.create(recipient=parent, child=kid, notification_type=ntype,
+                                            channel=NotificationChannel.PUSH, message=message, is_read=read)
+
         # The nurse is also a mother: she holds the Parent role and has her own child here
         from apps.accounts.models import RoleGrant
         from apps.children.models import Child, Guardian

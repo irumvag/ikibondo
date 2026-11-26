@@ -5,7 +5,10 @@ from django.utils import timezone
 
 from apps.core.responses import success_response, created_response, error_response
 from apps.accounts.models import UserRole
-from .models import Notification, Broadcast, BroadcastDelivery, BroadcastScope, NotificationStatus
+from .models import (
+    Broadcast, BroadcastDelivery, BroadcastScope, Notification, NotificationChannel, NotificationStatus,
+    NotificationType,
+)
 from .serializers import NotificationSerializer, BroadcastSerializer
 
 
@@ -16,7 +19,36 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         """Each user only sees their own notifications."""
         if getattr(self, 'swagger_fake_view', False):
             return Notification.objects.none()
-        return Notification.objects.filter(recipient=self.request.user)
+        qs = Notification.objects.filter(recipient=self.request.user)
+        # ?channel=PUSH: the in-app copy only (each alert is also stored once per SMS)
+        channel = self.request.query_params.get('channel')
+        if channel in NotificationChannel.values:
+            qs = qs.filter(channel=channel)
+        return qs
+
+    @action(detail=True, methods=['patch'], url_path='unread')
+    def mark_unread(self, request, pk=None):
+        """PATCH /api/v1/notifications/<id>/unread/ — mark a notification as unread again."""
+        notification = self.get_object()
+        notification.is_read = False
+        notification.save(update_fields=['is_read'])
+        return success_response(message='Marked as unread.')
+
+    @action(detail=False, methods=['get'], url_path='summary')
+    def summary(self, request):
+        """
+        GET /api/v1/notifications/summary/ — what the reminder system has sent this user:
+        in-app alerts, unread, vaccine reminders, overdue alerts, SMS sent.
+        """
+        mine = Notification.objects.filter(recipient=request.user)
+        in_app = mine.filter(channel=NotificationChannel.PUSH)
+        return success_response(data={
+            'total': in_app.count(),
+            'unread': in_app.filter(is_read=False).count(),
+            'reminders': in_app.filter(notification_type=NotificationType.VACCINATION_REMINDER).count(),
+            'overdue_alerts': in_app.filter(notification_type=NotificationType.VACCINATION_OVERDUE).count(),
+            'sms_sent': mine.filter(channel=NotificationChannel.SMS, status=NotificationStatus.SENT).count(),
+        })
 
     @action(detail=True, methods=['patch'], url_path='read')
     def mark_read(self, request, pk=None):

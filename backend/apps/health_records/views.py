@@ -304,19 +304,25 @@ def growth_data_view(request, child_id):
     ).order_by('measurement_date')
 
     parent_summary = _build_parent_summary(child, records, lang)
+    # Published WHO reference lines (not the child's scores), so parents can see the zones too
+    sd_bands = _build_who_sd_bands(child.sex)
 
     if is_parent:
         return success_response(data={
             'child_id': str(child_id),
             'child_name': child.full_name,
+            'sex': child.sex,
+            'date_of_birth': str(child.date_of_birth),
             'parent_summary': parent_summary,
+            'who_sd_bands': sd_bands,
         })
 
     measurements = []
     for r in records:
         measurements.append({
             'date': str(r.measurement_date),
-            'age_months': child.age_months,
+            # Age at this measurement, not today
+            'age_months': round((r.measurement_date - child.date_of_birth).days / 30.4375, 1),
             'weight_kg': float(r.weight_kg) if r.weight_kg else None,
             'height_cm': float(r.height_cm) if r.height_cm else None,
             'muac_cm': float(r.muac_cm) if r.muac_cm is not None else None,
@@ -332,6 +338,9 @@ def growth_data_view(request, child_id):
         'child_name': child.full_name,
         'measurements': measurements,
         'who_percentiles': who_percentiles,
+        'who_sd_bands': sd_bands,
+        'sex': child.sex,
+        'date_of_birth': str(child.date_of_birth),
         'parent_summary': parent_summary,
     })
 
@@ -410,6 +419,28 @@ def _build_parent_summary(child, records_qs, lang: str) -> dict:
         'message_key': message_key,
         'message': message,
     }
+
+
+def _build_who_sd_bands(sex: str) -> dict:
+    """
+    WHO z-score lines (-3, -2, median, +2, +3 SD) for weight-for-age and
+    length/height-for-age, every month from birth to 60 months. Between -2 and
+    +2 is normal; below -2 moderate, below -3 severe (WHO 2006 standards).
+    """
+    from apps.health_records.who_zscore import _lms, _value_at
+
+    lines = {'sd_neg3': -3, 'sd_neg2': -2, 'median': 0, 'sd2': 2, 'sd3': 3}
+    out = {}
+    for name, indicator in (('weight_for_age', 'wfa'), ('height_for_age', 'lhfa')):
+        out[name] = []
+        for age in range(0, 61):
+            lms = _lms(indicator, sex, age * 30.4375)
+            if not lms:
+                continue
+            row = {'age_months': age}
+            row.update({k: round(_value_at(z, *lms), 2) for k, z in lines.items()})
+            out[name].append(row)
+    return out
 
 
 def _build_who_percentile_bands(sex: str) -> dict:

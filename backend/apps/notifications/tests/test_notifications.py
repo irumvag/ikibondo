@@ -74,3 +74,39 @@ class TestNotificationModel:
         )
         assert 'SAM_ALERT' in str(n)
         assert chw.full_name in str(n)
+
+
+class TestReadStateAndSummary:
+    def _make(self, user, child, ntype, channel='PUSH', read=False, status='PENDING'):
+        return Notification.objects.create(recipient=user, child=child, notification_type=ntype,
+                                           channel=channel, message='m', is_read=read, status=status)
+
+    def test_mark_unread_again(self, client, chw, child):
+        n = self._make(chw, child, NotificationType.VACCINATION_REMINDER, read=True)
+        client.force_authenticate(chw)
+        assert client.patch(f'/api/v1/notifications/{n.id}/unread/').status_code == 200
+        n.refresh_from_db()
+        assert n.is_read is False
+
+    def test_cannot_change_someone_elses_notification(self, client, chw, child):
+        other = self._make(UserFactory(), child, NotificationType.VACCINATION_REMINDER)
+        client.force_authenticate(chw)
+        assert client.patch(f'/api/v1/notifications/{other.id}/unread/').status_code == 404
+
+    def test_summary_counts_in_app_alerts(self, client, chw, child):
+        self._make(chw, child, NotificationType.VACCINATION_REMINDER)
+        self._make(chw, child, NotificationType.VACCINATION_REMINDER, read=True)
+        self._make(chw, child, NotificationType.VACCINATION_OVERDUE)
+        self._make(chw, child, NotificationType.VACCINATION_OVERDUE, channel='SMS', status='SENT')
+        client.force_authenticate(chw)
+        data = client.get('/api/v1/notifications/summary/').json()['data']
+        assert data == {'total': 3, 'unread': 2, 'reminders': 2, 'overdue_alerts': 1, 'sms_sent': 1}
+
+    def test_channel_filter_hides_sms_copies(self, client, chw, child):
+        self._make(chw, child, NotificationType.VACCINATION_OVERDUE)
+        self._make(chw, child, NotificationType.VACCINATION_OVERDUE, channel='SMS')
+        client.force_authenticate(chw)
+        body = client.get('/api/v1/notifications/?channel=PUSH').json()
+        rows = body.get('results') or body.get('data')
+        rows = rows if isinstance(rows, list) else rows['results']
+        assert len(rows) == 1

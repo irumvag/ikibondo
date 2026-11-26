@@ -154,3 +154,28 @@ def test_unlinked_parent_cannot_read_growth_data(client, child):
     client.force_authenticate(user=stranger)
     resp = client.get(_url(child))
     assert resp.status_code == 404
+
+
+class TestWhoReferenceLines:
+    def test_parent_gets_reference_lines_but_no_scores(self, client, child, parent):
+        HealthRecordFactory(child=child)
+        client.force_authenticate(parent)
+        data = client.get(_url(child)).json()['data']
+        wfa = data['who_sd_bands']['weight_for_age']
+        assert len(wfa) == 61  # every month, birth to 5 years
+        assert 'measurements' not in data
+
+    def test_lines_are_ordered_and_match_who(self, client, child, nurse):
+        client.force_authenticate(nurse)
+        data = client.get(_url(child)).json()['data']
+        birth = data['who_sd_bands']['weight_for_age'][0]
+        assert birth['sd_neg3'] < birth['sd_neg2'] < birth['median'] < birth['sd2'] < birth['sd3']
+        # WHO 2006 weight-for-age median at birth: boys 3.3464 kg, girls 3.2322 kg
+        assert birth['median'] == pytest.approx(3.3464 if child.sex == 'M' else 3.2322, abs=0.01)
+
+    def test_measurement_age_is_age_at_that_visit(self, client, nurse, camp):
+        child = ChildFactory(camp=camp, date_of_birth=date.today() - timedelta(days=365))
+        HealthRecordFactory(child=child, measurement_date=child.date_of_birth + timedelta(days=61))
+        client.force_authenticate(nurse)
+        m = client.get(_url(child)).json()['data']['measurements'][0]
+        assert m['age_months'] == pytest.approx(2.0, abs=0.1)
