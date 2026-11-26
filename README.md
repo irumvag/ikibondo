@@ -343,7 +343,7 @@ ikibondo/
 │   ├── config/
 │   │   ├── settings/        # base.py, dev.py, prod.py
 │   │   └── urls.py          # Root URL configuration
-│   └── requirements.txt
+│   └── requirements/        # base.txt, dev.txt, prod.txt
 │
 ├── frontend/
 │   └── src/
@@ -398,10 +398,11 @@ python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -r requirements/dev.txt
 
 # Configure environment
-cp .env.example .env            # Fill in values (see Environment Variables below)
+cp .env.example .env            # Fill in values (see Environment Variables below);
+                                # USE_SQLITE=1 runs without PostgreSQL
 
 # Apply database migrations
 python manage.py migrate
