@@ -17,6 +17,7 @@ const atkinson = Atkinson_Hyperlegible_Next({
 });
 
 export const metadata: Metadata = {
+  other: { google: "notranslate" },
   title: {
     default: "Ikibondo — Child Health Platform",
     template: "%s | Ikibondo",
@@ -43,7 +44,9 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const locale = await getLocale();
   return (
-    <html lang={locale} suppressHydrationWarning data-scroll-behavior="smooth">
+    // translate="no": Ikibondo has its own language switch; a browser translating the page
+    // rewrites text React still owns and crashes it ("insertBefore" errors)
+    <html lang={locale} translate="no" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         {/* Blocking theme script — runs before CSS paint to prevent flash */}
         <Script

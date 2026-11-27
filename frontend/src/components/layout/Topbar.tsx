@@ -172,7 +172,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             style={{ backgroundColor: 'var(--high-bg)', color: 'var(--danger)', border: '1px solid color-mix(in srgb, var(--danger) 25%, transparent)' }}
           >
             <WifiOff size={11} aria-hidden="true" />
-            {t('offline')}
+            <span>{t('offline')}</span>
           </div>
         ) : pendingCount > 0 ? (
           <div
@@ -181,7 +181,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             style={{ backgroundColor: 'var(--med-bg)', color: 'var(--warn)', border: '1px solid color-mix(in srgb, var(--warn) 25%, transparent)' }}
           >
             <RefreshCw size={11} className="animate-spin" aria-hidden="true" />
-            {t('syncing', { count: pendingCount })}
+            <span>{t('syncing', { count: pendingCount })}</span>
           </div>
         ) : (
           <div
@@ -189,7 +189,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             style={{ backgroundColor: 'var(--low-bg)', color: 'var(--success)', border: '1px solid color-mix(in srgb, var(--success) 25%, transparent)' }}
           >
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--success)' }} aria-hidden="true" />
-            {t('online')}
+            <span>{t('online')}</span>
           </div>
         )}
 
