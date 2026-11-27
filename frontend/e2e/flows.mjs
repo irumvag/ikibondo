@@ -32,6 +32,17 @@ async function session(email, password) {
   await page.fill('[name="password"]', password);
   await page.click('button[type="submit"]');
   await page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 15000 });
+  // The flows look for English button text, so put the account in English first
+  // (demo accounts are seeded in Kinyarwanda), then reload so the pages follow
+  await page.evaluate(async (api) => {
+    await fetch(`${api}/auth/me/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+      body: JSON.stringify({ preferred_language: 'en' }),
+    });
+  }, API);
+  await ctx.addCookies([{ name: 'ikibondo_locale', value: 'en', url: BASE }]);
+  await page.reload();
   await page.waitForLoadState('networkidle');
   writes.length = 0;
   current = { page, ctx, writes, errors };
