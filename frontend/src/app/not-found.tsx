@@ -1,6 +1,8 @@
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 
 export default function NotFound() {
+  const t = useTranslations('common.notFound');
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center px-4 text-center"
@@ -16,27 +18,19 @@ export default function NotFound() {
       <h1
         className="text-2xl font-bold mb-2"
         style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-      >
-        Page not found
-      </h1>
-      <p className="text-sm mb-8 max-w-xs" style={{ color: 'var(--text-muted)' }}>
-        The page you&apos;re looking for doesn&apos;t exist or has been moved.
-      </p>
+      >{t('pageNotFound')}</h1>
+      <p className="text-sm mb-8 max-w-xs" style={{ color: 'var(--text-muted)' }}>{t('thePageYouRe')}</p>
       <div className="flex gap-3">
         <Link
           href="/"
           className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-80"
           style={{ backgroundColor: 'var(--ink)', color: 'var(--bg)' }}
-        >
-          Go home
-        </Link>
+        >{t('goHome')}</Link>
         <Link
           href="/login"
           className="px-5 py-2.5 rounded-xl text-sm font-semibold border transition-colors hover:bg-[var(--bg-elev)]"
           style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}
-        >
-          Sign in
-        </Link>
+        >{t('signIn')}</Link>
       </div>
     </div>
   );

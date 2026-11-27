@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 
@@ -31,6 +32,7 @@ export function Modal({
   children,
   footer,
 }: ModalProps) {
+  const t = useTranslations('common.ui');
   const dialogRef = useRef<HTMLDivElement>(null);
 
   /* Close on Escape */
@@ -98,7 +100,7 @@ export function Modal({
           </div>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('close')}
             className="shrink-0 rounded-lg p-1 hover:bg-[var(--bg-sand)] transition-colors"
             style={{ color: 'var(--text-muted)' }}
           >

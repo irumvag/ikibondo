@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState, useRef, useEffect } from 'react';
 import { Bell, X, CheckCheck } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,27 +9,23 @@ import {
   getUnreadNotifications,
   markNotificationRead,
   markAllNotificationsRead,
-  type AppNotification,
 } from '@/lib/api/user';
 
-const TRIGGER_LABELS: Record<AppNotification['trigger_type'], string> = {
-  HIGH_RISK_ALERT:       'High-risk alert',
-  VACCINATION_REMINDER:  'Vaccination reminder',
-  VACCINATION_OVERDUE:   'Vaccination overdue',
-  ZONE_SUMMARY:          'Zone summary',
-  CHW_INACTIVE:          'CHW inactive',
-  ACCOUNT_APPROVED:      'Account approved',
-};
+const TRIGGER_CODES = ['HIGH_RISK_ALERT', 'VACCINATION_REMINDER', 'VACCINATION_OVERDUE', 'ZONE_SUMMARY', 'CHW_INACTIVE', 'ACCOUNT_APPROVED'] as const;
+const isTriggerCode = (c: string): c is (typeof TRIGGER_CODES)[number] => (TRIGGER_CODES as readonly string[]).includes(c);
 
-function timeAgo(iso: string) {
+type TimeT = (key: 'time.secondsAgo' | 'time.minutesAgo' | 'time.hoursAgo' | 'time.daysAgo', values: { count: number }) => string;
+
+function timeAgo(iso: string, t: TimeT) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (diff < 60)   return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 60)   return t('time.secondsAgo', { count: diff });
+  if (diff < 3600) return t('time.minutesAgo', { count: Math.floor(diff / 60) });
+  if (diff < 86400) return t('time.hoursAgo', { count: Math.floor(diff / 3600) });
+  return t('time.daysAgo', { count: Math.floor(diff / 86400) });
 }
 
 export function NotificationBell() {
+  const t = useTranslations('common.notificationBell');
   const user = useAuthStore((s) => s.user);
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -79,7 +76,7 @@ export function NotificationBell() {
         ref={btnRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label={count > 0 ? `${count} unread notifications` : 'Notifications'}
+        aria-label={count > 0 ? t('unreadCount', { count }) : t('notifications')}
         aria-expanded={open}
         className="relative flex items-center justify-center w-9 h-9 rounded-xl transition-colors hover:bg-[var(--bg-sand)]"
         style={{ color: 'var(--ink)' }}
@@ -106,15 +103,14 @@ export function NotificationBell() {
             boxShadow: 'var(--shadow-xl)',
           }}
           role="dialog"
-          aria-label="Notifications"
+          aria-label={t('notifications')}
         >
           {/* Header */}
           <div
             className="flex items-center justify-between px-4 py-3 border-b"
             style={{ borderColor: 'var(--border)' }}
           >
-            <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
-              Notifications {count > 0 && <span style={{ color: 'var(--text-muted)' }}>({count})</span>}
+            <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{t('notifications')}{' '}{count > 0 && <span style={{ color: 'var(--text-muted)' }}>({count})</span>}
             </p>
             <div className="flex items-center gap-1">
               {count > 0 && (
@@ -124,16 +120,14 @@ export function NotificationBell() {
                   className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors hover:bg-[var(--bg-sand)]"
                   style={{ color: 'var(--text-muted)' }}
                 >
-                  <CheckCheck size={12} aria-hidden="true" />
-                  Mark all read
-                </button>
+                  <CheckCheck size={12} aria-hidden="true" />{t('markAllRead')}</button>
               )}
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 className="flex items-center justify-center w-7 h-7 rounded-lg transition-colors hover:bg-[var(--bg-sand)]"
                 style={{ color: 'var(--text-muted)' }}
-                aria-label="Close notifications"
+                aria-label={t('closeNotifications')}
               >
                 <X size={14} aria-hidden="true" />
               </button>
@@ -145,9 +139,7 @@ export function NotificationBell() {
             {items.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-10 px-4 text-center">
                 <Bell size={24} style={{ color: 'var(--border)' }} aria-hidden="true" />
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  No unread notifications
-                </p>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noUnreadNotifications')}</p>
               </div>
             ) : (
               <ul>
@@ -178,10 +170,10 @@ export function NotificationBell() {
                           className="text-[10px] px-1.5 py-0.5 rounded-md"
                           style={{ backgroundColor: 'var(--bg-sand)', color: 'var(--text-muted)' }}
                         >
-                          {TRIGGER_LABELS[n.trigger_type] ?? n.trigger_type}
+                          {isTriggerCode(n.trigger_type) ? t(`trigger.${n.trigger_type}`) : n.trigger_type}
                         </span>
                         <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                          {timeAgo(n.created_at)}
+                          {timeAgo(n.created_at, t)}
                         </span>
                       </div>
                     </div>
@@ -190,7 +182,7 @@ export function NotificationBell() {
                       onClick={() => handleMarkRead(n.id)}
                       className="opacity-0 group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded-lg transition-all hover:bg-[var(--bg-sand)] shrink-0"
                       style={{ color: 'var(--text-muted)' }}
-                      aria-label="Mark as read"
+                      aria-label={t('markAsRead')}
                     >
                       <X size={12} aria-hidden="true" />
                     </button>

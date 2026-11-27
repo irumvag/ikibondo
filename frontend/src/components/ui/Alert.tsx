@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { AlertTriangle, CheckCircle, Info, X, XCircle } from 'lucide-react';
 
@@ -44,6 +45,7 @@ const VARIANT: Record<AlertVariant, { bg: string; border: string; iconColor: str
 };
 
 export function Alert({ variant, title, children, onDismiss, icon, className = '' }: AlertProps) {
+  const t = useTranslations('common.ui');
   const { bg, border, iconColor, defaultIcon } = VARIANT[variant];
 
   return (
@@ -78,7 +80,7 @@ export function Alert({ variant, title, children, onDismiss, icon, className = '
       {onDismiss && (
         <button
           onClick={onDismiss}
-          aria-label="Dismiss"
+          aria-label={t('dismiss')}
           className="shrink-0 rounded-lg p-1 hover:bg-black/10 transition-colors"
           style={{ color: 'var(--text-muted)' }}
         >

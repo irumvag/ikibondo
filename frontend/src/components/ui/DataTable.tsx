@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Skeleton } from './Skeleton';
 
@@ -42,6 +43,7 @@ export function DataTable<T extends object>({
   pagination,
   className = '',
 }: DataTableProps<T>) {
+  const t = useTranslations('common.ui');
   const totalPages = pagination
     ? Math.ceil(pagination.total / pagination.pageSize)
     : 1;
@@ -139,9 +141,7 @@ export function DataTable<T extends object>({
           className="flex items-center justify-between gap-4 px-4 py-3 border-t"
           style={{ borderColor: 'var(--border)' }}
         >
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Page {pagination.page} of {totalPages} · {pagination.total} total
-          </p>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('pageOfTotal', { page: pagination.page, totalPages: totalPages, total: pagination.total })}</p>
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -149,7 +149,7 @@ export function DataTable<T extends object>({
               disabled={pagination.page <= 1}
               className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-[var(--bg-sand)] disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ color: 'var(--ink)' }}
-              aria-label="Previous page"
+              aria-label={t('previousPage')}
             >
               <ChevronLeft size={16} aria-hidden="true" />
             </button>
@@ -181,7 +181,7 @@ export function DataTable<T extends object>({
               disabled={pagination.page >= totalPages}
               className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-[var(--bg-sand)] disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ color: 'var(--ink)' }}
-              aria-label="Next page"
+              aria-label={t('nextPage')}
             >
               <ChevronRight size={16} aria-hidden="true" />
             </button>

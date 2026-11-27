@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { Camera, CameraOff, Loader2 } from 'lucide-react';
 
@@ -19,19 +20,22 @@ declare global {
   }
 }
 
-function friendlyError(raw: string): string {
+type ErrorT = (key: 'error.cameraDenied' | 'error.noCamera' | 'error.needsSecure' | 'error.retrying' | 'error.unavailable') => string;
+
+function friendlyError(raw: string, tt: ErrorT): string {
   if (/permission|notallowed|denied/i.test(raw))
-    return 'Camera access was denied. Click the camera icon in your browser address bar and allow access, then retry.';
+    return tt('error.cameraDenied');
   if (/notfound|devicenotfound|no camera/i.test(raw))
-    return 'No camera found on this device. Use the manual entry below.';
+    return tt('error.noCamera');
   if (/notsupported|insecure|https/i.test(raw))
-    return 'Camera requires a secure connection. Use the manual entry below.';
+    return tt('error.needsSecure');
   if (/overconstrained|constraint/i.test(raw))
-    return 'Camera constraints not supported. Trying again…';
-  return raw || 'Camera unavailable. Use the manual entry below.';
+    return tt('error.retrying');
+  return raw || tt('error.unavailable');
 }
 
 export function QRScanner({ onScan, onError }: QRScannerProps) {
+  const tt = useTranslations('common.qrScanner');
   const videoRef   = useRef<HTMLVideoElement>(null);
   const streamRef  = useRef<MediaStream | null>(null);
   const rafRef     = useRef<number | null>(null);
@@ -127,7 +131,7 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
     } catch (err: unknown) {
       stopAll();
       const raw = err instanceof Error ? err.message : String(err);
-      const msg = friendlyError(raw);
+      const msg = friendlyError(raw, tt);
       setErrMsg(msg);
       setStatus('error');
       onError?.(msg);
@@ -179,10 +183,10 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
               style={{ color: status === 'error' ? '#fca5a5' : 'var(--text-muted)' }}
             >
               {status === 'starting'
-                ? 'Starting camera…'
+                ? tt('startingCamera')
                 : status === 'error'
                   ? errMsg
-                  : 'Tap "Start scanning" to open the camera'}
+                  : tt('tapStartScanningTo')}
             </p>
           </div>
         )}
@@ -226,21 +230,17 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
           style={{ backgroundColor: 'var(--ink)', color: 'var(--bg)' }}
         >
           <Camera size={16} />
-          {status === 'error' ? 'Retry camera' : 'Start scanning'}
+          {status === 'error' ? tt('retryCamera') : tt('startScanning')}
         </button>
       ) : status === 'scanning' ? (
         <button
           onClick={stop}
           className="text-sm px-4 py-2 rounded-xl border transition-colors"
           style={{ borderColor: 'var(--border)', color: 'var(--text-muted)', backgroundColor: 'var(--bg-sand)' }}
-        >
-          Stop camera
-        </button>
+        >{tt('stopCamera')}</button>
       ) : null}
 
-      <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
-        Point the camera at a child&apos;s QR card. Detection is automatic.
-      </p>
+      <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>{tt('pointTheCameraAt')}</p>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore, loadSavedProfile } from '@/store/authStore';
@@ -12,6 +13,7 @@ import { isNetworkError } from '@/lib/offline/queue';
  * then falls back to /login if the token is absent or expired.
  */
 export function AuthInitializer({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('common.auth');
   const { user, isLoading, setUser, setLoading, clearAuth } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
@@ -63,7 +65,7 @@ export function AuthInitializer({ children }: { children: React.ReactNode }) {
         className="fixed inset-0 flex items-center justify-center"
         style={{ backgroundColor: 'var(--bg)' }}
         aria-live="polite"
-        aria-label="Loading your dashboard"
+        aria-label={t('loadingYourDashboard')}
       >
         <div className="flex flex-col items-center gap-4">
           {/* Spinning ring */}
@@ -83,9 +85,7 @@ export function AuthInitializer({ children }: { children: React.ReactNode }) {
               strokeLinecap="round"
             />
           </svg>
-          <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-            Loading…
-          </p>
+          <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{t('loading')}</p>
         </div>
       </div>
     );

@@ -7,36 +7,21 @@
  * Parent view (plain=true): shows friendly factor labels and directional icons only.
  */
 
+import { useTranslations } from 'next-intl';
 import React from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 // ── Factor label maps (plain-language for parents) ────────────────────────────
 
-const FRIENDLY_LABELS: Record<string, string> = {
-  weight_kg:           'Weight',
-  height_cm:           'Height',
-  muac_cm:             'Mid-upper arm measurement',
-  age_months:          'Child\'s age',
-  waz:                 'Weight for age',
-  haz:                 'Height for age',
-  whz:                 'Weight for height',
-  bmi_z:               'Body mass index',
-  temperature_c:       'Body temperature',
-  missed_vaccine_count:'Missed vaccines',
-  visit_count:         'Number of clinic visits',
-  days_since_last_visit:'Days since last visit',
-  sex:                 'Sex',
-  feeding_type:        'Feeding method',
-  gestational_age:     'Gestational age',
-  birth_weight:        'Birth weight',
-  respiratory_rate:    'Breathing rate',
-  oxygen_saturation:   'Oxygen level',
-  hemoglobin:          'Haemoglobin (blood)',
-  symptoms_count:      'Reported symptoms',
-};
+// Plain names for parents: messages/en.json common.riskExplainer.factor.<feature>
+const FACTORS = ['weight_kg', 'height_cm', 'muac_cm', 'age_months', 'waz', 'haz', 'whz', 'bmi_z', 'temperature_c', 'missed_vaccine_count', 'visit_count', 'days_since_last_visit', 'sex', 'feeding_type', 'gestational_age', 'birth_weight', 'respiratory_rate', 'oxygen_saturation', 'hemoglobin', 'symptoms_count'] as const;
 
-function friendlyLabel(feature: string): string {
-  return FRIENDLY_LABELS[feature] ?? feature.replace(/_/g, ' ');
+type FactorT = (key: `factor.${(typeof FACTORS)[number]}`) => string;
+
+function friendlyLabel(feature: string, t: FactorT): string {
+  return (FACTORS as readonly string[]).includes(feature)
+    ? t(`factor.${feature as (typeof FACTORS)[number]}`)
+    : feature.replace(/_/g, ' ');
 }
 
 function barColor(riskLevel: string): string {
@@ -65,6 +50,7 @@ interface Props {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function RiskExplainer({ factors, riskLevel, plain = false, limit = 5 }: Props) {
+  const t = useTranslations('common.riskExplainer');
   // Normalise to array
   const entries: RiskFactor[] = Array.isArray(factors)
     ? factors
@@ -83,9 +69,7 @@ export function RiskExplainer({ factors, riskLevel, plain = false, limit = 5 }: 
     // ── Parent-friendly view ─────────────────────────────────────────────────
     return (
       <div className="flex flex-col gap-2">
-        <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-          Key factors identified
-        </p>
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('keyFactorsIdentified')}</p>
         <div className="flex flex-col gap-1.5">
           {sorted.map(({ feature, value }) => {
             const isRising  = value > 0.01;
@@ -100,7 +84,7 @@ export function RiskExplainer({ factors, riskLevel, plain = false, limit = 5 }: 
             return (
               <div key={feature} className="flex items-center gap-2 text-sm">
                 <Icon size={14} style={{ color: iconColor, flexShrink: 0 }} />
-                <span style={{ color: 'var(--ink)' }}>{friendlyLabel(feature)}</span>
+                <span style={{ color: 'var(--ink)' }}>{friendlyLabel(feature, t)}</span>
                 <span className="text-xs" style={{ color: 'var(--text-muted)' }}>— {desc}</span>
               </div>
             );
@@ -113,9 +97,7 @@ export function RiskExplainer({ factors, riskLevel, plain = false, limit = 5 }: 
   // ── Clinical view (nurse / CHW / supervisor) ─────────────────────────────────
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-        SHAP feature contributions
-      </p>
+      <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('shapFeatureContributions')}</p>
       <div className="flex flex-col gap-2">
         {sorted.map(({ feature, value }) => (
           <div key={feature} className="flex items-center gap-3">

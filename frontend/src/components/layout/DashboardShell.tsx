@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
@@ -31,11 +32,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   // Upload visits saved while offline as soon as the connection or the user returns,
   // and say what happened so the health worker knows their records arrived
   const toast = useToast();
+  const tSync = useTranslations('common.sync');
   useEffect(() => startAutoSync(undefined, (results) => {
     const ok = results.filter((r) => r.status === 'ok' || r.status === 'conflict').length;
     const failed = results.length - ok;
-    if (ok > 0) toast.success(`${ok} saved record${ok === 1 ? '' : 's'} uploaded`);
-    if (failed > 0) toast.warn(`${failed} record${failed === 1 ? ' was' : 's were'} not accepted — open Sync to see why`);
+    if (ok > 0) toast.success(tSync('uploaded', { count: ok }));
+    if (failed > 0) toast.warn(tSync('notAccepted', { count: failed }));
     // toast is stable for the app's lifetime
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), []);

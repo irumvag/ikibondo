@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -17,7 +18,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Alert } from '@/components/ui/Alert';
 import { useToast } from '@/contexts/ToastContext';
 import { useRoleSwitch } from '@/components/layout/RoleSwitcher';
-import { ROLE_LABEL } from '@/lib/roles';
+import { useRoleLabel } from '@/i18n/useRoleLabel';
 
 const ROLE_HOME: Record<string, string> = {
   ADMIN:      '/admin',
@@ -27,17 +28,14 @@ const ROLE_HOME: Record<string, string> = {
   PARENT:     '/parent',
 };
 
+// Language names stay in their own language so anyone can find theirs
 const LANGUAGES: { value: 'rw' | 'fr' | 'en'; label: string }[] = [
   { value: 'rw', label: 'Kinyarwanda' },
   { value: 'fr', label: 'Français'    },
   { value: 'en', label: 'English'     },
 ];
 
-const THEMES: { value: 'system' | 'light' | 'dark'; label: string }[] = [
-  { value: 'system', label: 'Same as device' },
-  { value: 'light',  label: 'Light'          },
-  { value: 'dark',   label: 'Dark'           },
-];
+const THEMES = ['system', 'light', 'dark'] as const;
 
 // ── Edit Profile Modal ────────────────────────────────────────────────────────
 
@@ -52,6 +50,7 @@ function EditProfileModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations('profile');
   const toast = useToast();
   const [editName,       setEditName]       = useState(user.full_name    ?? '');
   const [editPhone,      setEditPhone]      = useState(user.phone_number ?? '');
@@ -65,10 +64,10 @@ function EditProfileModal({
     try {
       const updated = await patchMe({ full_name: editName, phone_number: editPhone, national_id: editNationalId });
       setUser(updated);
-      toast.success('Profile updated successfully');
+      toast.success(t('profileUpdatedSuccessfully'));
       onClose();
     } catch {
-      setError('Failed to save. Please try again.');
+      setError(t('failedToSavePlease'));
     } finally {
       setSaving(false);
     }
@@ -78,22 +77,22 @@ function EditProfileModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Edit profile"
+      title={t('editProfile')}
       size="sm"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
           <Button variant="primary" onClick={handleSave} loading={saving}>
-            {saving ? 'Saving…' : 'Save changes'}
+            {saving ? t('saving') : t('saveChanges')}
           </Button>
         </>
       }
     >
       <div className="flex flex-col gap-4">
         {error && <Alert variant="danger">{error}</Alert>}
-        <Input label="Full name" type="text" value={editName} onChange={(e) => setEditName(e.target.value)} autoComplete="name" />
-        <Input label="Phone number" type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} autoComplete="tel" />
-        <Input label="National ID" type="text" value={editNationalId} onChange={(e) => setEditNationalId(e.target.value)} autoComplete="off" />
+        <Input label={t('fullName')} type="text" value={editName} onChange={(e) => setEditName(e.target.value)} autoComplete="name" />
+        <Input label={t('phoneNumber')} type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} autoComplete="tel" />
+        <Input label={t('nationalId')} type="text" value={editNationalId} onChange={(e) => setEditNationalId(e.target.value)} autoComplete="off" />
       </div>
     </Modal>
   );
@@ -112,6 +111,7 @@ function ChangePasswordModal({
   onClose: () => void;
   setUser: (u: NonNullable<ReturnType<typeof useAuthStore.getState>['user']>) => void;
 }) {
+  const t = useTranslations('profile');
   const router = useRouter();
   const toast  = useToast();
   const [pwForm, setPwForm]     = useState({ old: '', next: '', confirm: '' });
@@ -120,8 +120,8 @@ function ChangePasswordModal({
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pwForm.next !== pwForm.confirm) { setPwError('New passwords do not match.'); return; }
-    if (pwForm.next.length < 8) { setPwError('New password must be at least 8 characters.'); return; }
+    if (pwForm.next !== pwForm.confirm) { setPwError(t('passwordsDoNotMatch')); return; }
+    if (pwForm.next.length < 8) { setPwError(t('passwordTooShort')); return; }
     setPwSaving(true);
     setPwError('');
     try {
@@ -130,19 +130,19 @@ function ChangePasswordModal({
       try {
         const fresh = await getMe();
         setUser(fresh);
-        toast.success('Password changed successfully');
+        toast.success(t('passwordChangedSuccessfully'));
         if (forceChange) {
           router.push(ROLE_HOME[fresh.role] ?? '/');
         } else {
           onClose();
         }
       } catch {
-        toast.success('Password changed');
+        toast.success(t('passwordChanged'));
         onClose();
       }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setPwError(msg ?? 'Failed to change password. Check your current password.');
+      setPwError(msg ?? t('passwordChangeFailed'));
     } finally {
       setPwSaving(false);
     }
@@ -152,19 +152,19 @@ function ChangePasswordModal({
     <Modal
       open={open}
       onClose={forceChange ? () => {} : onClose}
-      title="Change password"
+      title={t('changePassword')}
       size="sm"
     >
       <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
         {pwError && <Alert variant="danger">{pwError}</Alert>}
-        <Input label="Current password" type="password" value={pwForm.old} onChange={(e) => setPwForm({ ...pwForm, old: e.target.value })} required autoComplete="current-password" />
-        <Input label="New password" type="password" value={pwForm.next} onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })} required autoComplete="new-password" />
-        <Input label="Confirm new password" type="password" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} required autoComplete="new-password" />
+        <Input label={t('currentPassword')} type="password" value={pwForm.old} onChange={(e) => setPwForm({ ...pwForm, old: e.target.value })} required autoComplete="current-password" />
+        <Input label={t('newPassword')} type="password" value={pwForm.next} onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })} required autoComplete="new-password" />
+        <Input label={t('confirmNewPassword')} type="password" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} required autoComplete="new-password" />
         <Button type="submit" variant="primary" loading={pwSaving}>
-          {pwSaving ? 'Saving…' : 'Change password'}
+          {pwSaving ? t('saving') : t('changePassword')}
         </Button>
         {!forceChange && (
-          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="ghost" onClick={onClose}>{t('cancel')}</Button>
         )}
       </form>
     </Modal>
@@ -177,7 +177,8 @@ const STATUS_COLOR: Record<string, string> = {
   SAM: 'var(--danger)', MAM: 'var(--warn)', NORMAL: 'var(--success)',
   HIGH: 'var(--danger)', MEDIUM: 'var(--warn)', LOW: 'var(--success)',
 };
-const STATUS_LABEL: Record<string, string> = { SAM: 'Severe (SAM)', MAM: 'Moderate (MAM)', NORMAL: 'Growing well' };
+const STATUS_CODES = ['SAM', 'MAM', 'NORMAL'] as const;
+const isStatusCode = (s: string): s is (typeof STATUS_CODES)[number] => (STATUS_CODES as readonly string[]).includes(s);
 
 const panel = { borderColor: 'var(--border)', backgroundColor: 'var(--bg-elev)', boxShadow: 'var(--shadow-md)' };
 
@@ -232,6 +233,7 @@ function Stat({ value, label, href }: { value: React.ReactNode; label: string; h
 
 /** What this person does, for the role they are acting as. */
 function YourWork({ summary, role }: { summary: ProfileSummary | undefined; role: string }) {
+  const t = useTranslations('profile');
   const w = summary?.work;
   if (!w) return <div className="h-24 rounded-xl animate-pulse" style={{ backgroundColor: 'var(--bg-sand)' }} />;
 
@@ -240,7 +242,7 @@ function YourWork({ summary, role }: { summary: ProfileSummary | undefined; role
     return (
       <div className="flex flex-col gap-3">
         {kids.length === 0 && (
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No children are linked to your account yet. The nurse at your health centre links them.</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noChildrenAreLinked')}</p>
         )}
         {kids.map((c) => {
           const status = c.nutrition_status ?? undefined;
@@ -255,18 +257,18 @@ function YourWork({ summary, role }: { summary: ProfileSummary | undefined; role
               <div className="flex-1 min-w-0">
                 <p className="font-semibold" style={{ color: 'var(--ink)' }}>{c.full_name}</p>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  {c.sex === 'F' ? 'Girl' : 'Boy'} · {c.age_display}{c.last_checkup ? ` · last check-up ${fmtDate(c.last_checkup)}` : ''}
+                  {c.sex === 'F' ? t('girl') : t('boy')} · {c.age_display}{c.last_checkup ? t('lastCheckup', { date: fmtDate(c.last_checkup) }) : ''}
                 </p>
                 <p className="text-xs mt-1" style={{ color: c.overdue_doses ? 'var(--danger)' : 'var(--ink)' }}>
                   {c.overdue_doses
-                    ? `${c.overdue_doses} vaccine dose${c.overdue_doses === 1 ? '' : 's'} missed or overdue`
-                    : c.next_vaccine ? `Next vaccine: ${c.next_vaccine.name} on ${fmtDate(c.next_vaccine.date)}` : 'No vaccine due'}
+                    ? t('dosesOverdue', { count: c.overdue_doses })
+                    : c.next_vaccine ? t('nextVaccineOn', { name: c.next_vaccine.name, date: fmtDate(c.next_vaccine.date) }) : t('noVaccineDue')}
                 </p>
               </div>
               {status && (
                 <span className="text-xs font-bold px-2.5 py-1 rounded-full"
                   style={{ color: STATUS_COLOR[status], backgroundColor: 'var(--bg-sand)' }}>
-                  {STATUS_LABEL[status] ?? status}
+                  {isStatusCode(status) ? t(`nutritionStatus.${status}`) : status}
                 </span>
               )}
               <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
@@ -278,13 +280,12 @@ function YourWork({ summary, role }: { summary: ProfileSummary | undefined; role
             <HeartHandshake size={18} style={{ color: 'var(--ink)' }} aria-hidden="true" />
             <div className="flex-1">
               <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{m.full_name}</p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Your community health worker</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('yourCommunityHealthWorker')}</p>
             </div>
             {m.phone_number && (
               <a href={`tel:${m.phone_number}`} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-semibold"
                 style={{ backgroundColor: 'var(--bg-elev)', color: 'var(--success)' }}>
-                <Phone size={15} aria-hidden="true" /> Call
-              </a>
+                <Phone size={15} aria-hidden="true" />{' '}{t('call')}</a>
             )}
           </div>
         ))}
@@ -297,14 +298,14 @@ function YourWork({ summary, role }: { summary: ProfileSummary | undefined; role
     return (
       <>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <Stat value={w.families ?? 0} label="Families" href="/chw" />
-          <Stat value={typeof w.children === 'number' ? w.children : 0} label="Children" href="/chw" />
-          <Stat value={w.checkups_this_month ?? 0} label="Check-ups this month" href="/chw/records" />
-          <Stat value={w.open_visit_requests ?? 0} label="Open visit requests" href="/chw/requests" />
+          <Stat value={w.families ?? 0} label={t('families')} href="/chw" />
+          <Stat value={typeof w.children === 'number' ? w.children : 0} label={t('children')} href="/chw" />
+          <Stat value={w.checkups_this_month ?? 0} label={t('checkUpsThisMonth')} href="/chw/records" />
+          <Stat value={w.open_visit_requests ?? 0} label={t('openVisitRequests')} href="/chw/requests" />
         </div>
         <p className="text-sm mt-3" style={{ color: 'var(--text-muted)' }}>
-          {zones.length ? `Working in ${zones.join(', ')}` : 'No zone assigned yet'}
-          {w.last_checkup ? ` · last check-up recorded ${fmtDate(w.last_checkup)}` : ''}
+          {zones.length ? t('workingIn', { zones: zones.join(', ') }) : t('noZoneAssignedYet')}
+          {w.last_checkup ? t('lastCheckupRecorded', { date: fmtDate(w.last_checkup) }) : ''}
         </p>
       </>
     );
@@ -313,11 +314,11 @@ function YourWork({ summary, role }: { summary: ProfileSummary | undefined; role
   if (role === 'NURSE') {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-        <Stat value={w.children_in_camp ?? 0} label="Children in your camp" href="/nurse/children" />
-        <Stat value={w.registered_by_me ?? 0} label="Registered by you" href="/nurse/children" />
-        <Stat value={w.checkups_this_month ?? 0} label="Your check-ups this month" href="/nurse/records" />
-        <Stat value={w.open_referrals ?? 0} label="Open referrals" href="/nurse/referrals" />
-        <Stat value={w.open_sessions ?? 0} label="Open vaccination sessions" href="/nurse/vaccines" />
+        <Stat value={w.children_in_camp ?? 0} label={t('childrenInYourCamp')} href="/nurse/children" />
+        <Stat value={w.registered_by_me ?? 0} label={t('registeredByYou')} href="/nurse/children" />
+        <Stat value={w.checkups_this_month ?? 0} label={t('yourCheckUpsThis')} href="/nurse/records" />
+        <Stat value={w.open_referrals ?? 0} label={t('openReferrals')} href="/nurse/referrals" />
+        <Stat value={w.open_sessions ?? 0} label={t('openVaccinationSessions')} href="/nurse/vaccines" />
       </div>
     );
   }
@@ -325,9 +326,9 @@ function YourWork({ summary, role }: { summary: ProfileSummary | undefined; role
   if (role === 'SUPERVISOR') {
     return (
       <div className="grid grid-cols-3 gap-2.5">
-        <Stat value={typeof w.zones === 'number' ? w.zones : 0} label="Zones" href="/supervisor/zones" />
+        <Stat value={typeof w.zones === 'number' ? w.zones : 0} label={t('zones')} href="/supervisor/zones" />
         <Stat value={w.chws ?? 0} label="CHWs" href="/supervisor/staff" />
-        <Stat value={w.checkups_this_month ?? 0} label="Check-ups this month" />
+        <Stat value={w.checkups_this_month ?? 0} label={t('checkUpsThisMonth')} />
       </div>
     );
   }
@@ -339,7 +340,7 @@ function YourWork({ summary, role }: { summary: ProfileSummary | undefined; role
     const rate = (r?: { value: number | null; band: string | null; level: string | null } | null) =>
       r?.value == null ? `—` : `${r.value}%`;
     if (!w.organization) {
-      return <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Your account is not linked to an organisation yet. Ask an Ikibondo administrator.</p>;
+      return <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('yourAccountIsNot')}</p>;
     }
     return (
       <div className="flex flex-col gap-4">
@@ -351,19 +352,17 @@ function YourWork({ summary, role }: { summary: ProfileSummary | undefined; role
           <div className="flex-1 min-w-0">
             <p className="font-semibold truncate" style={{ color: 'var(--ink)' }}>{w.organization}</p>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {w.kind === 'GOVERNMENT' ? 'Government body' : 'NGO / UN partner'}
-              {typeof w.colleagues === 'number' && ` · ${w.colleagues} colleague${w.colleagues === 1 ? '' : 's'} on Ikibondo`}
+              {w.kind === 'GOVERNMENT' ? t('governmentBody') : t('ngoUnPartner')}
+              {typeof w.colleagues === 'number' && t('colleaguesOnIkibondo', { count: w.colleagues })}
             </p>
           </div>
         </div>
 
         {/* Coverage */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
-            Camps you report on ({w.camps_covered ?? camps.length})
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>{t('campsYouReportOn', { value: w.camps_covered ?? camps.length })}</p>
           {w.all_camps ? (
-            <p className="text-sm" style={{ color: 'var(--ink)' }}>All camps (national oversight)</p>
+            <p className="text-sm" style={{ color: 'var(--ink)' }}>{t('allCampsNationalOversight')}</p>
           ) : camps.length ? (
             <div className="flex flex-wrap gap-1.5">
               {camps.map((c) => (
@@ -373,39 +372,36 @@ function YourWork({ summary, role }: { summary: ProfileSummary | undefined; role
               ))}
             </div>
           ) : (
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No camps are linked to your organisation yet.</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('noCampsAreLinked')}</p>
           )}
         </div>
 
         {/* Headline figures */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <Stat value={h.children?.suppressed ? `<${min}` : (h.children?.value ?? '—')} label="Children covered" href="/insights" />
-          <Stat value={rate(h.gam_rate)} label="Wasting (GAM)" href="/insights" />
-          <Stat value={rate(h.measles_coverage)} label="Measles coverage" href="/insights" />
-          <Stat value={rate(h.penta3_coverage)} label="Penta3 coverage" href="/insights" />
+          <Stat value={h.children?.suppressed ? `<${min}` : (h.children?.value ?? '—')} label={t('childrenCovered')} href="/insights" />
+          <Stat value={rate(h.gam_rate)} label={t('wastingGam')} href="/insights" />
+          <Stat value={rate(h.measles_coverage)} label={t('measlesCoverage')} href="/insights" />
+          <Stat value={rate(h.penta3_coverage)} label={t('penta3Coverage')} href="/insights" />
         </div>
 
         {/* What the account may see */}
         <div className="rounded-xl border p-3.5 text-sm" style={{ borderColor: 'var(--border)' }}>
           <p className="font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: 'var(--ink)' }}>
-            <ShieldCheck size={15} aria-hidden="true" /> Your data access
-          </p>
+            <ShieldCheck size={15} aria-hidden="true" />{' '}{t('yourDataAccess')}</p>
           <ul className="flex flex-col gap-1" style={{ color: 'var(--text-muted)' }}>
-            <li>• Counts and rates per camp; never a child&apos;s name or record.</li>
-            <li>• Numbers from 1 to {min - 1} are shown as “&lt;{min}” so no child can be identified.</li>
-            <li>• Rates follow WHO/UNICEF, UNHCR and Sphere definitions.</li>
+            <li>{t('countsAndRatesPer')}</li>
+            <li>{t('numbersFrom1To', { value: min - 1, min: min })}</li>
+            <li>{t('ratesFollowWhoUnicef')}</li>
           </ul>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Link href="/insights" className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-sm font-semibold"
             style={{ backgroundColor: 'var(--ink)', color: 'var(--bg-elev)' }}>
-            <BarChart3 size={15} aria-hidden="true" /> Open statistics
-          </Link>
+            <BarChart3 size={15} aria-hidden="true" />{' '}{t('openStatistics')}</Link>
           <Link href="/insights/reports" className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-sm font-semibold border"
             style={{ borderColor: 'var(--border)', color: 'var(--ink)' }}>
-            <Download size={15} aria-hidden="true" /> Download report
-          </Link>
+            <Download size={15} aria-hidden="true" />{' '}{t('downloadReport')}</Link>
         </div>
       </div>
     );
@@ -414,8 +410,8 @@ function YourWork({ summary, role }: { summary: ProfileSummary | undefined; role
   if (role === 'ADMIN') {
     return (
       <div className="grid grid-cols-2 gap-2.5">
-        <Stat value={typeof w.camps === 'number' ? w.camps : 0} label="Active camps" href="/admin/camps" />
-        <Stat value={w.active_users ?? 0} label="Active accounts" href="/admin/users" />
+        <Stat value={typeof w.camps === 'number' ? w.camps : 0} label={t('activeCamps')} href="/admin/camps" />
+        <Stat value={w.active_users ?? 0} label={t('activeAccounts')} href="/admin/users" />
       </div>
     );
   }
@@ -423,6 +419,7 @@ function YourWork({ summary, role }: { summary: ProfileSummary | undefined; role
 }
 
 export default function ProfilePage() {
+  const t = useTranslations('profile');
   const searchParams = useSearchParams();
   const toast   = useToast();
   const user    = useAuthStore((s) => s.user);
@@ -442,9 +439,9 @@ export default function ProfilePage() {
     setSavingLang(true);
     try {
       setUser(await patchMe({ preferred_language: value }));
-      toast.success('Language updated');
+      toast.success(t('languageUpdated'));
     } catch {
-      toast.error('Could not change the language. Try again.');
+      toast.error(t('couldNotChangeThe'));
     } finally {
       setSavingLang(false);
     }
@@ -452,16 +449,15 @@ export default function ProfilePage() {
 
   const initials = user?.full_name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase() ?? '?';
   const nationalId = (user as (typeof user & { national_id?: string | null }) | null)?.national_id;
-  const roleLabel = user ? ROLE_LABEL[user.role] : '';
+  const roleName = useRoleLabel();
+  const roleLabel = user ? roleName(user.role) : '';
   const place = user?.organization_name ?? user?.camp_name;
 
   return (
     <>
       <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full">
         {forceChange && (
-          <Alert variant="warn" title="You're using a temporary password">
-            Please set a new password below before continuing. You won&apos;t be able to access other pages until this is done.
-          </Alert>
+          <Alert variant="warn" title={t('youReUsingA')}>{t('pleaseSetANew')}</Alert>
         )}
 
         {/* Identity: cover band, large avatar, who and where */}
@@ -480,22 +476,20 @@ export default function ProfilePage() {
                 <h2 className="text-2xl font-bold flex items-center gap-2 flex-wrap" style={{ color: 'var(--ink)' }}>
                   {user?.full_name ?? '—'}
                   {user?.is_approved && (
-                    <span title="Verified account" className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                    <span title={t('verifiedAccount')} className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
                       style={{ backgroundColor: 'var(--low-bg)', color: 'var(--success)' }}>
-                      <BadgeCheck size={14} aria-hidden="true" /> Verified
-                    </span>
+                      <BadgeCheck size={14} aria-hidden="true" />{' '}{t('verified')}</span>
                   )}
                 </h2>
                 <p className="text-sm mt-1 flex flex-wrap items-center gap-x-3 gap-y-1" style={{ color: 'var(--text-muted)' }}>
                   <span className="inline-flex items-center gap-1"><Briefcase size={14} aria-hidden="true" />{roleLabel}</span>
                   {place && <span className="inline-flex items-center gap-1"><MapPin size={14} aria-hidden="true" />{place}</span>}
-                  {summary?.member_since && <span className="inline-flex items-center gap-1"><CalendarDays size={14} aria-hidden="true" />Member since {fmtDate(summary.member_since)}</span>}
+                  {summary?.member_since && <span className="inline-flex items-center gap-1"><CalendarDays size={14} aria-hidden="true" />{t('memberSince', { fmtDate: fmtDate(summary.member_since) })}</span>}
                 </p>
               </div>
               {!forceChange && (
                 <Button variant="secondary" onClick={() => setShowEditModal(true)}>
-                  <Pencil size={15} className="mr-2" aria-hidden="true" /> Edit profile
-                </Button>
+                  <Pencil size={15} className="mr-2" aria-hidden="true" />{' '}{t('editProfile')}</Button>
               )}
             </div>
           </div>
@@ -505,26 +499,23 @@ export default function ProfilePage() {
           <div className="grid lg:grid-cols-5 gap-6 items-start">
             {/* Left: their work */}
             <div className="lg:col-span-3 flex flex-col gap-6">
-              <Section title={user?.role === 'PARENT' ? 'Your children' : 'Your work'} icon={user?.role === 'PARENT' ? Baby : Activity}>
+              <Section title={user?.role === 'PARENT' ? t('yourChildren') : t('yourWork')} icon={user?.role === 'PARENT' ? Baby : Activity}>
                 {user && <YourWork summary={summary} role={user.role} />}
               </Section>
 
               {(user?.roles?.length ?? 0) > 1 && (
-                <Section title="Your roles" icon={Repeat}>
-                  <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>You hold more than one role. Switch to see that role&apos;s pages.</p>
+                <Section title={t('yourRoles')} icon={Repeat}>
+                  <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>{t('youHoldMoreThan')}</p>
                   {user!.roles!.map((r) => {
                     const active = r === user!.role;
                     return (
                       <div key={r} className="flex items-center justify-between py-2.5 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
-                        <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{ROLE_LABEL[r]}</span>
+                        <span className="text-sm font-medium" style={{ color: 'var(--ink)' }}>{roleName(r)}</span>
                         {active ? (
                           <span className="text-xs font-bold flex items-center gap-1" style={{ color: 'var(--success)' }}>
-                            <Check size={13} aria-hidden="true" /> Working as
-                          </span>
+                            <Check size={13} aria-hidden="true" />{' '}{t('workingAs')}</span>
                         ) : (
-                          <Button variant="secondary" size="sm" loading={switching === r} disabled={switching !== null} onClick={() => void switchTo(r)}>
-                            Switch
-                          </Button>
+                          <Button variant="secondary" size="sm" loading={switching === r} disabled={switching !== null} onClick={() => void switchTo(r)}>{t('switch')}</Button>
                         )}
                       </div>
                     );
@@ -535,28 +526,27 @@ export default function ProfilePage() {
 
             {/* Right: account settings */}
             <div className="lg:col-span-2 flex flex-col gap-6">
-              <Section title="Personal information" icon={User}
-                action={<button type="button" onClick={() => setShowEditModal(true)} className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Edit</button>}>
-                <Row icon={User} label="Full name" value={user?.full_name ?? '—'} />
-                <Row icon={Phone} label="Phone" value={user?.phone_number ?? 'Not added'} muted={!user?.phone_number} />
-                <Row icon={Mail} label="Email" value={user?.email || 'Not added'} muted={!user?.email} />
-                <Row icon={IdCard} label="National ID" value={mask(nationalId) ?? 'Not added'} muted={!nationalId} />
+              <Section title={t('personalInformation')} icon={User}
+                action={<button type="button" onClick={() => setShowEditModal(true)} className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{t('edit')}</button>}>
+                <Row icon={User} label={t('fullName')} value={user?.full_name ?? '—'} />
+                <Row icon={Phone} label={t('phone')} value={user?.phone_number ?? t('notAdded')} muted={!user?.phone_number} />
+                <Row icon={Mail} label={t('email')} value={user?.email || t('notAdded')} muted={!user?.email} />
+                <Row icon={IdCard} label={t('nationalId')} value={mask(nationalId) ?? t('notAdded')} muted={!nationalId} />
               </Section>
 
-              <Section title="Sign-in & security" icon={ShieldCheck}>
+              <Section title={t('signInSecurity')} icon={ShieldCheck}>
                 <div className="flex items-center gap-3 py-2.5 border-b" style={{ borderColor: 'var(--border)' }}>
                   <KeyRound size={16} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />
-                  <span className="flex-1 text-sm" style={{ color: 'var(--ink)' }}>Password <span style={{ color: 'var(--text-muted)' }}>••••••••</span></span>
+                  <span className="flex-1 text-sm" style={{ color: 'var(--ink)' }}>{t('password')}{' '}<span style={{ color: 'var(--text-muted)' }}>••••••••</span></span>
                   <Button variant="secondary" size="sm" onClick={() => setShowPwModal(true)}>
-                    <Lock size={14} className="mr-1.5" aria-hidden="true" /> Change
-                  </Button>
+                    <Lock size={14} className="mr-1.5" aria-hidden="true" />{' '}{t('change')}</Button>
                 </div>
-                <Row icon={Clock} label="Last sign-in" value={fmtDate(summary?.last_sign_in, true)} />
-                <Row icon={BadgeCheck} label="Account" value={user?.is_approved ? 'Active and verified' : 'Waiting for approval'} />
+                <Row icon={Clock} label={t('lastSignIn')} value={fmtDate(summary?.last_sign_in, true)} />
+                <Row icon={BadgeCheck} label={t('account')} value={user?.is_approved ? t('activeAndVerified') : t('waitingForApproval')} />
               </Section>
 
-              <Section title="Preferences" icon={SlidersHorizontal}>
-                <p id="profile-language-label" className="text-sm font-medium mb-2" style={{ color: 'var(--ink)' }}>Language</p>
+              <Section title={t('preferences')} icon={SlidersHorizontal}>
+                <p id="profile-language-label" className="text-sm font-medium mb-2" style={{ color: 'var(--ink)' }}>{t('language')}</p>
                 <div role="group" aria-labelledby="profile-language-label" className="grid grid-cols-3 gap-2 mb-4">
                   {LANGUAGES.map(({ value, label }) => {
                     const on = user?.preferred_language === value;
@@ -569,15 +559,15 @@ export default function ProfilePage() {
                     );
                   })}
                 </div>
-                <p id="profile-theme-label" className="text-sm font-medium mb-2" style={{ color: 'var(--ink)' }}>Appearance</p>
+                <p id="profile-theme-label" className="text-sm font-medium mb-2" style={{ color: 'var(--ink)' }}>{t('appearance')}</p>
                 <div role="group" aria-labelledby="profile-theme-label" className="grid grid-cols-3 gap-2">
-                  {THEMES.map(({ value, label }) => {
+                  {THEMES.map((value) => {
                     const on = theme === value;
                     return (
                       <button key={value} type="button" aria-pressed={on} onClick={() => setTheme(value)}
                         className="py-2 rounded-xl border text-sm font-medium transition-colors"
                         style={{ borderColor: on ? 'var(--ink)' : 'var(--border)', backgroundColor: on ? 'var(--ink)' : 'transparent', color: on ? 'var(--bg-elev)' : 'var(--ink)' }}>
-                        {label}
+                        {t(`themeOption.${value}`)}
                       </button>
                     );
                   })}
@@ -585,11 +575,9 @@ export default function ProfilePage() {
               </Section>
 
               {user?.role === 'PARENT' && (
-                <Section title="Privacy" icon={Lock}>
-                  <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>
-                    Choose what Ikibondo keeps about your children, and download or delete their records.
-                  </p>
-                  <Link href="/parent/consent" className="text-sm font-semibold underline" style={{ color: 'var(--ink)' }}>Consent &amp; privacy settings →</Link>
+                <Section title={t('privacy')} icon={Lock}>
+                  <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>{t('chooseWhatIkibondoKeeps')}</p>
+                  <Link href="/parent/consent" className="text-sm font-semibold underline" style={{ color: 'var(--ink)' }}>{t('consentPrivacySettings')}</Link>
                 </Section>
               )}
             </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, CheckCircle2, Bell } from 'lucide-react';
@@ -38,15 +39,16 @@ const DEFAULT_PREFS: NotifPrefs = {
   quiet_hours_enabled: false,
 };
 
-const CATEGORIES: { key: keyof Omit<NotifPrefs, 'quiet_hours_start' | 'quiet_hours_end' | 'quiet_hours_enabled'>; label: string; description: string; smsKey: string; pushKey: string }[] = [
-  { key: 'sms_high_risk', smsKey: 'sms_high_risk', pushKey: 'push_high_risk', label: 'High risk alerts', description: 'When your child is classified as high risk' },
-  { key: 'sms_vaccination', smsKey: 'sms_vaccination', pushKey: 'push_vaccination', label: 'Vaccination reminders', description: 'Upcoming and overdue vaccination notices' },
-  { key: 'sms_visit_accepted', smsKey: 'sms_visit_accepted', pushKey: 'push_visit_accepted', label: 'Visit accepted', description: 'When a CHW accepts your visit request' },
-  { key: 'sms_visit_declined', smsKey: 'sms_visit_declined', pushKey: 'push_visit_declined', label: 'Visit declined', description: 'When a CHW declines your visit request' },
-  { key: 'sms_visit_completed', smsKey: 'sms_visit_completed', pushKey: 'push_visit_completed', label: 'Visit completed', description: 'When a home visit is marked as done' },
+const CATEGORIES: { key: keyof Omit<NotifPrefs, 'quiet_hours_start' | 'quiet_hours_end' | 'quiet_hours_enabled'>; msgKey: 'highRisk' | 'vaccination' | 'visitAccepted' | 'visitDeclined' | 'visitCompleted'; smsKey: string; pushKey: string }[] = [
+  { key: 'sms_high_risk', smsKey: 'sms_high_risk', pushKey: 'push_high_risk', msgKey: 'highRisk' },
+  { key: 'sms_vaccination', smsKey: 'sms_vaccination', pushKey: 'push_vaccination', msgKey: 'vaccination' },
+  { key: 'sms_visit_accepted', smsKey: 'sms_visit_accepted', pushKey: 'push_visit_accepted', msgKey: 'visitAccepted' },
+  { key: 'sms_visit_declined', smsKey: 'sms_visit_declined', pushKey: 'push_visit_declined', msgKey: 'visitDeclined' },
+  { key: 'sms_visit_completed', smsKey: 'sms_visit_completed', pushKey: 'push_visit_completed', msgKey: 'visitCompleted' },
 ];
 
 export default function NotificationPreferencesPage() {
+  const t = useTranslations('notificationPrefs');
   const toast = useToast();
   const qc = useQueryClient();
   const { data: me } = useQuery({ queryKey: ['me'], queryFn: getMe });
@@ -64,7 +66,7 @@ export default function NotificationPreferencesPage() {
   const mutation = useMutation({
     mutationFn: (p: NotifPrefs) => patchMe({ notification_prefs: p as unknown as Record<string, unknown> }),
     onSuccess: () => {
-      toast.success('Notification settings saved');
+      toast.success(t('notificationSettingsSaved'));
       qc.invalidateQueries({ queryKey: ['me'] });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -82,8 +84,8 @@ export default function NotificationPreferencesPage() {
           <Bell className="h-5 w-5 text-blue-600" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Notification Preferences</h1>
-          <p className="text-sm text-gray-500">Choose what you are notified about and how.</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('notificationPreferences')}</h1>
+          <p className="text-sm text-gray-500">{t('chooseWhatYouAre')}</p>
         </div>
       </div>
 
@@ -91,16 +93,16 @@ export default function NotificationPreferencesPage() {
       <div className="rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
         {/* Header */}
         <div className="grid grid-cols-[1fr_60px_60px] gap-2 px-4 py-2.5 bg-gray-50 text-xs font-semibold text-gray-500">
-          <span>Alert type</span>
+          <span>{t('alertType')}</span>
           <span className="text-center">SMS</span>
-          <span className="text-center">Push</span>
+          <span className="text-center">{t('push')}</span>
         </div>
 
-        {CATEGORIES.map(({ label, description, smsKey, pushKey }) => (
+        {CATEGORIES.map(({ msgKey, smsKey, pushKey }) => (
           <div key={smsKey} className="grid grid-cols-[1fr_60px_60px] gap-2 items-center px-4 py-3.5 bg-white">
             <div>
-              <p className="text-sm font-medium text-gray-900">{label}</p>
-              <p className="text-xs text-gray-500">{description}</p>
+              <p className="text-sm font-medium text-gray-900">{t(`category.${msgKey}.label`)}</p>
+              <p className="text-xs text-gray-500">{t(`category.${msgKey}.description`)}</p>
             </div>
             <div className="flex justify-center">
               <Toggle
@@ -122,8 +124,8 @@ export default function NotificationPreferencesPage() {
       <div className="rounded-xl border border-gray-200 p-4 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-900">Quiet hours</p>
-            <p className="text-xs text-gray-500">Suppress non-urgent notifications during these hours</p>
+            <p className="text-sm font-medium text-gray-900">{t('quietHours')}</p>
+            <p className="text-xs text-gray-500">{t('suppressNonUrgentNotifications')}</p>
           </div>
           <Toggle
             checked={prefs.quiet_hours_enabled}
@@ -134,7 +136,7 @@ export default function NotificationPreferencesPage() {
         {prefs.quiet_hours_enabled && (
           <div className="flex items-center gap-4">
             <label className="flex-1">
-              <span className="block text-xs text-gray-500 mb-1">From</span>
+              <span className="block text-xs text-gray-500 mb-1">{t('from')}</span>
               <input
                 type="time"
                 value={prefs.quiet_hours_start}
@@ -143,7 +145,7 @@ export default function NotificationPreferencesPage() {
               />
             </label>
             <label className="flex-1">
-              <span className="block text-xs text-gray-500 mb-1">Until</span>
+              <span className="block text-xs text-gray-500 mb-1">{t('until')}</span>
               <input
                 type="time"
                 value={prefs.quiet_hours_end}
@@ -162,14 +164,10 @@ export default function NotificationPreferencesPage() {
           disabled={mutation.isPending}
           className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
         >
-          {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-          Save preferences
-        </button>
+          {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}{t('savePreferences')}</button>
         {saved && (
           <span className="flex items-center gap-1.5 text-sm text-green-600">
-            <CheckCircle2 className="h-4 w-4" />
-            Saved
-          </span>
+            <CheckCircle2 className="h-4 w-4" />{t('saved')}</span>
         )}
       </div>
     </div>

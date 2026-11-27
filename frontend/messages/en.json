@@ -18,7 +18,16 @@
     "district": "District"
   },
   "roles": {
-    "featuresFor": "Features for {role}"
+    "featuresFor": "Features for {role}",
+    "name": {
+      "ADMIN": "Administrator",
+      "SUPERVISOR": "Zone Supervisor",
+      "NURSE": "Nurse",
+      "CHW": "Community Health Worker",
+      "PARENT": "Parent / Guardian",
+      "GOVERNMENT": "Government official",
+      "PARTNER": "NGO / UN partner"
+    }
   },
   "muac": {
     "band": {
@@ -3006,6 +3015,481 @@
       "next": "Next →",
       "byNameDate": "By {name} · {date}",
       "chwName": "CHW: {name}"
+    }
+  },
+  "profile": {
+    "profileUpdatedSuccessfully": "Profile updated successfully",
+    "failedToSavePlease": "Failed to save. Please try again.",
+    "editProfile": "Edit profile",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "saveChanges": "Save changes",
+    "fullName": "Full name",
+    "phoneNumber": "Phone number",
+    "nationalId": "National ID",
+    "passwordChangedSuccessfully": "Password changed successfully",
+    "passwordChanged": "Password changed",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmNewPassword": "Confirm new password",
+    "noChildrenAreLinked": "No children are linked to your account yet. The nurse at your health centre links them.",
+    "girl": "Girl",
+    "boy": "Boy",
+    "noVaccineDue": "No vaccine due",
+    "yourCommunityHealthWorker": "Your community health worker",
+    "call": "Call",
+    "families": "Families",
+    "children": "Children",
+    "checkUpsThisMonth": "Check-ups this month",
+    "openVisitRequests": "Open visit requests",
+    "noZoneAssignedYet": "No zone assigned yet",
+    "childrenInYourCamp": "Children in your camp",
+    "registeredByYou": "Registered by you",
+    "yourCheckUpsThis": "Your check-ups this month",
+    "openReferrals": "Open referrals",
+    "openVaccinationSessions": "Open vaccination sessions",
+    "zones": "Zones",
+    "yourAccountIsNot": "Your account is not linked to an organisation yet. Ask an Ikibondo administrator.",
+    "governmentBody": "Government body",
+    "ngoUnPartner": "NGO / UN partner",
+    "campsYouReportOn": "Camps you report on ({value})",
+    "allCampsNationalOversight": "All camps (national oversight)",
+    "noCampsAreLinked": "No camps are linked to your organisation yet.",
+    "childrenCovered": "Children covered",
+    "wastingGam": "Wasting (GAM)",
+    "measlesCoverage": "Measles coverage",
+    "penta3Coverage": "Penta3 coverage",
+    "yourDataAccess": "Your data access",
+    "countsAndRatesPer": "• Counts and rates per camp; never a child's name or record.",
+    "numbersFrom1To": "• Numbers from 1 to {value} are shown as “<{min}” so no child can be identified.",
+    "ratesFollowWhoUnicef": "• Rates follow WHO/UNICEF, UNHCR and Sphere definitions.",
+    "openStatistics": "Open statistics",
+    "downloadReport": "Download report",
+    "activeCamps": "Active camps",
+    "activeAccounts": "Active accounts",
+    "languageUpdated": "Language updated",
+    "couldNotChangeThe": "Could not change the language. Try again.",
+    "pleaseSetANew": "Please set a new password below before continuing. You won't be able to access other pages until this is done.",
+    "youReUsingA": "You're using a temporary password",
+    "verified": "Verified",
+    "verifiedAccount": "Verified account",
+    "memberSince": "Member since {fmtDate}",
+    "yourChildren": "Your children",
+    "yourWork": "Your work",
+    "yourRoles": "Your roles",
+    "youHoldMoreThan": "You hold more than one role. Switch to see that role's pages.",
+    "workingAs": "Working as",
+    "switch": "Switch",
+    "personalInformation": "Personal information",
+    "edit": "Edit",
+    "phone": "Phone",
+    "email": "Email",
+    "signInSecurity": "Sign-in & security",
+    "password": "Password",
+    "change": "Change",
+    "lastSignIn": "Last sign-in",
+    "account": "Account",
+    "preferences": "Preferences",
+    "language": "Language",
+    "appearance": "Appearance",
+    "privacy": "Privacy",
+    "chooseWhatIkibondoKeeps": "Choose what Ikibondo keeps about your children, and download or delete their records.",
+    "consentPrivacySettings": "Consent & privacy settings →",
+    "themeOption": {
+      "system": "Same as device",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "nutritionStatus": {
+      "SAM": "Severe (SAM)",
+      "MAM": "Moderate (MAM)",
+      "NORMAL": "Growing well"
+    },
+    "lastCheckup": " · last check-up {date}",
+    "dosesOverdue": "{count, plural, one {# vaccine dose missed or overdue} other {# vaccine doses missed or overdue}}",
+    "nextVaccineOn": "Next vaccine: {name} on {date}",
+    "workingIn": "Working in {zones}",
+    "lastCheckupRecorded": " · last check-up recorded {date}",
+    "colleaguesOnIkibondo": " · {count, plural, one {# colleague} other {# colleagues}} on Ikibondo",
+    "notAdded": "Not added",
+    "activeAndVerified": "Active and verified",
+    "waitingForApproval": "Waiting for approval",
+    "passwordsDoNotMatch": "New passwords do not match.",
+    "passwordTooShort": "New password must be at least 8 characters.",
+    "passwordChangeFailed": "Failed to change password. Check your current password."
+  },
+  "onboarding": {
+    "welcomeToIkibondo": "Welcome to Ikibondo",
+    "getStarted": "Get started,",
+    "hereAreAFew": "Here are a few things to do first as a",
+    "tickEachOneWhen": ". Tick each one when you're done — then hit “All done” to continue.",
+    "ofCompleted": "{size} of {length} completed",
+    "ready": "Ready!",
+    "allDoneLetS": "All done — let's go",
+    "skipForNow": "Skip for now",
+    "steps": {
+      "chwProfile": {
+        "label": "Set up your profile",
+        "description": "Confirm your name, phone number, and language preference."
+      },
+      "chwCaseload": {
+        "label": "Review your caseload",
+        "description": "Familiarise yourself with the families assigned to you."
+      },
+      "chwVisit": {
+        "label": "Record your first visit",
+        "description": "Conduct a home visit and submit health measurements."
+      },
+      "chwOffline": {
+        "label": "Test offline mode",
+        "description": "Record a visit without internet and sync when reconnected."
+      },
+      "nurseProfile": {
+        "label": "Set up your profile",
+        "description": "Confirm your name and facility."
+      },
+      "nurseRegister": {
+        "label": "Register a child",
+        "description": "Use the child registration form to enrol a newborn or existing child."
+      },
+      "nurseVaccine": {
+        "label": "Administer a vaccination",
+        "description": "Record a vaccine dose against a scheduled appointment."
+      },
+      "nurseApprove": {
+        "label": "Review parent approvals",
+        "description": "Check the pending approvals queue and approve or decline accounts."
+      },
+      "supervisorProfile": {
+        "label": "Set up your profile",
+        "description": "Confirm your name and assigned camp."
+      },
+      "supervisorStaff": {
+        "label": "Review your staff",
+        "description": "View CHWs and nurses assigned to your camp."
+      },
+      "supervisorAnalytics": {
+        "label": "Explore analytics",
+        "description": "Check the nutrition overview and high-risk records."
+      },
+      "supervisorAssign": {
+        "label": "Assign a CHW to a family",
+        "description": "Use the guardian management page to assign a CHW."
+      },
+      "adminProfile": {
+        "label": "Set up your profile",
+        "description": "Confirm your admin account details."
+      },
+      "adminCamp": {
+        "label": "Configure a camp",
+        "description": "Create or update camp and zone information."
+      },
+      "adminUser": {
+        "label": "Create a staff account",
+        "description": "Add a nurse or supervisor through user management."
+      },
+      "adminMl": {
+        "label": "Review ML model status",
+        "description": "Check that all prediction models are loaded and ready."
+      },
+      "parentProfile": {
+        "label": "Set up your profile",
+        "description": "Add your phone number and preferred language."
+      },
+      "parentChildren": {
+        "label": "View your children",
+        "description": "See your child's health records and growth chart."
+      },
+      "parentConsent": {
+        "label": "Review data consent",
+        "description": "Understand how your data is used under UNHCR policy."
+      },
+      "parentNotifications": {
+        "label": "Set notification preferences",
+        "description": "Choose how you want to receive health reminders."
+      },
+      "governmentProfile": {
+        "label": "Set up your profile",
+        "description": "Confirm your name and organisation."
+      },
+      "governmentOverview": {
+        "label": "Read the overview",
+        "description": "Malnutrition, vaccination and visit figures for the camps you oversee."
+      },
+      "governmentReport": {
+        "label": "Download a report",
+        "description": "Export the figures as a spreadsheet for planning and reporting."
+      },
+      "partnerProfile": {
+        "label": "Set up your profile",
+        "description": "Confirm your name and organisation."
+      },
+      "partnerOverview": {
+        "label": "Read the overview",
+        "description": "Figures for the camps your organisation works in."
+      },
+      "partnerReport": {
+        "label": "Download a report",
+        "description": "Export the figures as a spreadsheet for donors and planning."
+      }
+    }
+  },
+  "notificationPrefs": {
+    "notificationSettingsSaved": "Notification settings saved",
+    "notificationPreferences": "Notification Preferences",
+    "chooseWhatYouAre": "Choose what you are notified about and how.",
+    "alertType": "Alert type",
+    "push": "Push",
+    "quietHours": "Quiet hours",
+    "suppressNonUrgentNotifications": "Suppress non-urgent notifications during these hours",
+    "from": "From",
+    "until": "Until",
+    "savePreferences": "Save preferences",
+    "saved": "Saved",
+    "category": {
+      "highRisk": {
+        "label": "High risk alerts",
+        "description": "When your child is classified as high risk"
+      },
+      "vaccination": {
+        "label": "Vaccination reminders",
+        "description": "Upcoming and overdue vaccination notices"
+      },
+      "visitAccepted": {
+        "label": "Visit accepted",
+        "description": "When a CHW accepts your visit request"
+      },
+      "visitDeclined": {
+        "label": "Visit declined",
+        "description": "When a CHW declines your visit request"
+      },
+      "visitCompleted": {
+        "label": "Visit completed",
+        "description": "When a home visit is marked as done"
+      }
+    }
+  },
+  "insights": {
+    "notEnoughChildrenYet": "Not enough children yet (fewer than {min}), so no rate is shown.",
+    "childNutritionOverview": "Child nutrition overview",
+    "yourOrganisation": "Your organisation",
+    "camp2": "Camp",
+    "allCamps": "All camps",
+    "statisticsCouldNotBe": "Statistics could not be loaded. Try again later.",
+    "noCampsAssignedYet": "No camps assigned yet",
+    "anIkibondoAdministratorLinks": "An Ikibondo administrator links your organisation to the camps it works in.",
+    "childrenRegistered": "Children registered",
+    "acuteMalnutritionSamMam": "Acute malnutrition (SAM + MAM)",
+    "ofChildrenMeasured": "of children measured",
+    "severeSam": "Severe (SAM)",
+    "moderateMam": "Moderate (MAM)",
+    "vaccinationCoverage": "Vaccination coverage",
+    "dosesGivenOfDoses": "doses given of doses due",
+    "visitsLast30Days": "Visits, last 30 days",
+    "keyIndicators": "Key indicators",
+    "judgedAgainstWhoUnicef": "Judged against WHO/UNICEF prevalence thresholds, UNHCR and Sphere standards.",
+    "campScorecard": "Camp scorecard",
+    "last12Months": "Last 12 months",
+    "childrenMeasuredEachMonth": "Children measured each month, and how many were severely or moderately malnourished at that visit.",
+    "byCamp": "By camp",
+    "campsCount": "· {count, plural, one {# camp} other {# camps}}",
+    "updatedOn": " · updated {date}",
+    "tooFewMeasured": " Too few children aged 6–59 months were measured in the last 90 days to show rates safely.",
+    "basedOnMeasured": " Based on {measured} of {total} children aged 6–59 months, measured in the last 90 days.",
+    "fewerThanChildren": "Fewer than {min} children",
+    "smallBarsLeftOut": " Bars with fewer than {min} children are left out to protect privacy.",
+    "privacyNote": "Figures are counts only — no child is named or listed. Numbers from 1 to {maxHidden} are shown as “<{min}” and rates are only given for at least {min} children, so a child in a small camp cannot be identified. Nutrition status uses each child’s latest measurement (WHO 2006 standards).",
+    "indicator": {
+      "gam_rate": "Wasting (GAM)",
+      "sam_rate": "Severe wasting (SAM)",
+      "stunting_rate": "Stunting",
+      "underweight_rate": "Underweight",
+      "screening_coverage": "Screening coverage",
+      "measles_coverage": "Measles (MR1) coverage",
+      "penta3_coverage": "Penta3 coverage",
+      "penta_dropout": "Penta1 → Penta3 dropout",
+      "referral_completion": "Referrals completed"
+    },
+    "group": {
+      "nutrition": "Nutrition, children 6–59 months",
+      "immunisation": "Immunisation",
+      "followUp": "Follow-up"
+    },
+    "childrenSeen": "Children seen",
+    "column": {
+      "camp": "Camp",
+      "children": "Children",
+      "sam": "SAM",
+      "mam": "MAM",
+      "malnutritionRate": "Malnutrition rate",
+      "highRisk": "High risk",
+      "vaccination": "Vaccination",
+      "visits30d": "Visits (30 d)",
+      "openReferrals": "Open referrals"
+    }
+  },
+  "insightsReports": {
+    "reportDownloaded": "Report downloaded",
+    "theReportCouldNot": "The report could not be downloaded. Try again later.",
+    "reports": "Reports",
+    "readTheReportHere": "Read the report here, print it or save it as PDF, or download the figures.",
+    "camp": "Camp",
+    "allMyCamps": "All my camps",
+    "printPdf": "Print / PDF",
+    "childNutritionReport": "Child nutrition report",
+    "issued": "Issued",
+    "nutrition": "Nutrition",
+    "last90Days": "last 90 days",
+    "vaccination": "Vaccination",
+    "toDate": "to date",
+    "referrals": "Referrals",
+    "last12Months": "last 12 months",
+    "preparingTheReport": "Preparing the report…",
+    "noCampsAreLinked": "No camps are linked to your organisation yet.",
+    "n1Summary": "1. Summary",
+    "tooFewChildrenHave": "Too few children have been measured or vaccinated in these camps to judge the indicators safely (at least {min} children are needed for any rate). The counts below still apply.",
+    "n2KeyFigures": "2. Key figures",
+    "n3Indicators": "3. Indicators",
+    "indicator": "Indicator",
+    "value": "Value",
+    "status": "Status",
+    "benchmark": "Benchmark",
+    "tooFewChildren": "Too few children",
+    "n4ByCamp": "4. By camp",
+    "definitions": ". Definitions",
+    "notInThisReport": "Not in this report",
+    "cureDeathAndDefaulter": "Cure, death and defaulter rates of treatment programmes (Sphere) come from those programmes' own reporting.",
+    "countsOnlyNoChild": "Counts only — no child is named. Numbers from 1 to {value} appear as “<{min}” and rates need at least {min2} children, so no child can be identified. Prepared from Ikibondo on {today}.",
+    "level": {
+      "good": "On track",
+      "watch": "Watch",
+      "alert": "Act now"
+    },
+    "definition": {
+      "children": {
+        "term": "Children",
+        "text": "Active children registered in the camp."
+      },
+      "samMam": {
+        "term": "SAM / MAM",
+        "text": "Children whose latest check-up showed severe / moderate acute malnutrition (WHO weight-for-height, MUAC or oedema)."
+      },
+      "checkups30d": {
+        "term": "Check-ups (30 days)",
+        "text": "Measurements recorded in the last 30 days."
+      },
+      "openReferrals": {
+        "term": "Open referrals",
+        "text": "Referrals to a health facility that are not yet completed."
+      }
+    },
+    "summaryLine": "{name}: {value}%, {verdict}.",
+    "summaryLineTarget": "{name}: {value}%, {verdict} (target {target}%).",
+    "campsCount": "{count, plural, one {# camp} other {# camps}}",
+    "targetNote": " Target: {target}%.",
+    "column": {
+      "children": "Children",
+      "sam": "SAM",
+      "mam": "MAM"
+    }
+  },
+  "common": {
+    "error": {
+      "somethingWentWrong": "Something went wrong",
+      "thisSectionEncounteredAn": "This section encountered an error. You can try reloading it.",
+      "tryAgain": "Try again"
+    },
+    "notFound": {
+      "pageNotFound": "Page not found",
+      "thePageYouRe": "The page you're looking for doesn't exist or has been moved.",
+      "goHome": "Go home",
+      "signIn": "Sign in"
+    },
+    "auth": {
+      "loadingYourDashboard": "Loading your dashboard",
+      "loading": "Loading…"
+    },
+    "notificationBell": {
+      "notifications": "Notifications",
+      "markAllRead": "Mark all read",
+      "closeNotifications": "Close notifications",
+      "noUnreadNotifications": "No unread notifications",
+      "markAsRead": "Mark as read",
+      "trigger": {
+        "HIGH_RISK_ALERT": "High-risk alert",
+        "VACCINATION_REMINDER": "Vaccination reminder",
+        "VACCINATION_OVERDUE": "Vaccination overdue",
+        "ZONE_SUMMARY": "Zone summary",
+        "CHW_INACTIVE": "CHW inactive",
+        "ACCOUNT_APPROVED": "Account approved"
+      },
+      "time": {
+        "secondsAgo": "{count}s ago",
+        "minutesAgo": "{count}m ago",
+        "hoursAgo": "{count}h ago",
+        "daysAgo": "{count}d ago"
+      },
+      "unreadCount": "{count, plural, one {# unread notification} other {# unread notifications}}"
+    },
+    "roleSwitcher": {
+      "switchRole": "Switch role",
+      "workAs": "Work as",
+      "nowWorkingAs": "Now working as {role}",
+      "couldNotSwitch": "Could not switch role. Check your connection and try again.",
+      "switchRoleWorkingAs": "Switch role (working as {role})"
+    },
+    "ui": {
+      "dismiss": "Dismiss",
+      "pageOfTotal": "Page {page} of {totalPages} · {total} total",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "close": "Close"
+    },
+    "qrScanner": {
+      "startingCamera": "Starting camera…",
+      "tapStartScanningTo": "Tap \"Start scanning\" to open the camera",
+      "retryCamera": "Retry camera",
+      "startScanning": "Start scanning",
+      "stopCamera": "Stop camera",
+      "pointTheCameraAt": "Point the camera at a child's QR card. Detection is automatic.",
+      "error": {
+        "cameraDenied": "Camera access was denied. Click the camera icon in your browser address bar and allow access, then retry.",
+        "noCamera": "No camera found on this device. Use the manual entry below.",
+        "needsSecure": "Camera requires a secure connection. Use the manual entry below.",
+        "retrying": "Camera constraints not supported. Trying again…",
+        "unavailable": "Camera unavailable. Use the manual entry below."
+      }
+    },
+    "riskExplainer": {
+      "keyFactorsIdentified": "Key factors identified",
+      "shapFeatureContributions": "SHAP feature contributions",
+      "factor": {
+        "weight_kg": "Weight",
+        "height_cm": "Height",
+        "muac_cm": "Mid-upper arm measurement",
+        "age_months": "Child's age",
+        "waz": "Weight for age",
+        "haz": "Height for age",
+        "whz": "Weight for height",
+        "bmi_z": "Body mass index",
+        "temperature_c": "Body temperature",
+        "missed_vaccine_count": "Missed vaccines",
+        "visit_count": "Number of clinic visits",
+        "days_since_last_visit": "Days since last visit",
+        "sex": "Sex",
+        "feeding_type": "Feeding method",
+        "gestational_age": "Gestational age",
+        "birth_weight": "Birth weight",
+        "respiratory_rate": "Breathing rate",
+        "oxygen_saturation": "Oxygen level",
+        "hemoglobin": "Haemoglobin (blood)",
+        "symptoms_count": "Reported symptoms"
+      }
+    },
+    "sync": {
+      "uploaded": "{count, plural, one {# saved record uploaded} other {# saved records uploaded}}",
+      "notAccepted": "{count, plural, one {# record was not accepted — open Sync to see why} other {# records were not accepted — open Sync to see why}}"
     }
   }
 }

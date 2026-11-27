@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { AlertTriangle } from 'lucide-react';
 
 export default function AuthError({
@@ -8,6 +9,7 @@ export default function AuthError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useTranslations('common.error');
   return (
     <div
       className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center gap-4"
@@ -22,20 +24,14 @@ export default function AuthError({
         <h2
           className="text-xl font-bold mb-1"
           style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-        >
-          Something went wrong
-        </h2>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          This section encountered an error. You can try reloading it.
-        </p>
+        >{t('somethingWentWrong')}</h2>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('thisSectionEncounteredAn')}</p>
       </div>
       <button
         onClick={reset}
         className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-80"
         style={{ backgroundColor: 'var(--ink)', color: 'var(--bg)' }}
-      >
-        Try again
-      </button>
+      >{t('tryAgain')}</button>
     </div>
   );
 }

@@ -1,60 +1,61 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { apiClient } from '@/lib/api/client';
+import type en from '../../../../messages/en.json';
 import { Button } from '@/components/ui/Button';
 
 type Role = 'CHW' | 'NURSE' | 'SUPERVISOR' | 'ADMIN' | 'PARENT' | 'GOVERNMENT' | 'PARTNER';
 
 interface ChecklistItem {
   id: string;
-  label: string;
-  description: string;
+  msgKey: keyof (typeof en)['onboarding']['steps'] & string;
 }
 
 const ROLE_CHECKLISTS: Record<Role, ChecklistItem[]> = {
   CHW: [
-    { id: 'profile', label: 'Set up your profile', description: 'Confirm your name, phone number, and language preference.' },
-    { id: 'caseload', label: 'Review your caseload', description: 'Familiarise yourself with the families assigned to you.' },
-    { id: 'visit', label: 'Record your first visit', description: 'Conduct a home visit and submit health measurements.' },
-    { id: 'offline', label: 'Test offline mode', description: 'Record a visit without internet and sync when reconnected.' },
+    { id: 'profile', msgKey: 'chwProfile' },
+    { id: 'caseload', msgKey: 'chwCaseload' },
+    { id: 'visit', msgKey: 'chwVisit' },
+    { id: 'offline', msgKey: 'chwOffline' },
   ],
   NURSE: [
-    { id: 'profile', label: 'Set up your profile', description: 'Confirm your name and facility.' },
-    { id: 'register', label: 'Register a child', description: 'Use the child registration form to enrol a newborn or existing child.' },
-    { id: 'vaccine', label: 'Administer a vaccination', description: 'Record a vaccine dose against a scheduled appointment.' },
-    { id: 'approve', label: 'Review parent approvals', description: 'Check the pending approvals queue and approve or decline accounts.' },
+    { id: 'profile', msgKey: 'nurseProfile' },
+    { id: 'register', msgKey: 'nurseRegister' },
+    { id: 'vaccine', msgKey: 'nurseVaccine' },
+    { id: 'approve', msgKey: 'nurseApprove' },
   ],
   SUPERVISOR: [
-    { id: 'profile', label: 'Set up your profile', description: 'Confirm your name and assigned camp.' },
-    { id: 'staff', label: 'Review your staff', description: 'View CHWs and nurses assigned to your camp.' },
-    { id: 'analytics', label: 'Explore analytics', description: 'Check the nutrition overview and high-risk records.' },
-    { id: 'assign', label: 'Assign a CHW to a family', description: 'Use the guardian management page to assign a CHW.' },
+    { id: 'profile', msgKey: 'supervisorProfile' },
+    { id: 'staff', msgKey: 'supervisorStaff' },
+    { id: 'analytics', msgKey: 'supervisorAnalytics' },
+    { id: 'assign', msgKey: 'supervisorAssign' },
   ],
   ADMIN: [
-    { id: 'profile', label: 'Set up your profile', description: 'Confirm your admin account details.' },
-    { id: 'camp', label: 'Configure a camp', description: 'Create or update camp and zone information.' },
-    { id: 'user', label: 'Create a staff account', description: 'Add a nurse or supervisor through user management.' },
-    { id: 'ml', label: 'Review ML model status', description: 'Check that all prediction models are loaded and ready.' },
+    { id: 'profile', msgKey: 'adminProfile' },
+    { id: 'camp', msgKey: 'adminCamp' },
+    { id: 'user', msgKey: 'adminUser' },
+    { id: 'ml', msgKey: 'adminMl' },
   ],
   PARENT: [
-    { id: 'profile', label: 'Set up your profile', description: 'Add your phone number and preferred language.' },
-    { id: 'children', label: 'View your children', description: 'See your child\'s health records and growth chart.' },
-    { id: 'consent', label: 'Review data consent', description: 'Understand how your data is used under UNHCR policy.' },
-    { id: 'notifications', label: 'Set notification preferences', description: 'Choose how you want to receive health reminders.' },
+    { id: 'profile', msgKey: 'parentProfile' },
+    { id: 'children', msgKey: 'parentChildren' },
+    { id: 'consent', msgKey: 'parentConsent' },
+    { id: 'notifications', msgKey: 'parentNotifications' },
   ],
   GOVERNMENT: [
-    { id: 'profile', label: 'Set up your profile', description: 'Confirm your name and organisation.' },
-    { id: 'overview', label: 'Read the overview', description: 'Malnutrition, vaccination and visit figures for the camps you oversee.' },
-    { id: 'report', label: 'Download a report', description: 'Export the figures as a spreadsheet for planning and reporting.' },
+    { id: 'profile', msgKey: 'governmentProfile' },
+    { id: 'overview', msgKey: 'governmentOverview' },
+    { id: 'report', msgKey: 'governmentReport' },
   ],
   PARTNER: [
-    { id: 'profile', label: 'Set up your profile', description: 'Confirm your name and organisation.' },
-    { id: 'overview', label: 'Read the overview', description: 'Figures for the camps your organisation works in.' },
-    { id: 'report', label: 'Download a report', description: 'Export the figures as a spreadsheet for donors and planning.' },
+    { id: 'profile', msgKey: 'partnerProfile' },
+    { id: 'overview', msgKey: 'partnerOverview' },
+    { id: 'report', msgKey: 'partnerReport' },
   ],
 };
 
@@ -69,6 +70,7 @@ const ROLE_LANDING: Record<Role, string> = {
 };
 
 export default function OnboardingPage() {
+  const t = useTranslations('onboarding');
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const router = useRouter();
@@ -114,19 +116,13 @@ export default function OnboardingPage() {
           <p
             className="text-xs font-semibold mb-2"
             style={{ color: 'var(--brand)' }}
-          >
-            Welcome to Ikibondo
-          </p>
+          >{t('welcomeToIkibondo')}</p>
           <h1
             className="text-3xl font-bold"
             style={{ fontFamily: 'var(--font-fraunces)', color: 'var(--ink)' }}
-          >
-            Get started, {user?.full_name?.split(' ')[0] ?? 'there'}
+          >{t('getStarted')}{' '}{user?.full_name?.split(' ')[0] ?? 'there'}
           </h1>
-          <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>
-            Here are a few things to do first as a <strong style={{ color: 'var(--ink)' }}>{role.toLowerCase()}</strong>.
-            Tick each one when you&apos;re done — then hit &ldquo;All done&rdquo; to continue.
-          </p>
+          <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>{t('hereAreAFew')}{' '}<strong style={{ color: 'var(--ink)' }}>{role.toLowerCase()}</strong>{t('tickEachOneWhen')}</p>
         </div>
 
         {/* Checklist */}
@@ -160,10 +156,10 @@ export default function OnboardingPage() {
                     className="text-sm font-semibold"
                     style={{ color: done ? 'var(--brand)' : 'var(--ink)', textDecoration: done ? 'line-through' : 'none' }}
                   >
-                    {item.label}
+                    {t(`steps.${item.msgKey}.label`)}
                   </p>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    {item.description}
+                    {t(`steps.${item.msgKey}.description`)}
                   </p>
                 </div>
                 <ChevronRight size={16} style={{ color: 'var(--text-muted)', flexShrink: 0, marginTop: 3 }} aria-hidden="true" />
@@ -175,13 +171,9 @@ export default function OnboardingPage() {
         {/* Progress */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-              {checked.size} of {checklist.length} completed
-            </span>
+            <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{t('ofCompleted', { size: checked.size, length: checklist.length })}</span>
             {allChecked && (
-              <span className="text-xs font-semibold" style={{ color: 'var(--success)' }}>
-                Ready!
-              </span>
+              <span className="text-xs font-semibold" style={{ color: 'var(--success)' }}>{t('ready')}</span>
             )}
           </div>
           <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-sand)' }}>
@@ -201,7 +193,7 @@ export default function OnboardingPage() {
           onClick={handleComplete}
           className="w-full py-3"
         >
-          {allChecked ? "All done — let's go" : 'Skip for now'}
+          {allChecked ? t('allDoneLetS') : t('skipForNow')}
         </Button>
       </div>
     </div>
